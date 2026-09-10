@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SistemaAsignacionEscolar.Api", "SistemaAsignacionEscolar.Api.csproj", "{FBDE8046-AADC-43E8-A32A-102D1748C3DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClassLibrary1", "modules\ClassLibrary1\ClassLibrary1.csproj", "{4534038A-14CA-49D1-9063-8C75D763D46C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{FBDE8046-AADC-43E8-A32A-102D1748C3DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBDE8046-AADC-43E8-A32A-102D1748C3DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBDE8046-AADC-43E8-A32A-102D1748C3DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4534038A-14CA-49D1-9063-8C75D763D46C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4534038A-14CA-49D1-9063-8C75D763D46C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4534038A-14CA-49D1-9063-8C75D763D46C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4534038A-14CA-49D1-9063-8C75D763D46C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
