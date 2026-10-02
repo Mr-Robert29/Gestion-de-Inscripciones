@@ -8,11 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="modules\" />
+      <Folder Include="modules\Identidad\Application\" />
+      <Folder Include="modules\Identidad\Domain\NewFolder\" />
+      <Folder Include="modules\Identidad\Infraestructure\" />
     </ItemGroup>
 
 </Project>
