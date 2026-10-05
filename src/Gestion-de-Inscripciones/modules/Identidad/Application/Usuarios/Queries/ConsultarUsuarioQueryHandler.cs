@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using SistemaEducativo.Modulos.Identidad.Domain.Repositories;
+using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Repositories;
 
-namespace SistemaEducativo.Modulos.Identidad.Application.Usuarios.Queries
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Application.Usuarios.Queries
 {
     public class ConsultarUsuarioQueryHandler
     {

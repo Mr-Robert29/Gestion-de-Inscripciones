@@ -1,4 +1,4 @@
-namespace SistemaEducativo.Modulos.Identidad.Application.Usuarios.Queries
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Application.Usuarios.Queries
 {
     public class UsuarioDto
     {

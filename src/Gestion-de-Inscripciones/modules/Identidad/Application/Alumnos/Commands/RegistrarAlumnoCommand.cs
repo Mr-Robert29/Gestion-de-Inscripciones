@@ -1,6 +1,6 @@
 using System;
 
-namespace SistemaEducativo.Modulos.Identidad.Application.Alumnos.Commands
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Application.Alumnos.Commands
 {
     public record RegistrarAlumnoCommand(
         string Nombre, 

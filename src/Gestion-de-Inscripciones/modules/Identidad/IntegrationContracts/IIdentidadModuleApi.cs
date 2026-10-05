@@ -1,4 +1,4 @@
-﻿namespace SistemaAsignacionEscolar.Api.modules.Identidad.IntegrationContracts
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.IntegrationContracts
 {
     public interface IIdentidadModuleApi
     {

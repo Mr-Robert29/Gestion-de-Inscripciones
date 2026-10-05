@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
-using SistemaEducativo.Modulos.Identidad.Domain.Entities;
-using SistemaEducativo.Modulos.Identidad.Domain.Repositories;
+using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities;
+using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Repositories;
 
-namespace SistemaEducativo.Modulos.Identidad.Application.Alumnos.Commands
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Application.Alumnos.Commands
 {
     public class RegistrarAlumnoCommandHandler
     {

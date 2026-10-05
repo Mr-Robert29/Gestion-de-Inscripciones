@@ -1,4 +1,4 @@
-﻿namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
 {
     public class Administrativo : Usuario
     {
