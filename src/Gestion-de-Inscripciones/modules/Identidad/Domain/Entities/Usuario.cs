@@ -1,4 +1,4 @@
-ï»¿namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
 {
     public abstract class Usuario
     {
@@ -16,7 +16,7 @@
 
         public void Identificar()
         {
-            // LÃ³gica de dominio para marcar el login/sesiÃ³n[cite: 16]
+            // Lógica de dominio para marcar el login/sesión[cite: 16]
         }
 
         public void RegistrarAccion(string accion)

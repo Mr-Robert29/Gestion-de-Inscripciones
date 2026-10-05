@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -36,7 +36,7 @@ namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
         {
             if (responsable == null) throw new ArgumentNullException(nameof(responsable));
 
-            // RF-03: Permitir asociar uno o más responsables a un alumno
+            // RF-03: Permitir asociar uno o m�s responsables a un alumno
             if (!_responsables.Contains(responsable))
             {
                 _responsables.Add(responsable);

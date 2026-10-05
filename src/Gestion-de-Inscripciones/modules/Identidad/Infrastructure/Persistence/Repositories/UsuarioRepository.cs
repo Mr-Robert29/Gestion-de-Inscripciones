@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities;
-using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Repository;
+using SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Repositories;
 using SistemaAsignacionEscolar.Api.modules.Identidad.Infrastructure.Persistence.Contexts;
 
 namespace SistemaAsignacionEscolar.Api.modules.Identidad.Infrastructure.Persistence.Repositories

@@ -1,6 +1,6 @@
 using System;
 
-namespace SistemaEducativo.Modulos.Identidad.Application.Alumnos.Queries
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Application.Alumnos.Queries
 {
     public class AlumnoDto
     {

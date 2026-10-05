@@ -1,4 +1,4 @@
-﻿namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
+namespace SistemaAsignacionEscolar.Api.modules.Identidad.Domain.Entities
 {
     public class Domicilio
     {
@@ -23,7 +23,7 @@
         {
             if (string.IsNullOrWhiteSpace(Calle) || string.IsNullOrWhiteSpace(Numero))
             {
-                throw new InvalidOperationException("La calle y el número son obligatorios.");
+                throw new InvalidOperationException("La calle y el n�mero son obligatorios.");
             }
         }
         public (decimal Latitud, decimal Longitud) ObtenerCoordenadas()

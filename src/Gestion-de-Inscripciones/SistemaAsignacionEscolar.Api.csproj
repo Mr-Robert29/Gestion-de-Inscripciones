@@ -9,11 +9,12 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="modules\Identidad\Application\" />
-      <Folder Include="modules\Identidad\Domain\NewFolder\" />
       <Folder Include="modules\Identidad\Infraestructure\" />
     </ItemGroup>
 
