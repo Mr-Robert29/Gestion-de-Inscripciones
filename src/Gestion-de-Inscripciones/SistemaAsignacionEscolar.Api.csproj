@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <DefaultItemExcludes>$(DefaultItemExcludes);**/bin/**;**/obj/**</DefaultItemExcludes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,6 +17,19 @@
     <ItemGroup>
       <Folder Include="modules\Identidad\Application\" />
       <Folder Include="modules\Identidad\Infraestructure\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Modulos\Usuarios\Contracts\Jardin.Usuarios.Contracts.csproj" />
+        <ProjectReference Include="..\Modulos\Usuarios\Infrastructure\Jardin.Usuarios.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modulos\Configuracion\Contracts\Jardin.Configuracion.Contracts.csproj" />
+        <ProjectReference Include="..\Modulos\Configuracion\Infrastructure\Jardin.Configuracion.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modulos\Inscripciones\Contracts\Jardin.Inscripciones.Contracts.csproj" />
+        <ProjectReference Include="..\Modulos\Inscripciones\Infrastructure\Jardin.Inscripciones.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modulos\Vacantes\Contracts\Jardin.Vacantes.Contracts.csproj" />
+        <ProjectReference Include="..\Modulos\Vacantes\Infrastructure\Jardin.Vacantes.Infrastructure.csproj" />
+        <ProjectReference Include="..\Modulos\Secciones\Contracts\Jardin.Secciones.Contracts.csproj" />
+        <ProjectReference Include="..\Modulos\Secciones\Infrastructure\Jardin.Secciones.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Application\Jardin.Secciones.Application.csproj" />
+    <ProjectReference Include="..\Domain\Jardin.Secciones.Domain.csproj" />
+    <ProjectReference Include="..\Contracts\Jardin.Secciones.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
