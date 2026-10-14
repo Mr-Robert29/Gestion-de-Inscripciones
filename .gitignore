@@ -4,3 +4,8 @@ bin/
 obj/
 *.user
 *.suo
+
+# Archivos de entorno y secretos
+.env
+*.env
+!.env.example
