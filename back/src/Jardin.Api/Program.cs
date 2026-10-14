@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
+// Cargar variables de entorno desde archivo .env si existe en desarrollo local
+CargarArchivoEnv();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Controladores
@@ -20,17 +23,29 @@ builder.Services.AgregarModuloUsuarios(builder.Configuration);
 
 // 4. Autenticacion JWT Bearer
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();
+var claveJwt = !string.IsNullOrWhiteSpace(jwtConfig.ClaveSecreta)
+    ? jwtConfig.ClaveSecreta
+    : builder.Configuration["Jwt:ClaveSecreta"]
+    ?? Environment.GetEnvironmentVariable("Jwt__ClaveSecreta");
+
+if (string.IsNullOrWhiteSpace(claveJwt) || claveJwt.Length < 32)
+{
+    throw new InvalidOperationException(
+        "La clave secreta para la firma JWT no está configurada o tiene menos de 32 caracteres. " +
+        "Asegúrese de definir 'Jwt__ClaveSecreta' en su archivo .env o en las variables de entorno.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opciones =>
     {
         opciones.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = jwtConfig.Emisor,
+            ValidIssuer = !string.IsNullOrWhiteSpace(jwtConfig.Emisor) ? jwtConfig.Emisor : "Jardin.Api",
             ValidateAudience = true,
-            ValidAudience = jwtConfig.Audiencia,
+            ValidAudience = !string.IsNullOrWhiteSpace(jwtConfig.Audiencia) ? jwtConfig.Audiencia : "Jardin.Frontend",
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.ClaveSecreta)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(claveJwt)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -87,3 +102,34 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+static void CargarArchivoEnv()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        var envPath = Path.Combine(dir.FullName, ".env");
+        if (File.Exists(envPath))
+        {
+            foreach (var line in File.ReadAllLines(envPath))
+            {
+                var clean = line.Trim();
+                if (string.IsNullOrWhiteSpace(clean) || clean.StartsWith('#'))
+                    continue;
+
+                var parts = clean.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var key = parts[0].Trim();
+                    var val = parts[1].Trim();
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        Environment.SetEnvironmentVariable(key, val);
+                    }
+                }
+            }
+            break;
+        }
+        dir = dir.Parent;
+    }
+}
