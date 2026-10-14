@@ -2,6 +2,7 @@ using Jardin.Usuarios.Domain;
 using Jardin.Usuarios.Domain.Entidades;
 using Jardin.Usuarios.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Jardin.Usuarios.Infrastructure.Inicializacion;
@@ -11,17 +12,20 @@ public class InicializadorUsuarios
     private readonly ContextoUsuarios _contexto;
     private readonly UserManager<IdentityUser<Guid>> _userManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+    private readonly IConfiguration _configuracion;
     private readonly ILogger<InicializadorUsuarios> _logger;
 
     public InicializadorUsuarios(
         ContextoUsuarios contexto,
         UserManager<IdentityUser<Guid>> userManager,
         RoleManager<IdentityRole<Guid>> roleManager,
+        IConfiguration configuracion,
         ILogger<InicializadorUsuarios> logger)
     {
         _contexto = contexto;
         _userManager = userManager;
         _roleManager = roleManager;
+        _configuracion = configuracion;
         _logger = logger;
     }
 
@@ -36,7 +40,22 @@ public class InicializadorUsuarios
             }
         }
 
-        var correoRoot = "admin@jardin.gob.ar";
+        var correoRoot = _configuracion["UsuarioRoot:Correo"]
+            ?? Environment.GetEnvironmentVariable("UsuarioRoot__Correo")
+            ?? "admin@jardin.gob.ar";
+
+        var claveRoot = _configuracion["UsuarioRoot:Clave"]
+            ?? Environment.GetEnvironmentVariable("UsuarioRoot__Clave");
+
+        var nombreRoot = _configuracion["UsuarioRoot:Nombre"]
+            ?? "Administrador Root";
+
+        if (string.IsNullOrWhiteSpace(claveRoot))
+        {
+            _logger.LogWarning("No se ha configurado la contraseña para el usuario Root inicial ('UsuarioRoot:Clave' o variable de entorno 'UsuarioRoot__Clave'). Se omite la creación del usuario inicial.");
+            return;
+        }
+
         var usuarioRoot = await _userManager.FindByEmailAsync(correoRoot);
 
         if (usuarioRoot is null)
@@ -50,14 +69,13 @@ public class InicializadorUsuarios
                 EmailConfirmed = true
             };
 
-            const string claveRoot = "Admin123*!";
             var creacionResult = await _userManager.CreateAsync(identityUser, claveRoot);
 
             if (creacionResult.Succeeded)
             {
                 await _userManager.AddToRoleAsync(identityUser, RolesPersonal.AdministradorDelSistema);
 
-                var personalRoot = new UsuarioPersonal(rootId, "Administrador Root", correoRoot);
+                var personalRoot = new UsuarioPersonal(rootId, nombreRoot, correoRoot);
                 await _contexto.UsuariosPersonal.AddAsync(personalRoot, cancellationToken);
                 await _contexto.SaveChangesAsync(cancellationToken);
 

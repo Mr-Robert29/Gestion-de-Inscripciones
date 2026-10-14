@@ -24,6 +24,14 @@ public class GeneradorTokenJwt : IGeneradorTokenJwt
         IReadOnlyList<string> permisos,
         IReadOnlyList<Guid> institucionesPermitidas)
     {
+        var claveSecreta = _configuracion.ClaveSecreta;
+        if (string.IsNullOrWhiteSpace(claveSecreta) || claveSecreta.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "La clave secreta para la firma JWT no está configurada o tiene menos de 32 caracteres. " +
+                "Configure 'Jwt:ClaveSecreta' en appsettings o la variable de entorno 'Jwt__ClaveSecreta'.");
+        }
+
         var expiracion = DateTimeOffset.UtcNow.AddMinutes(_configuracion.MinutosExpiracion);
 
         var claims = new List<Claim>
@@ -49,7 +57,7 @@ public class GeneradorTokenJwt : IGeneradorTokenJwt
             claims.Add(new Claim("institucion_id", instId.ToString()));
         }
 
-        var clave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuracion.ClaveSecreta));
+        var clave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(claveSecreta));
         var credenciales = new SigningCredentials(clave, SecurityAlgorithms.HmacSha256);
 
         var tokenDescriptor = new SecurityTokenDescriptor
