@@ -1,6 +1,7 @@
 namespace Jardin.Configuracion.Domain.ObjetosDeValor;
 
 // Valor local de Configuración para la futura Institucion.
+// sealed record Domicilio impide la herencia y permite la comparación de igualdad por valor. 
 public sealed record Domicilio
 {
     public string Calle { get; }
@@ -16,10 +17,15 @@ public sealed record Domicilio
         string? codigoPostal = null, string? complemento = null,
         string? piso = null, string? departamento = null, string? barrio = null)
     {
-        Calle = calle?.Trim() ?? ""; Numero = numero?.Trim() ?? "";
-        Localidad = localidad?.Trim() ?? ""; Provincia = provincia?.Trim() ?? "";
-        CodigoPostal = codigoPostal; Complemento = complemento;
-        Piso = piso; Departamento = departamento; Barrio = barrio;
+        Calle = calle?.Trim() ?? "";
+        Numero = numero?.Trim() ?? "";
+        Localidad = localidad?.Trim() ?? "";
+        Provincia = provincia?.Trim() ?? "";
+        CodigoPostal = codigoPostal;
+        Complemento = complemento;
+        Piso = piso;
+        Departamento = departamento;
+        Barrio = barrio;
         // La obligatoriedad por tipo de dirección se completa con P-14.
     }
 }
