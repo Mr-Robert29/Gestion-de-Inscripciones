@@ -2,6 +2,7 @@ namespace Jardin.Usuarios.Application.Abstracciones;
 
 public interface IServicioIdentidad
 {
+    Task<IReadOnlyList<string>> ObtenerRolesAsync(Guid usuarioId, CancellationToken tokenCancelacion = default);
     Task<(bool Exito, string? Error)> CrearCuentaAsync(
         Guid usuarioId,
         string correoElectronico,

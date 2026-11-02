@@ -5,6 +5,13 @@ namespace Jardin.Usuarios.Infrastructure.Identidad;
 
 public class AdaptadorIdentidad : IServicioIdentidad
 {
+    // Implementa IServicioIdentidad.ObtenerRolesAsync: consulta roles vigentes, incluido Root sin acceso institucional.
+    public async Task<IReadOnlyList<string>> ObtenerRolesAsync(Guid usuarioId, CancellationToken tokenCancelacion = default)
+    {
+        tokenCancelacion.ThrowIfCancellationRequested();
+        var usuario = await _userManager.FindByIdAsync(usuarioId.ToString());
+        return usuario is null ? Array.Empty<string>() : (await _userManager.GetRolesAsync(usuario)).ToArray();
+    }
     private readonly UserManager<IdentityUser<Guid>> _userManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
 
