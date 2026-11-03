@@ -84,7 +84,7 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     autor,
                     solicitud.Id,
                     "Solicitud.Registro",
-                    JsonSerializer.Serialize(Mapear(solicitud)));
+                    JsonSerializer.Serialize(MapeoSolicitudes.Convertir(solicitud)));
                 await _solicitudes.AgregarAsync(
                     solicitud,
                     cambio,
@@ -112,7 +112,7 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
             institucionId,
             solicitudId,
             tokenCancelacion);
-        return solicitud is null ? null : Mapear(solicitud);
+        return solicitud is null ? null : MapeoSolicitudes.Convertir(solicitud);
     }
 
     // Implementa IModuloSolicitudes.ListarAsync.
@@ -137,45 +137,10 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
             peticion.TamanoPagina + 1,
             tokenCancelacion);
         return new ListarSolicitudesRespuesta(
-            solicitudes.Take(peticion.TamanoPagina).Select(Mapear).ToArray(),
+            solicitudes.Take(peticion.TamanoPagina).Select(MapeoSolicitudes.Convertir).ToArray(),
             peticion.Pagina,
             peticion.TamanoPagina,
             solicitudes.Count > peticion.TamanoPagina);
     }
 
-    private static ConsultarSolicitudRespuesta Mapear(SolicitudInscripcion solicitud)
-    {
-        var domicilio = solicitud.DomicilioDeclarado;
-        return new ConsultarSolicitudRespuesta(
-            solicitud.Id,
-            solicitud.InstitucionId,
-            solicitud.PeriodoId,
-            solicitud.AspiranteId,
-            new DatosDomicilioSolicitud(
-                domicilio.Calle,
-                domicilio.Numero,
-                domicilio.Localidad,
-                domicilio.Provincia,
-                domicilio.CodigoPostal,
-                domicilio.Complemento,
-                domicilio.Piso,
-                domicilio.Departamento,
-                domicilio.Barrio),
-            solicitud.CalculoEdad.FechaNacimientoUtilizada,
-            solicitud.CalculoEdad.FechaCorteUtilizada,
-            solicitud.CalculoEdad.EdadCalculada,
-            solicitud.CalculoEdad.Sala,
-            solicitud.RequiereRevisionEdad,
-            solicitud.TurnoPreferidoId,
-            solicitud.TurnosAlternativos.Select(t => t.TurnoId).Order().ToArray(),
-            solicitud.VersionReglasId,
-            solicitud.VersionOfertaId,
-            solicitud.RevisionPeriodoUtilizada,
-            solicitud.EstadoRecepcion.ToString(),
-            solicitud.FueraDeTermino,
-            solicitud.UsuarioRegistroId,
-            solicitud.FechaRegistro,
-            solicitud.ReferenciaConsentimiento,
-            solicitud.RevisionDatos);
-    }
 }

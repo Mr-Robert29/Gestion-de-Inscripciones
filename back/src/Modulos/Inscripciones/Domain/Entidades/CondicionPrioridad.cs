@@ -53,5 +53,25 @@ public sealed class CondicionPrioridad
         FechaRevision = DateTimeOffset.UtcNow;
     }
 
+    // Una verificación anterior no se traslada silenciosamente a un contenido distinto.
+    public void CorregirDeclaracion(
+        string tipo,
+        string valorDeclarado,
+        string? evidenciaReferencia)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tipo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(valorDeclarado);
+        var referencia = Normalizar(evidenciaReferencia);
+        if (Tipo == tipo.Trim() && ValorDeclarado == valorDeclarado.Trim() && EvidenciaReferencia == referencia)
+            throw new InvalidOperationException("No se detectaron cambios en la declaración.");
+        Tipo = tipo.Trim();
+        ValorDeclarado = valorDeclarado.Trim();
+        EvidenciaReferencia = referencia;
+        EstadoVerificacion = EstadoVerificacionCondicion.PendienteRevision;
+        Observacion = null;
+        UsuarioRevisionId = null;
+        FechaRevision = null;
+    }
+
     private static string? Normalizar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 }

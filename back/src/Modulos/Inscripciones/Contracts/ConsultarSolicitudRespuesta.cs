@@ -21,4 +21,5 @@ public sealed record ConsultarSolicitudRespuesta(
     Guid UsuarioRegistroId,
     DateTimeOffset FechaRegistro,
     string? ReferenciaConsentimiento,
-    int RevisionDatos);
+    int RevisionDatos,
+    int RevisionDomicilio = 1);

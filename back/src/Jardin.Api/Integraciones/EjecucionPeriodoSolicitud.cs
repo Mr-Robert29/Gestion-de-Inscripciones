@@ -70,4 +70,34 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
                 : throw new KeyNotFoundException("El período no pertenece a esta institución."),
             tokenCancelacion);
     }
+    // Implementa IEjecucionPeriodoSolicitud.EjecutarCorreccionAsync: conserva la oferta histórica de la solicitud.
+    public Task<T> EjecutarCorreccionAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Guid versionOfertaId,
+        Func<DatosPeriodoCorreccionSolicitud, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        return _periodos.EjecutarConPeriodoProtegidoAsync(
+            periodoId,
+            async (periodo, token) =>
+            {
+                if (periodo.InstitucionId != institucionId) throw new KeyNotFoundException("El período no pertenece a esta institución.");
+                var version = await _versiones.ConsultarAsync(versionOfertaId, token);
+                if (version is null || version.PeriodoId != periodoId || version.Tipo != "Oferta" || version.Formato != 1)
+                    throw new InvalidOperationException("La versión de oferta de la solicitud no es compatible.");
+                ConsultarOfertaRespuesta[] oferta;
+                try
+                {
+                    oferta = version.Datos.Deserialize<ConsultarOfertaRespuesta[]>() ?? throw new InvalidOperationException("Oferta vacía.");
+                }
+                catch (JsonException) { throw new InvalidOperationException("No se pudo interpretar la oferta publicada."); }
+                if (oferta.Any(o => o is null || o.PeriodoId != periodoId)) throw new InvalidOperationException("Oferta incompatible.");
+                return await operacion(new DatosPeriodoCorreccionSolicitud(
+                    periodo.Estado,
+                    oferta.Where(o => o.Disponible).Select(o => o.TurnoId).Distinct().ToArray()), token);
+            },
+            tokenCancelacion);
+    }
 }

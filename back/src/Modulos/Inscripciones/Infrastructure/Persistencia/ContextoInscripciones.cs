@@ -7,6 +7,7 @@ public sealed class ContextoInscripciones : DbContext
 {
     public DbSet<DocumentacionSolicitud> DocumentosSolicitud => Set<DocumentacionSolicitud>();
     public DbSet<CondicionPrioridad> CondicionesPrioridad => Set<CondicionPrioridad>();
+    public DbSet<UsoDatosSolicitud> UsosDatosSolicitud => Set<UsoDatosSolicitud>();
     public DbSet<SolicitudInscripcion> Solicitudes => Set<SolicitudInscripcion>();
     public DbSet<Aspirante> Aspirantes => Set<Aspirante>();
     public DbSet<Responsable> Responsables => Set<Responsable>();
@@ -20,8 +21,18 @@ public sealed class ContextoInscripciones : DbContext
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("inscripciones");
+        modelo.HasDbFunction(typeof(TextoBusquedaInscripciones).GetMethod(nameof(TextoBusquedaInscripciones.Mayusculas))!)
+            .HasName("upper").IsBuiltIn();
         MapeoSolicitudes.Configurar(modelo);
         MapeoAntecedentesSolicitud.Configurar(modelo);
+        var uso = modelo.Entity<UsoDatosSolicitud>();
+        uso.ToTable("usos_datos_solicitud");
+        uso.HasKey(u => u.Id);
+        uso.Property(u => u.Id).ValueGeneratedNever();
+        uso.Property(u => u.Tipo).IsRequired();
+        uso.HasOne<SolicitudInscripcion>().WithMany().HasForeignKey(u => u.SolicitudId).OnDelete(DeleteBehavior.Restrict);
+        uso.HasIndex(u => new { u.SolicitudId, u.ReferenciaId, u.Tipo, u.RevisionDatos, u.RevisionDomicilio })
+            .IsUnique().HasDatabaseName("UX_UsoSolicitud_Referencia_Revision");
         var aspirante = modelo.Entity<Aspirante>();
         aspirante.ToTable("aspirantes");
         aspirante.HasKey(a => a.Id);

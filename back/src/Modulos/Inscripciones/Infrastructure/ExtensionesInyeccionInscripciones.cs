@@ -22,6 +22,10 @@ public static class ExtensionesInyeccionInscripciones
         servicios.AddScoped<IModuloSolicitudes, ServicioSolicitudes>();
         servicios.AddScoped<IRepositorioAntecedentesSolicitud, RepositorioAntecedentesSolicitud>();
         servicios.AddScoped<IModuloAntecedentesSolicitud, ServicioAntecedentesSolicitud>();
+        servicios.AddScoped<IRepositorioCorreccionesSolicitudes, RepositorioCorreccionesSolicitudes>();
+        servicios.AddScoped<IModuloCorreccionesSolicitudes, ServicioCorreccionesSolicitudes>();
+        servicios.AddScoped<IRepositorioUsoDatosSolicitud, RepositorioUsoDatosSolicitud>();
+        servicios.AddScoped<IModuloUsoDatosSolicitud, ServicioUsoDatosSolicitud>();
         return servicios;
     }
 }

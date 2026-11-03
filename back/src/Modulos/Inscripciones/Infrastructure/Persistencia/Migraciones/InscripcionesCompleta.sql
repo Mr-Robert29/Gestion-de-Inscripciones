@@ -306,3 +306,44 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    ALTER TABLE inscripciones.solicitudes ADD "RevisionDomicilio" integer NOT NULL DEFAULT 1;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    CREATE TABLE inscripciones.usos_datos_solicitud (
+        "Id" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "ReferenciaId" uuid NOT NULL,
+        "Tipo" text NOT NULL,
+        "RevisionDatos" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        CONSTRAINT "PK_usos_datos_solicitud" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_usos_datos_solicitud_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    CREATE UNIQUE INDEX "UX_UsoSolicitud_Referencia_Revision" ON inscripciones.usos_datos_solicitud ("SolicitudId", "ReferenciaId", "Tipo", "RevisionDatos", "RevisionDomicilio");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103161223_CorreccionesEImpactoSolicitudes', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+
