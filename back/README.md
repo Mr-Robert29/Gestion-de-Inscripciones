@@ -112,3 +112,9 @@ Ambas solicitudes se conservan. Elegir cuál continúa y aplicar esa decisión a
 Inscripciones permite ingresar provisionalmente una distancia en metros, con decimales, referencia de cómo se obtuvo, usuario y fecha. Corregir agrega una nueva carga y conserva el historial. Las consultas distinguen el último registro y señalan si cambiaron los domicilios utilizados; incluye permisos, migración y protección de concurrencia.
 
 Por decisión del usuario, Geoapify, la localización y el cálculo automático quedan pospuestos. El origen se identifica como ManualProvisional; esta alternativa no completa los criterios automáticos de HU-11 ni verifica la precisión física del dato.
+
+## HU-13 — Cierre de recepción
+
+El cierre de Configuración ya integrado con Inscripciones impide nuevas recepciones ordinarias y conserva las posteriores como fuera de término pendientes de autorización. Permite continuar revisiones y conserva las versiones asignadas e históricas. Se agregó una prueba de integración específica de estado, versiones, historial y permisos.
+
+Quedan pendientes el procedimiento de autorización fuera de término y los procesos reales de propuestas/confirmación. Esta revisión no agrega tablas, migraciones ni otro endpoint de cierre.

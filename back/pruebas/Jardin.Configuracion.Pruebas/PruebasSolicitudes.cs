@@ -196,6 +196,19 @@ public static class PruebasSolicitudes
         comprobar(historial.Count(c => c.Accion == "Solicitud.Registro") == 6 &&
             historial.Any(c => c.EntidadId == fuera.Id && c.Datos.Contains("FueraDeTerminoPendienteAutorizacion")),
             "Cada solicitud y su situación de recepción quedan auditadas sin guardar intentos rechazados.");
+        await PruebasCierreRecepcion.EjecutarAsync(
+            cliente,
+            iniciarSesion,
+            new EscenarioCierreRecepcion(
+                institucion,
+                periodo,
+                registrada.Id,
+                fuera.Id,
+                reglas,
+                nuevasReglas,
+                versionOferta,
+                entrada),
+            comprobar);
         using var alcance = aplicacion.Services.CreateScope();
         await PruebasSolicitudesPersistencia.EjecutarAsync(
             alcance.ServiceProvider.GetRequiredService<DbContextOptions<ContextoInscripciones>>(),
