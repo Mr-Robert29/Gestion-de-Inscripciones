@@ -29,7 +29,25 @@ public static class PruebasSorteos
         comprobar(periodoRespuesta.StatusCode == HttpStatusCode.Created, "Se crea el período de prueba para sorteos.");
         var periodo = (await periodoRespuesta.Content.ReadFromJsonAsync<CrearPeriodoRespuesta>())!.Id;
 
+        var periodoActual = (await cliente.GetFromJsonAsync<ConsultarPeriodoRespuesta>($"/api/v1/periodos/{periodo}"))!;
+        var abrir = await cliente.PostAsJsonAsync(
+            $"/api/v1/periodos/{periodo}/abrir",
+            new CambiarRecepcionPeticion(periodoActual.Revision, "Preparar la recepción"));
+        comprobar(abrir.StatusCode == HttpStatusCode.OK, "Se abre el período antes de registrar solicitudes.");
+
         var ruta = $"/api/v1/periodos/{periodo}/sorteos";
+        var antesDelCierre = await cliente.PostAsJsonAsync(
+            ruta,
+            new RegistrarSorteoPeticion(347, new DateOnly(2026, 12, 1), "Intento prematuro", 3));
+        comprobar(antesDelCierre.StatusCode == HttpStatusCode.Conflict,
+            "Se impide registrar el sorteo mientras la recepción permanece abierta.");
+
+        periodoActual = (await cliente.GetFromJsonAsync<ConsultarPeriodoRespuesta>($"/api/v1/periodos/{periodo}"))!;
+        var cerrar = await cliente.PostAsJsonAsync(
+            $"/api/v1/periodos/{periodo}/cerrar-recepcion",
+            new CambiarRecepcionPeticion(periodoActual.Revision, "Cerrar la recepción para procesar"));
+        comprobar(cerrar.StatusCode == HttpStatusCode.OK, "Se cierra la recepción para habilitar el sorteo.");
+
         var primero = await cliente.PostAsJsonAsync(
             ruta,
             new RegistrarSorteoPeticion(0, new DateOnly(2026, 12, 1), "Acta Lotería 001", 3));
@@ -58,5 +76,10 @@ public static class PruebasSorteos
             ruta,
             new RegistrarSorteoPeticion(999, new DateOnly(2026, 12, 3), "Sala inválida", 2));
         comprobar(salaInvalida.StatusCode == HttpStatusCode.BadRequest, "Se rechaza una sala fuera del rango permitido.");
+
+        var orden = await cliente.GetAsync($"{ruta}/3/orden");
+        comprobar(orden.StatusCode == HttpStatusCode.OK &&
+            (await orden.Content.ReadFromJsonAsync<DatosOrdenSorteo[]>())!.Length == 0,
+            "La API calcula el orden vigente para la sala sin participantes pendientes.");
     }
 }
