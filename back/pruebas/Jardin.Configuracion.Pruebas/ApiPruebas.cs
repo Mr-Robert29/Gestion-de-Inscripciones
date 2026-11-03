@@ -1,3 +1,4 @@
+using Jardin.Inscripciones.Infrastructure.Persistencia;
 using Jardin.Api;
 using Jardin.Configuracion.Infrastructure.Persistencia;
 using Jardin.Usuarios.Domain;
@@ -16,10 +17,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Jardin.Configuracion.Pruebas;
 
-// Dos bases SQLite aisladas: nunca se usa la conexión local de la aplicación.
+// Bases aisladas por módulo: nunca se usa la conexión local de la aplicación.
 public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
 {
     private readonly SqliteConnection _configuracion = new("Data Source=:memory:");
+    private readonly SqliteConnection _inscripciones = new("Data Source=:memory:");
     private readonly SqliteConnection _usuarios = new("Data Source=:memory:");
     private readonly string _contenidoApi;
 
@@ -27,6 +29,7 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
     {
         _contenidoApi = contenidoApi;
         _configuracion.Open();
+        _inscripciones.Open();
         _usuarios.Open();
     }
 
@@ -45,6 +48,8 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
         {
             servicios.RemoveAll<DbContextOptions<ContextoConfiguracion>>();
             servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoConfiguracion>>();
+            servicios.RemoveAll<DbContextOptions<ContextoInscripciones>>();
+            servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoInscripciones>>();
             servicios.RemoveAll<DbContextOptions<ContextoUsuarios>>();
             servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoUsuarios>>();
             var conexionPostgres = Environment.GetEnvironmentVariable("HU01_POSTGRES_PRUEBAS");
@@ -58,6 +63,13 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
                 else
                     opciones.UseNpgsql(conexionPostgres, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "configuracion"));
             });
+            servicios.AddDbContext<ContextoInscripciones>(opciones =>
+            {
+                if (string.IsNullOrWhiteSpace(conexionPostgres))
+                    opciones.UseSqlite(_inscripciones);
+                else
+                    opciones.UseNpgsql(conexionPostgres, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "inscripciones"));
+            });
             servicios.AddDbContext<ContextoUsuarios>(opciones => opciones.UseSqlite(_usuarios));
         });
     }
@@ -70,10 +82,16 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
             await contextoConfiguracion.Database.MigrateAsync();
         else
             await contextoConfiguracion.Database.EnsureCreatedAsync();
+        var contextoInscripciones = alcance.ServiceProvider.GetRequiredService<ContextoInscripciones>();
+        if (contextoInscripciones.Database.IsNpgsql())
+            await contextoInscripciones.Database.MigrateAsync();
+        else
+            await contextoInscripciones.Database.EnsureCreatedAsync();
         await alcance.ServiceProvider.GetRequiredService<ContextoUsuarios>().Database.EnsureCreatedAsync();
         var roles = alcance.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         foreach (var rol in RolesPersonal.Todos)
             await roles.CreateAsync(new IdentityRole<Guid>(rol));
+        await CrearUsuarioAsync("inscripciones@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("root@prueba.example", RolesPersonal.AdministradorDelSistema);
         await CrearUsuarioAsync("administrativo@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("directivo@prueba.example", RolesPersonal.Directivo);

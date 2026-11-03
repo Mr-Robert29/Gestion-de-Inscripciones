@@ -1,3 +1,5 @@
+using Jardin.Inscripciones.Infrastructure;
+using Jardin.Inscripciones.Application.Seguridad;
 using System.Text;
 using Jardin.Configuracion.Infrastructure;
 using Jardin.Configuracion.Application.Seguridad;
@@ -25,8 +27,10 @@ builder.Services.AddOpenApi();
 // 3. Modulo Usuarios (Infrastructure)
 builder.Services.AgregarModuloUsuarios(builder.Configuration);
 builder.Services.AgregarModuloConfiguracion(builder.Configuration);
+builder.Services.AgregarModuloInscripciones(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IContextoUsuarioConfiguracion, ContextoUsuarioConfiguracion>();
+builder.Services.AddScoped<IAccesoInstitucionesInscripciones, AccesoInstitucionesInscripciones>();
 
 // 4. Autenticacion JWT Bearer
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();

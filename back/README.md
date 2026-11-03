@@ -74,3 +74,9 @@ Configuración permite registrar aulas y turnos, configurar oferta por período,
 Configuración permite publicar versiones inmutables de reglas y oferta y elegir explícitamente cuáles utiliza un período. Las publicaciones anteriores permanecen consultables; cambiar el borrador de oferta no modifica esas copias. Las consultas de períodos incluyen VersionReglasId y VersionOfertaId.
 
 Se publican las reglas acordadas del perfil Prototipo-2026-1 con fecha de corte explícita. La comprobación de vigencia compara las referencias actuales; su integración con propuestas, resultados y confirmación transaccional sigue pendiente. La apertura sin configuración válida de HU-02 conserva la omisión aprobada para el prototipo.
+
+## HU-06 — Personas de Inscripciones
+
+Inscripciones permite registrar y consultar aspirantes y responsables, buscar responsables por institución y vincular una misma persona con varios aspirantes. Incluye registro sin DNI, permisos actuales por institución, auditoría y migración propia en el esquema inscripciones. La solicitud asociada a período/domicilio todavía corresponde a HU-07.
+
+La conexión admite ConnectionStrings__Inscripciones y, si se omite, utiliza DefaultConnection. Aplicar las migraciones de ContextoInscripciones antes de usar estos endpoints en la base local.
