@@ -19,4 +19,8 @@ public interface IRepositorioSolicitudes
         int desplazamiento,
         int cantidad,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<SolicitudEvaluableInterna>> ListarEvaluablesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default);
 }

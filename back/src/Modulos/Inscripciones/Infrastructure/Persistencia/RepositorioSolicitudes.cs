@@ -43,4 +43,41 @@ public sealed class RepositorioSolicitudes : IRepositorioSolicitudes
         => await _contexto.Solicitudes.AsNoTracking().AsSingleQuery().Include(s => s.TurnosAlternativos)
             .Where(s => s.InstitucionId == institucionId && s.PeriodoId == periodoId)
             .OrderBy(s => s.Id).Skip(desplazamiento).Take(cantidad).ToArrayAsync(tokenCancelacion);
+
+    public async Task<IReadOnlyList<SolicitudEvaluableInterna>> ListarEvaluablesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default)
+    {
+        var solicitudes = await _contexto.Solicitudes
+            .AsNoTracking()
+            .AsSingleQuery()
+            .Include(s => s.Condiciones)
+            .Where(s => s.InstitucionId == institucionId && s.PeriodoId == periodoId)
+            .OrderBy(s => s.Id)
+            .ToArrayAsync(tokenCancelacion);
+        var ids = solicitudes.Select(s => s.Id).ToArray();
+        var distancias = await _contexto.MedicionesDistancia
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.SolicitudId))
+            .OrderByDescending(m => m.NumeroRegistro)
+            .ToArrayAsync(tokenCancelacion);
+
+        return solicitudes.Select(s =>
+        {
+            var distancia = distancias.FirstOrDefault(m =>
+                m.SolicitudId == s.Id && m.RevisionDomicilio == s.RevisionDomicilio);
+            return new SolicitudEvaluableInterna(
+                s.Id,
+                s.AspiranteId,
+                s.InstitucionId,
+                s.PeriodoId,
+                s.CalculoEdad.Sala,
+                s.FueraDeTermino,
+                s.Condiciones.ToArray(),
+                distancia?.DistanciaMetros,
+                s.RevisionDatos,
+                s.RevisionDomicilio);
+        }).ToArray();
+    }
 }
