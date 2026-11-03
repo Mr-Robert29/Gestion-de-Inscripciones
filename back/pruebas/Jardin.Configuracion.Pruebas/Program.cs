@@ -142,6 +142,10 @@ public static class EjecutorPruebas
             cliente,
             correo => IniciarSesionAsync(cliente, correo),
             Comprobar);
+        await PruebasOferta.EjecutarAsync(
+            cliente,
+            correo => IniciarSesionAsync(cliente, correo),
+            Comprobar);
         using (var alcance = aplicacion.Services.CreateScope())
         {
             var cuentas = alcance.ServiceProvider.GetRequiredService<UserManager<IdentityUser<Guid>>>();

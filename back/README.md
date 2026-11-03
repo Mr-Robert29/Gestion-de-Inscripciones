@@ -61,3 +61,10 @@ Configuración también permite crear y consultar períodos y abrir/cerrar recep
 
 - [HU-02 — Primera versión](docs/HU-02-Primera-version.md).
 - [Cosas pendientes de las historias trabajadas](<docs/Cosas pendientes.md>).
+
+## Primera versión de HU-03
+
+Configuración permite registrar aulas y turnos, configurar oferta por período, disponibilidad, capacidad documentada y ocupaciones iniciales por edad. Incluye permisos, historial y revisión concurrente.
+
+- [HU-03 — Operaciones, ejemplos, migración y comprobaciones](docs/HU-03-Primera-version.md).
+- La capacidad neta inicial no es el cálculo final de vacantes. Las integraciones y decisiones pendientes se mantienen en Cosas pendientes.md.
