@@ -1,5 +1,6 @@
 using System.Text;
 using Jardin.Api.Middlewares;
+using Jardin.Secciones.Infrastructure;
 using Jardin.Usuarios.Infrastructure;
 using Jardin.Usuarios.Infrastructure.Inicializacion;
 using Jardin.Usuarios.Infrastructure.Tokens;
@@ -7,21 +8,22 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
-// Cargar variables de entorno desde archivo .env si existe en desarrollo local
+
 CargarArchivoEnv();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controladores
+
 builder.Services.AddControllers();
 
-// 2. Documentacion OpenAPI y Swagger
+
 builder.Services.AddOpenApi();
 
-// 3. Modulo Usuarios (Infrastructure)
+
 builder.Services.AgregarModuloUsuarios(builder.Configuration);
 
-// 4. Autenticacion JWT Bearer
+builder.Services.AgregarModuloSecciones(builder.Configuration);
+
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();
 var claveJwt = !string.IsNullOrWhiteSpace(jwtConfig.ClaveSecreta)
     ? jwtConfig.ClaveSecreta
@@ -53,7 +55,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// 5. CORS
 builder.Services.AddCors(opciones =>
 {
     opciones.AddDefaultPolicy(politica =>
@@ -64,7 +65,6 @@ builder.Services.AddCors(opciones =>
 
 var app = builder.Build();
 
-// 6. Pipeline HTTP
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -84,7 +84,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// 7. Inicializacion de datos iniciales / Seed
 using (var scope = app.Services.CreateScope())
 {
     var inicializador = scope.ServiceProvider.GetService<InicializadorUsuarios>();
