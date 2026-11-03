@@ -182,6 +182,13 @@ public static class PruebasDistanciasManuales
         cliente.DefaultRequestHeaders.Authorization = autorizacion;
         await iniciarSesion("root@prueba.example");
         using var alcance = aplicacion.Services.CreateScope();
+        await PruebasRevisionDomicilios.EjecutarAsync(
+            cliente,
+            aplicacion,
+            iniciarSesion,
+            institucion,
+            solicitud,
+            comprobar);
         await PruebasDistanciasPersistencia.EjecutarAsync(
             alcance.ServiceProvider.GetRequiredService<DbContextOptions<ContextoInscripciones>>(),
             institucion,

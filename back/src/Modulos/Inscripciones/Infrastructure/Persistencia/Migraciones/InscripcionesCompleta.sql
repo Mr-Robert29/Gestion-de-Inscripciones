@@ -455,3 +455,58 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE TABLE inscripciones.revisiones_domicilio (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "NumeroRegistro" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        "RevisionSolicitudUtilizada" integer NOT NULL,
+        "Estado" text NOT NULL,
+        "Domicilio_Calle" text NOT NULL,
+        "Domicilio_Numero" text NOT NULL,
+        "Domicilio_Localidad" text NOT NULL,
+        "Domicilio_Provincia" text NOT NULL,
+        "Domicilio_CodigoPostal" text,
+        "Domicilio_Complemento" text,
+        "Domicilio_Piso" text,
+        "Domicilio_Departamento" text,
+        "Domicilio_Barrio" text,
+        "UsuarioId" uuid NOT NULL,
+        "Fecha" timestamp with time zone NOT NULL,
+        "Motivo" text NOT NULL,
+        "Referencia" text,
+        CONSTRAINT "PK_revisiones_domicilio" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_revisiones_domicilio_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE INDEX "IX_revisiones_domicilio_InstitucionId_SolicitudId" ON inscripciones.revisiones_domicilio ("InstitucionId", "SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE UNIQUE INDEX "UX_RevisionDomicilio_Solicitud_Numero" ON inscripciones.revisiones_domicilio ("SolicitudId", "NumeroRegistro");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103195435_RevisionManualDomicilios', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

@@ -118,3 +118,9 @@ Por decisión del usuario, Geoapify, la localización y el cálculo automático 
 El cierre de Configuración ya integrado con Inscripciones impide nuevas recepciones ordinarias y conserva las posteriores como fuera de término pendientes de autorización. Permite continuar revisiones y conserva las versiones asignadas e históricas. Se agregó una prueba de integración específica de estado, versiones, historial y permisos.
 
 Quedan pendientes el procedimiento de autorización fuera de término y los procesos reales de propuestas/confirmación. Esta revisión no agrega tablas, migraciones ni otro endpoint de cierre.
+
+## HU-12 — Revisión manual de domicilios
+
+Inscripciones permite registrar domicilios pendientes, observados o revisados manualmente con motivo, referencia, usuario, fecha e historial. Cada decisión conserva la dirección y su revisión; corregirla deja la versión nueva pendiente, mientras que cambiar otros datos conserva la comprobación actual.
+
+Reutiliza la corrección de HU-09 y la carga de distancia manual de HU-11. La revisión puede continuar tras el cierre con permisos, control de concurrencia y migración propia. Localización, reintentos y cálculo automático con Geoapify siguen pendientes; revisar no certifica coordenadas ni genera distancias.

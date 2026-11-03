@@ -10,6 +10,7 @@ public enum OperacionInscripciones
     DetectarDuplicados,
     ResolverDuplicados,
     RegistrarDistanciaManual,
+    RevisarDomicilio,
     CorregirDuranteRecepcion,
     CorregirDespuesDelCierre
 }
