@@ -19,4 +19,9 @@ public interface IRepositorioSolicitudes
         int desplazamiento,
         int cantidad,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<ParticipanteSorteoInterno>> ListarParticipantesSorteoAsync(
+        Guid institucionId,
+        Guid periodoId,
+        int sala,
+        CancellationToken tokenCancelacion = default);
 }

@@ -33,6 +33,13 @@ public sealed class SorteosController : ControllerBase
         CancellationToken cancellationToken)
         => EjecutarAsync(async () => Ok(await _sorteos.ListarVigentesAsync(periodoId, cancellationToken)));
 
+    [HttpGet("{periodoId:guid}/sorteos/{sala:int}/orden")]
+    public Task<IActionResult> CalcularOrden(
+        Guid periodoId,
+        int sala,
+        CancellationToken cancellationToken)
+        => EjecutarAsync(async () => Ok(await _sorteos.CalcularOrdenAsync(periodoId, sala, cancellationToken)));
+
     private async Task<IActionResult> EjecutarAsync(Func<Task<IActionResult>> operacion)
     {
         try { return await operacion(); }
