@@ -6,6 +6,7 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia;
 public sealed class ContextoInscripciones : DbContext
 {
     public DbSet<MedicionDistancia> MedicionesDistancia => Set<MedicionDistancia>();
+    public DbSet<RevisionManualDomicilio> RevisionesDomicilio => Set<RevisionManualDomicilio>();
     public DbSet<DocumentacionSolicitud> DocumentosSolicitud => Set<DocumentacionSolicitud>();
     public DbSet<CondicionPrioridad> CondicionesPrioridad => Set<CondicionPrioridad>();
     public DbSet<PosibleDuplicado> PosiblesDuplicados => Set<PosibleDuplicado>();
@@ -22,21 +23,24 @@ public sealed class ContextoInscripciones : DbContext
 
     public override int SaveChanges(bool aceptarTodosLosCambios)
     {
-        ComprobarHistorialDistancias();
+        ComprobarHistorialesInmutables();
         return base.SaveChanges(aceptarTodosLosCambios);
     }
 
     public override Task<int> SaveChangesAsync(bool aceptarTodosLosCambios, CancellationToken tokenCancelacion = default)
     {
-        ComprobarHistorialDistancias();
+        ComprobarHistorialesInmutables();
         return base.SaveChangesAsync(aceptarTodosLosCambios, tokenCancelacion);
     }
 
-    private void ComprobarHistorialDistancias()
+    private void ComprobarHistorialesInmutables()
     {
         ChangeTracker.DetectChanges();
         if (ChangeTracker.Entries<MedicionDistancia>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("El historial de distancias no se modifica ni se borra; agregá otro registro.");
+        if (ChangeTracker.Entries().Any(e => (e.State is EntityState.Modified or EntityState.Deleted) &&
+            (e.Entity is RevisionManualDomicilio || e.Metadata.FindOwnership()?.PrincipalEntityType.ClrType == typeof(RevisionManualDomicilio))))
+            throw new InvalidOperationException("El historial de revisión de domicilios no se modifica ni se borra; registrá una decisión nueva.");
     }
 
     protected override void OnModelCreating(ModelBuilder modelo)
@@ -48,6 +52,7 @@ public sealed class ContextoInscripciones : DbContext
         MapeoAntecedentesSolicitud.Configurar(modelo);
         MapeoDuplicadosSolicitud.Configurar(modelo);
         MapeoDistancias.Configurar(modelo);
+        MapeoRevisionDomicilios.Configurar(modelo);
         var uso = modelo.Entity<UsoDatosSolicitud>();
         uso.ToTable("usos_datos_solicitud");
         uso.HasKey(u => u.Id);

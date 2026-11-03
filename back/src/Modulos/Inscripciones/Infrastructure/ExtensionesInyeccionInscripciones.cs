@@ -30,6 +30,8 @@ public static class ExtensionesInyeccionInscripciones
         servicios.AddScoped<IModuloDuplicadosSolicitud, ServicioDuplicadosSolicitud>();
         servicios.AddScoped<IRepositorioDistancias, RepositorioDistancias>();
         servicios.AddScoped<IModuloDistancias, ServicioDistancias>();
+        servicios.AddScoped<IRepositorioRevisionDomicilios, RepositorioRevisionDomicilios>();
+        servicios.AddScoped<IModuloRevisionDomicilios, ServicioRevisionDomicilios>();
         return servicios;
     }
 }
