@@ -23,4 +23,9 @@ public interface IRepositorioSolicitudes
         Guid institucionId,
         Guid periodoId,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<ParticipanteSorteoInterno>> ListarParticipantesSorteoAsync(
+        Guid institucionId,
+        Guid periodoId,
+        int sala,
+        CancellationToken tokenCancelacion = default);
 }

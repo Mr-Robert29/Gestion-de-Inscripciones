@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Jardin.Inscripciones.Contracts;
+using Jardin.Vacantes.Application.Persistencia;
 using Jardin.Vacantes.Application.Seguridad;
 using Jardin.Vacantes.Contracts;
 using Jardin.Vacantes.Domain.Entidades;
@@ -12,17 +14,20 @@ public sealed class ServicioPrioridades : IModuloPrioridades
     private readonly IProveedorEstadoPeriodo _periodos;
     private readonly IProveedorReglasPeriodo _reglas;
     private readonly IModuloSolicitudesEvaluables _solicitudes;
+    private readonly IRepositorioEvaluacionesPrioridad _evaluaciones;
 
     public ServicioPrioridades(
         IAutorizacionVacantes autorizacion,
         IProveedorEstadoPeriodo periodos,
         IProveedorReglasPeriodo reglas,
-        IModuloSolicitudesEvaluables solicitudes)
+        IModuloSolicitudesEvaluables solicitudes,
+        IRepositorioEvaluacionesPrioridad evaluaciones)
     {
         _autorizacion = autorizacion;
         _periodos = periodos;
         _reglas = reglas;
         _solicitudes = solicitudes;
+        _evaluaciones = evaluaciones;
     }
 
     public async Task<IReadOnlyList<DatosPrioridad>> EvaluarAsync(
@@ -45,7 +50,7 @@ public sealed class ServicioPrioridades : IModuloPrioridades
                 x.DistanciaMetros)),
             reglas.OrdenSalas,
             reglas.OrdenProcedimiento);
-        return resultados.Select(x => new DatosPrioridad(
+        var respuesta = resultados.Select(x => new DatosPrioridad(
             x.SolicitudId,
             x.AspiranteId,
             x.Sala,
@@ -55,5 +60,14 @@ public sealed class ServicioPrioridades : IModuloPrioridades
             x.CriteriosAplicados,
             x.Explicacion,
             reglas.VersionReglasId)).ToArray();
+        await _evaluaciones.GuardarAsync(
+            new EvaluacionPrioridad(
+                periodoId,
+                reglas.VersionReglasId,
+                autorizacion.UsuarioId,
+                estado.Revision,
+                JsonSerializer.Serialize(respuesta)),
+            cancellationToken);
+        return respuesta;
     }
 }

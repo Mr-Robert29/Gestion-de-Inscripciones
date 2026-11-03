@@ -22,6 +22,7 @@ public static class ExtensionesInyeccionVacantes
             opciones.UseNpgsql(conexion, postgres =>
                 postgres.MigrationsHistoryTable("__EFMigrationsHistory", "vacantes")));
         servicios.AddScoped<IRepositorioSorteos, RepositorioSorteos>();
+        servicios.AddScoped<IRepositorioEvaluacionesPrioridad, RepositorioEvaluacionesPrioridad>();
         servicios.AddScoped<IModuloSorteos, ServicioSorteos>();
         servicios.AddScoped<IModuloPrioridades, ServicioPrioridades>();
         return servicios;

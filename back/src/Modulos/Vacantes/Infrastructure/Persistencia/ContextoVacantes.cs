@@ -6,6 +6,7 @@ namespace Jardin.Vacantes.Infrastructure.Persistencia;
 public sealed class ContextoVacantes : DbContext
 {
     public DbSet<Sorteo> Sorteos => Set<Sorteo>();
+    public DbSet<EvaluacionPrioridad> EvaluacionesPrioridad => Set<EvaluacionPrioridad>();
 
     public ContextoVacantes(DbContextOptions<ContextoVacantes> opciones)
         : base(opciones) { }
@@ -31,5 +32,17 @@ public sealed class ContextoVacantes : DbContext
         sorteo.HasIndex(x => new { x.PeriodoId, x.Sala })
             .IsUnique()
             .HasFilter("\"Vigente\" = true");
+
+        var evaluacion = modelo.Entity<EvaluacionPrioridad>();
+        evaluacion.ToTable("evaluaciones_prioridad");
+        evaluacion.HasKey(x => x.Id);
+        evaluacion.Property(x => x.Id).ValueGeneratedNever();
+        evaluacion.Property(x => x.PeriodoId).IsRequired();
+        evaluacion.Property(x => x.VersionReglasId).IsRequired();
+        evaluacion.Property(x => x.UsuarioId).IsRequired();
+        evaluacion.Property(x => x.RevisionPeriodo).IsRequired();
+        evaluacion.Property(x => x.Fecha).IsRequired();
+        evaluacion.Property(x => x.Datos).IsRequired().HasColumnType("jsonb");
+        evaluacion.HasIndex(x => new { x.PeriodoId, x.Fecha });
     }
 }
