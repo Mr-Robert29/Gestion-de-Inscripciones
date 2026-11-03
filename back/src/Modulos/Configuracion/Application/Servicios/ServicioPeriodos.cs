@@ -158,6 +158,8 @@ public sealed class ServicioPeriodos : IModuloPeriodos
             periodo.Inicio,
             periodo.Fin,
             periodo.Estado.ToString(),
-            periodo.Revision);
+            periodo.Revision,
+            periodo.VersionReglasId,
+            periodo.VersionOfertaId);
     }
 }

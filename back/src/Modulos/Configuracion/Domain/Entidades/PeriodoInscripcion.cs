@@ -17,6 +17,8 @@ public sealed class PeriodoInscripcion
     public DateOnly Fin { get; private set; }
     public EstadoPeriodo Estado { get; private set; }
     public int Revision { get; private set; }
+    public Guid? VersionReglasId { get; private set; }
+    public Guid? VersionOfertaId { get; private set; }
 
     private PeriodoInscripcion() { }
 
@@ -53,6 +55,21 @@ public sealed class PeriodoInscripcion
         if (Estado != EstadoPeriodo.RecepcionAbierta)
             throw new InvalidOperationException("Solo se puede cerrar una recepción abierta.");
         Estado = EstadoPeriodo.RecepcionCerrada;
+        Revision++;
+    }
+
+    public void AsignarConfiguracion(VersionConfiguracion reglas, VersionConfiguracion oferta)
+    {
+        ArgumentNullException.ThrowIfNull(reglas);
+        ArgumentNullException.ThrowIfNull(oferta);
+        if (reglas.PeriodoId != Id || oferta.PeriodoId != Id)
+            throw new ArgumentException("Las versiones deben pertenecer al mismo período.");
+        if (reglas.Tipo != TipoVersionConfiguracion.Reglas || oferta.Tipo != TipoVersionConfiguracion.Oferta)
+            throw new ArgumentException("Seleccioná una versión de reglas y una de oferta.");
+        if (VersionReglasId == reglas.Id && VersionOfertaId == oferta.Id)
+            throw new InvalidOperationException("El período ya utiliza esas versiones.");
+        VersionReglasId = reglas.Id;
+        VersionOfertaId = oferta.Id;
         Revision++;
     }
 

@@ -246,3 +246,82 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    ALTER TABLE configuracion.periodos ADD "VersionOfertaId" uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    ALTER TABLE configuracion.periodos ADD "VersionReglasId" uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    CREATE TABLE configuracion.versiones_configuracion (
+        "Id" uuid NOT NULL,
+        "PeriodoId" uuid NOT NULL,
+        "Tipo" text NOT NULL,
+        "Formato" integer NOT NULL,
+        "Datos" text NOT NULL,
+        "UsuarioId" uuid NOT NULL,
+        "Fecha" timestamp with time zone NOT NULL,
+        "Motivo" text NOT NULL,
+        "Referencia" text NOT NULL,
+        CONSTRAINT "PK_versiones_configuracion" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_versiones_configuracion_periodos_PeriodoId" FOREIGN KEY ("PeriodoId") REFERENCES configuracion.periodos ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    CREATE INDEX "IX_periodos_VersionOfertaId" ON configuracion.periodos ("VersionOfertaId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    CREATE INDEX "IX_periodos_VersionReglasId" ON configuracion.periodos ("VersionReglasId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    CREATE INDEX "IX_versiones_configuracion_PeriodoId" ON configuracion.versiones_configuracion ("PeriodoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    ALTER TABLE configuracion.periodos ADD CONSTRAINT "FK_periodos_versiones_configuracion_VersionOfertaId" FOREIGN KEY ("VersionOfertaId") REFERENCES configuracion.versiones_configuracion ("Id") ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    ALTER TABLE configuracion.periodos ADD CONSTRAINT "FK_periodos_versiones_configuracion_VersionReglasId" FOREIGN KEY ("VersionReglasId") REFERENCES configuracion.versiones_configuracion ("Id") ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261103131354_VersionesConfiguracion') THEN
+    INSERT INTO configuracion."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103131354_VersionesConfiguracion', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

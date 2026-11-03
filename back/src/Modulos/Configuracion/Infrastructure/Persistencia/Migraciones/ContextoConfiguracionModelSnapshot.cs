@@ -182,9 +182,19 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         .IsConcurrencyToken()
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("VersionOfertaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("VersionReglasId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InstitucionId");
+
+                    b.HasIndex("VersionOfertaId");
+
+                    b.HasIndex("VersionReglasId");
 
                     b.ToTable("periodos", "configuracion");
                 });
@@ -232,6 +242,46 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         .IsUnique();
 
                     b.ToTable("usos_ubicacion", "configuracion");
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.VersionConfiguracion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Datos")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Fecha")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Formato")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PeriodoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PeriodoId");
+
+                    b.ToTable("versiones_configuracion", "configuracion");
                 });
 
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Aula", b =>
@@ -372,6 +422,16 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         .HasForeignKey("InstitucionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.VersionConfiguracion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionOfertaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.VersionConfiguracion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionReglasId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Turno", b =>
@@ -388,6 +448,15 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
                         .WithMany()
                         .HasForeignKey("InstitucionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.VersionConfiguracion", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
