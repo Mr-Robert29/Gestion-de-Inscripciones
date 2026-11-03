@@ -43,4 +43,25 @@ public sealed class RepositorioSolicitudes : IRepositorioSolicitudes
         => await _contexto.Solicitudes.AsNoTracking().AsSingleQuery().Include(s => s.TurnosAlternativos)
             .Where(s => s.InstitucionId == institucionId && s.PeriodoId == periodoId)
             .OrderBy(s => s.Id).Skip(desplazamiento).Take(cantidad).ToArrayAsync(tokenCancelacion);
+
+    public async Task<IReadOnlyList<ParticipanteSorteoInterno>> ListarParticipantesSorteoAsync(
+        Guid institucionId,
+        Guid periodoId,
+        int sala,
+        CancellationToken tokenCancelacion = default)
+        => await (
+            from solicitud in _contexto.Solicitudes.AsNoTracking()
+            join aspirante in _contexto.Aspirantes.AsNoTracking()
+                on solicitud.AspiranteId equals aspirante.Id
+            where solicitud.InstitucionId == institucionId &&
+                  solicitud.PeriodoId == periodoId &&
+                  solicitud.CalculoEdad.Sala == sala &&
+                  solicitud.EstadoRecepcion == EstadoRecepcionSolicitud.Ordinaria
+            orderby solicitud.Id
+            select new ParticipanteSorteoInterno(
+                solicitud.Id,
+                solicitud.AspiranteId,
+                solicitud.CalculoEdad.Sala!.Value,
+                aspirante.Dni))
+            .ToArrayAsync(tokenCancelacion);
 }
