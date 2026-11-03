@@ -18,6 +18,8 @@ public static class ExtensionesInyeccionConfiguracion
             opciones.UseNpgsql(conexion, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "configuracion")));
         servicios.AddScoped<IRepositorioInstituciones, RepositorioInstituciones>();
         servicios.AddScoped<IModuloConfiguracion, ServicioConfiguracion>();
+        servicios.AddScoped<IRepositorioPeriodos, RepositorioPeriodos>();
+        servicios.AddScoped<IModuloPeriodos, ServicioPeriodos>();
         return servicios;
     }
 }

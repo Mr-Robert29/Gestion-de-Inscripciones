@@ -9,12 +9,21 @@ public sealed class ContextoConfiguracion : DbContext
     public DbSet<Institucion> Instituciones => Set<Institucion>();
     public DbSet<CambioInstitucion> Cambios => Set<CambioInstitucion>();
     public DbSet<UsoUbicacion> UsosUbicacion => Set<UsoUbicacion>();
+    public DbSet<PeriodoInscripcion> Periodos => Set<PeriodoInscripcion>();
 
     public ContextoConfiguracion(DbContextOptions<ContextoConfiguracion> opciones) : base(opciones) { }
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("configuracion");
+        var periodo = modelo.Entity<PeriodoInscripcion>();
+        periodo.ToTable("periodos");
+        periodo.HasKey(p => p.Id);
+        periodo.Property(p => p.Id).ValueGeneratedNever();
+        periodo.Property(p => p.Estado).HasConversion<string>().IsRequired();
+        periodo.Property(p => p.Revision).IsConcurrencyToken();
+        periodo.HasOne<Institucion>().WithMany().HasForeignKey(p => p.InstitucionId).OnDelete(DeleteBehavior.Restrict);
+        periodo.HasIndex(p => p.InstitucionId);
         var institucion = modelo.Entity<Institucion>();
         institucion.ToTable("instituciones");
         institucion.HasKey(i => i.Id);

@@ -93,6 +93,38 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.ToTable("instituciones", "configuracion");
                 });
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Ciclo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Fin")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("Inicio")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstitucionId");
+
+                    b.ToTable("periodos", "configuracion");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.UsoUbicacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -196,6 +228,15 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.Navigation("Coordenadas");
 
                     b.Navigation("Domicilio")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
+                        .WithMany()
+                        .HasForeignKey("InstitucionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
