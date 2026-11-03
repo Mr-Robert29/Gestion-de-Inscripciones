@@ -3,6 +3,7 @@ using Jardin.Configuracion.Infrastructure;
 using Jardin.Configuracion.Application.Seguridad;
 using Jardin.Api.Seguridad;
 using Jardin.Api.Middlewares;
+using Jardin.Secciones.Infrastructure;
 using Jardin.Usuarios.Infrastructure;
 using Jardin.Usuarios.Infrastructure.Inicializacion;
 using Jardin.Usuarios.Infrastructure.Tokens;
@@ -16,19 +17,20 @@ if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Pruebas")
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controladores
+
 builder.Services.AddControllers();
 
-// 2. Documentacion OpenAPI y Swagger
+
 builder.Services.AddOpenApi();
 
-// 3. Modulo Usuarios (Infrastructure)
+
 builder.Services.AgregarModuloUsuarios(builder.Configuration);
 builder.Services.AgregarModuloConfiguracion(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IContextoUsuarioConfiguracion, ContextoUsuarioConfiguracion>();
 
-// 4. Autenticacion JWT Bearer
+builder.Services.AgregarModuloSecciones(builder.Configuration);
+
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();
 var claveJwt = !string.IsNullOrWhiteSpace(jwtConfig.ClaveSecreta)
     ? jwtConfig.ClaveSecreta
@@ -60,7 +62,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// 5. CORS
 builder.Services.AddCors(opciones =>
 {
     opciones.AddDefaultPolicy(politica =>
@@ -71,7 +72,6 @@ builder.Services.AddCors(opciones =>
 
 var app = builder.Build();
 
-// 6. Pipeline HTTP
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
