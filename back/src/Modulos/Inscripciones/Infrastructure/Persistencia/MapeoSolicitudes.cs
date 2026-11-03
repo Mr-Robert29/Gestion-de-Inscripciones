@@ -13,6 +13,7 @@ internal static class MapeoSolicitudes
         solicitud.Property(s => s.Id).ValueGeneratedNever();
         solicitud.Property(s => s.EstadoRecepcion).HasConversion<string>();
         solicitud.Property(s => s.RevisionDatos).IsConcurrencyToken();
+        solicitud.Property(s => s.RevisionDomicilio).HasDefaultValue(1);
         solicitud.Ignore(s => s.FueraDeTermino);
         solicitud.Ignore(s => s.RequiereRevisionEdad);
         solicitud.HasIndex(s => new { s.InstitucionId, s.PeriodoId });

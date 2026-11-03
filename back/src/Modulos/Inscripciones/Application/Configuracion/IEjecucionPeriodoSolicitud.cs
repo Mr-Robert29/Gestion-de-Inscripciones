@@ -14,6 +14,12 @@ public interface IEjecucionPeriodoSolicitud
         Guid periodoId,
         Func<string, CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default);
+    Task<T> EjecutarCorreccionAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Guid versionOfertaId,
+        Func<DatosPeriodoCorreccionSolicitud, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
 }
 
 public sealed record DatosPeriodoSolicitud(
@@ -25,3 +31,5 @@ public sealed record DatosPeriodoSolicitud(
     Guid VersionOfertaId,
     DateOnly FechaCorte,
     IReadOnlyList<Guid> TurnosDisponibles);
+
+public sealed record DatosPeriodoCorreccionSolicitud(string Estado, IReadOnlyList<Guid> TurnosDisponibles);

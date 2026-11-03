@@ -264,6 +264,11 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                         .IsConcurrencyToken()
                         .HasColumnType("integer");
 
+                    b.Property<int>("RevisionDomicilio")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<int>("RevisionPeriodoUtilizada")
                         .HasColumnType("integer");
 
@@ -288,6 +293,36 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.HasIndex("InstitucionId", "PeriodoId");
 
                     b.ToTable("solicitudes", "inscripciones");
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.UsoDatosSolicitud", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReferenciaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RevisionDatos")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RevisionDomicilio")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolicitudId", "ReferenciaId", "Tipo", "RevisionDatos", "RevisionDomicilio")
+                        .IsUnique()
+                        .HasDatabaseName("UX_UsoSolicitud_Referencia_Revision");
+
+                    b.ToTable("usos_datos_solicitud", "inscripciones");
                 });
 
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.VinculoResponsable", b =>
@@ -451,6 +486,15 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                         .IsRequired();
 
                     b.Navigation("TurnosAlternativos");
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.UsoDatosSolicitud", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.VinculoResponsable", b =>

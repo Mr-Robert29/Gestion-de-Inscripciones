@@ -28,4 +28,10 @@ public interface IModuloAntecedentesSolicitud
         Guid condicionId,
         RevisarCondicionPeticion peticion,
         CancellationToken tokenCancelacion = default);
+    Task<RevisarAntecedenteRespuesta> CorregirCondicionAsync(
+        Guid institucionId,
+        Guid solicitudId,
+        Guid condicionId,
+        CorregirCondicionPeticion peticion,
+        CancellationToken tokenCancelacion = default);
 }

@@ -89,6 +89,20 @@ public sealed class AntecedentesSolicitudController : ControllerBase
             peticion,
             tokenCancelacion)));
 
+    [HttpPut("condiciones/{condicionId:guid}/declaracion")]
+    public Task<IActionResult> CorregirCondicion(
+        Guid institucionId,
+        Guid solicitudId,
+        Guid condicionId,
+        CorregirCondicionPeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _antecedentes.CorregirCondicionAsync(
+            institucionId,
+            solicitudId,
+            condicionId,
+            peticion,
+            tokenCancelacion)));
+
     private async Task<IActionResult> EjecutarAsync(Func<Task<IActionResult>> operacion)
     {
         try { return await operacion(); }

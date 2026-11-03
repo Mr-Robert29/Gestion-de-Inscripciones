@@ -92,3 +92,9 @@ El registro requiere versiones de reglas/oferta asignadas al período. Configura
 Inscripciones permite registrar documentación pendiente/presentada/observada y condiciones declaradas con revisión separada. Conserva la solicitud ante faltantes, sin exigir archivos digitalizados. Incluye permisos específicos por institución, historial anterior/nuevo, actualización de la revisión de solicitud y protección contra ediciones simultáneas.
 
 La revisión puede continuar después del cierre; incorporar una declaración nueva requiere el permiso especial de corrección. El catálogo de documentos obligatorios y la evaluación automática de prioridades pertenecen a definiciones/procesos posteriores.
+
+## Primera versión de HU-09 — Búsqueda y correcciones
+
+Inscripciones permite buscar solicitudes por identificador o datos del aspirante y corregir dirección, preferencias, consentimiento y condiciones declaradas. Las correcciones conservan historial, requieren la revisión actual y un permiso especial después del cierre; cambiar una declaración reinicia su verificación.
+
+Se conserva la oferta histórica y se distingue RevisionDatos de RevisionDomicilio. El índice de referencias permite consultar usos registrados desactualizados; su integración con mediciones/propuestas reales y bloqueo de confirmación sigue pendiente. La corrección de la persona compartida requiere una operación específica acordada posteriormente.

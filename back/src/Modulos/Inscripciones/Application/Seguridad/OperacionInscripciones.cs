@@ -7,5 +7,6 @@ public enum OperacionInscripciones
     RegistrarPersonasOSolicitudes,
     RegistrarDocumentacion,
     VerificarCondiciones,
+    CorregirDuranteRecepcion,
     CorregirDespuesDelCierre
 }

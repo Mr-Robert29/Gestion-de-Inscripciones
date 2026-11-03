@@ -223,6 +223,50 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             tokenCancelacion);
     }
 
+    // Implementa IModuloAntecedentesSolicitud.CorregirCondicionAsync: cambiar la declaración reinicia su verificación.
+    public Task<RevisarAntecedenteRespuesta> CorregirCondicionAsync(
+        Guid institucionId,
+        Guid solicitudId,
+        Guid condicionId,
+        CorregirCondicionPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        return EjecutarCambioAsync(
+            institucionId,
+            solicitudId,
+            OperacionInscripciones.CorregirDuranteRecepcion,
+            async (
+                solicitud,
+                autor,
+                token) =>
+            {
+                ComprobarRevision(
+                    solicitud,
+                    peticion.RevisionSolicitud,
+                    peticion.Motivo);
+                var condicion = solicitud.Condiciones.SingleOrDefault(c => c.Id == condicionId)
+                    ?? throw new KeyNotFoundException("No se encontró la condición en esta solicitud.");
+                var anteriores = MapearCondicion(condicion);
+                condicion.CorregirDeclaracion(
+                    peticion.Tipo,
+                    peticion.ValorDeclarado,
+                    peticion.EvidenciaReferencia);
+                await _antecedentes.GuardarRevisionAsync(
+                    solicitud,
+                    RegistrarCambio(
+                        solicitud,
+                        autor,
+                        "Condicion.Correccion",
+                        peticion.Motivo,
+                        anteriores,
+                        MapearCondicion(condicion)),
+                    token);
+                return new RevisarAntecedenteRespuesta(condicion.Id, solicitud.RevisionDatos);
+            },
+            tokenCancelacion);
+    }
+
     private async Task<T> EjecutarCambioAsync<T>(
         Guid institucionId,
         Guid solicitudId,
@@ -243,9 +287,12 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             solicitud.PeriodoId,
             async (estado, token) =>
             {
-                // Agregar una declaración tras el cierre requiere el permiso específico de corrección.
+                // Agregar o corregir una declaración tras el cierre requiere el permiso específico de corrección.
                 // La revisión de declaraciones existentes y la recepción de documentación pueden continuar.
-                if (estado == "RecepcionCerrada" && operacion == OperacionInscripciones.RegistrarPersonasOSolicitudes)
+                if (operacion == OperacionInscripciones.CorregirDuranteRecepcion && estado is not ("RecepcionAbierta" or "RecepcionCerrada"))
+                    throw new InvalidOperationException("El estado del período no permite corregir declaraciones.");
+                if (estado == "RecepcionCerrada" && operacion is
+                    (OperacionInscripciones.RegistrarPersonasOSolicitudes or OperacionInscripciones.CorregirDuranteRecepcion))
                     await _acceso.AutorizarOperacionAsync(
                         institucionId,
                         OperacionInscripciones.CorregirDespuesDelCierre,
