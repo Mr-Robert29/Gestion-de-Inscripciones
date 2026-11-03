@@ -10,19 +10,27 @@ public sealed class Responsable
     public string Telefono { get; private set; } = "";
     public string? CorreoElectronico { get; private set; }
     private Responsable() { }
-    public Responsable(string nombre, string apellido, string? documento, string telefono,
-        string? correoElectronico = null, string? tipoDocumento = null)
+    public Responsable(
+        string nombre,
+        string apellido,
+        string? documento,
+        string telefono,
+        string? correoElectronico = null,
+        string? tipoDocumento = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombre);
         ArgumentException.ThrowIfNullOrWhiteSpace(apellido);
-        Id = Guid.NewGuid(); Nombre = nombre.Trim(); Apellido = apellido.Trim();
+        Id = Guid.NewGuid();
+        Nombre = nombre.Trim();
+        Apellido = apellido.Trim();
         Documento = string.IsNullOrWhiteSpace(documento) ? null : documento.Trim();
-        TipoDocumento = tipoDocumento;
+        TipoDocumento = string.IsNullOrWhiteSpace(tipoDocumento) ? null : tipoDocumento.Trim();
         ActualizarContacto(telefono, correoElectronico);
     }
     public void ActualizarContacto(string telefono, string? correoElectronico)
     {
-        Telefono = telefono?.Trim() ?? "";
+        ArgumentException.ThrowIfNullOrWhiteSpace(telefono);
+        Telefono = telefono.Trim();
         CorreoElectronico = string.IsNullOrWhiteSpace(correoElectronico) ? null : correoElectronico.Trim();
     }
 }

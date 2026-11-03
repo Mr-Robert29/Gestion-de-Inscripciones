@@ -12,18 +12,36 @@ public sealed class Aspirante
     private readonly List<VinculoResponsable> _vinculos = [];
     public IReadOnlyCollection<VinculoResponsable> Vinculos => _vinculos.AsReadOnly();
     private Aspirante() { }
-    public Aspirante(string nombre, string apellido, string? dni, DateOnly fechaNacimiento,
-        string? tipoDocumento = null, string? sexo = null)
+    public Aspirante(
+        string nombre,
+        string apellido,
+        string? dni,
+        DateOnly fechaNacimiento,
+        string? tipoDocumento = null,
+        string? sexo = null)
     {
         Id = Guid.NewGuid();
-        CorregirDatos(nombre, apellido, dni, fechaNacimiento, tipoDocumento, sexo);
+        CorregirDatos(
+            nombre,
+            apellido,
+            dni,
+            fechaNacimiento,
+            tipoDocumento,
+            sexo);
     }
-    public void CorregirDatos(string nombre, string apellido, string? dni, DateOnly fechaNacimiento,
-        string? tipoDocumento = null, string? sexo = null)
+    public void CorregirDatos(
+        string nombre,
+        string apellido,
+        string? dni,
+        DateOnly fechaNacimiento,
+        string? tipoDocumento = null,
+        string? sexo = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombre);
         ArgumentException.ThrowIfNullOrWhiteSpace(apellido);
-        Nombre = nombre.Trim(); Apellido = apellido.Trim();
+        if (fechaNacimiento == default) throw new ArgumentException("La fecha de nacimiento es obligatoria.", nameof(fechaNacimiento));
+        Nombre = nombre.Trim();
+        Apellido = apellido.Trim();
         Dni = string.IsNullOrWhiteSpace(dni) ? null : dni.Trim();
         FechaNacimiento = fechaNacimiento;
         TipoDocumento = string.IsNullOrWhiteSpace(tipoDocumento) ? null : tipoDocumento.Trim();
@@ -37,13 +55,21 @@ public sealed class Aspirante
             (fechaCorte.Month == FechaNacimiento.Month && fechaCorte.Day < FechaNacimiento.Day)) edad--;
         return edad;
     }
-    public VinculoResponsable VincularResponsable(Responsable responsable, string tipoVinculo,
-        bool contactoPrincipal, bool esTutor)
+    public VinculoResponsable VincularResponsable(
+        Responsable responsable,
+        string tipoVinculo,
+        bool contactoPrincipal,
+        bool esTutor)
     {
         ArgumentNullException.ThrowIfNull(responsable);
         if (_vinculos.Any(v => v.ResponsableId == responsable.Id))
             throw new InvalidOperationException("El responsable ya está vinculado con el aspirante.");
-        var vinculo = new VinculoResponsable(Id, responsable, tipoVinculo, contactoPrincipal, esTutor);
+        var vinculo = new VinculoResponsable(
+            Id,
+            responsable,
+            tipoVinculo,
+            contactoPrincipal,
+            esTutor);
         _vinculos.Add(vinculo);
         return vinculo;
     }
