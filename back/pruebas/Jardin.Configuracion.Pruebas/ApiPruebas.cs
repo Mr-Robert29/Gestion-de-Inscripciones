@@ -99,6 +99,7 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
         foreach (var rol in RolesPersonal.Todos)
             await roles.CreateAsync(new IdentityRole<Guid>(rol));
         await CrearUsuarioAsync("duplicados@prueba.example", RolesPersonal.Administrativo);
+        await CrearUsuarioAsync("distancias@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("correcciones@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("antecedentes@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("solicitudes@prueba.example", RolesPersonal.Administrativo);

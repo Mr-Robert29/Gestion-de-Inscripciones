@@ -175,6 +175,11 @@ public static class EjecutorPruebas
             aplicacion,
             correo => IniciarSesionAsync(cliente, correo),
             Comprobar);
+        await PruebasDistanciasManuales.EjecutarAsync(
+            cliente,
+            aplicacion,
+            correo => IniciarSesionAsync(cliente, correo),
+            Comprobar);
         await PruebasSorteos.EjecutarAsync(cliente, Comprobar);
         using (var alcance = aplicacion.Services.CreateScope())
         {
