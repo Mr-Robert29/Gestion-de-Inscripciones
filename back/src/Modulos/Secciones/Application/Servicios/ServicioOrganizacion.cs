@@ -1,5 +1,6 @@
 using Jardin.Secciones.Application.Abstracciones;
 using Jardin.Secciones.Contracts;
+using Jardin.Secciones.Domain;
 using Jardin.Secciones.Domain.Entidades;
 using Jardin.Vacantes.Contracts;
 
@@ -162,12 +163,50 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         return propuesta is null ? null : Mapear(propuesta);
     }
 
-    public Task<DatosPropuestaDistribucion> ModificarAsignacionAsync(
+    public async Task<DatosPropuestaDistribucion> ModificarAsignacionAsync(
         Guid propuestaId,
         ModificarAsignacionPropuestaPeticion peticion,
         Guid usuarioId,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        if (usuarioId == Guid.Empty)
+            throw new ArgumentException("El usuario no puede estar vacío.", nameof(usuarioId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+
+        var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta de distribución.");
+
+        if (propuesta.Estado != EstadoPropuestaDistribucion.Borrador)
+            throw new InvalidOperationException("Solo se puede modificar una propuesta vigente.");
+
+        var asignacion = propuesta.Asignaciones.FirstOrDefault(x => x.IngresoId == peticion.IngresoId)
+            ?? throw new InvalidOperationException("El ingreso no forma parte de la propuesta.");
+
+        if (peticion.SeccionId is not null)
+        {
+            var seccion = await _repositorio.ObtenerPorIdAsync(peticion.SeccionId.Value, cancellationToken)
+                ?? throw new KeyNotFoundException("No se encontró la sección indicada.");
+
+            if (seccion.PeriodoId != propuesta.PeriodoId || !seccion.EsCompatibleCon(asignacion.Edad, asignacion.TurnoId))
+                throw new InvalidOperationException("La sección no es compatible con la edad, el turno o el período del ingreso.");
+
+            var ocupacion = propuesta.Asignaciones.Count(x => x.SeccionId == seccion.Id && x.IngresoId != peticion.IngresoId);
+            if (ocupacion >= seccion.Capacidad)
+                throw new InvalidOperationException("La sección no tiene capacidad disponible.");
+        }
+
+        propuesta.ModificarAsignacion(
+            peticion.IngresoId,
+            peticion.SeccionId,
+            peticion.MotivoSinSeccion,
+            usuarioId,
+            DateTimeOffset.UtcNow,
+            peticion.Motivo);
+
+        await _repositorioDistribuciones.ActualizarAsync(propuesta, cancellationToken);
+        return Mapear(propuesta);
+    }
 
     public Task<DatosPropuestaDistribucion?> ConfirmarDistribucionAsync(
         Guid propuestaId,
@@ -204,5 +243,8 @@ public sealed class ServicioOrganizacion : IModuloSecciones
             x.SeccionId,
             x.Edad,
             x.TurnoId,
-            x.MotivoSinSeccion)).ToList());
+            x.MotivoSinSeccion,
+            x.ModificadaPor,
+            x.ModificadaEn,
+            x.MotivoModificacion)).ToList());
 }

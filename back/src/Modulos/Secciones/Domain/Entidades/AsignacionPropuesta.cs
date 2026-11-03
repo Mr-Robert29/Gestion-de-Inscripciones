@@ -9,6 +9,9 @@ public sealed class AsignacionPropuesta
     public int Edad { get; private set; }
     public Guid TurnoId { get; private set; }
     public string? MotivoSinSeccion { get; private set; }
+    public Guid? ModificadaPor { get; private set; }
+    public DateTimeOffset? ModificadaEn { get; private set; }
+    public string? MotivoModificacion { get; private set; }
 
     private AsignacionPropuesta() { }
 
@@ -53,5 +56,26 @@ public sealed class AsignacionPropuesta
         ArgumentException.ThrowIfNullOrWhiteSpace(motivo);
         SeccionId = null;
         MotivoSinSeccion = motivo.Trim();
+    }
+
+    public void Modificar(
+        Guid? seccionId,
+        string? motivoSinSeccion,
+        Guid usuarioId,
+        DateTimeOffset fecha,
+        string motivo)
+    {
+        if (usuarioId == Guid.Empty)
+            throw new ArgumentException("El usuario no puede estar vacío.", nameof(usuarioId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(motivo);
+
+        if (seccionId is null)
+            QuitarAsignacion(motivoSinSeccion ?? motivo);
+        else
+            AsignarASeccion(seccionId.Value);
+
+        ModificadaPor = usuarioId;
+        ModificadaEn = fecha;
+        MotivoModificacion = motivo.Trim();
     }
 }

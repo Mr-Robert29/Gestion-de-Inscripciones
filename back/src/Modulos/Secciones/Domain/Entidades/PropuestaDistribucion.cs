@@ -62,15 +62,15 @@ public sealed class PropuestaDistribucion
     public void ModificarAsignacion(
         Guid ingresoId,
         Guid? seccionId,
-        string? motivoSinSeccion)
+        string? motivoSinSeccion,
+        Guid usuarioId,
+        DateTimeOffset fecha,
+        string motivo)
     {
         var asignacion = _asignaciones.FirstOrDefault(x => x.IngresoId == ingresoId)
             ?? throw new InvalidOperationException("El ingreso no forma parte de la propuesta.");
 
-        if (seccionId is null)
-            asignacion.QuitarAsignacion(motivoSinSeccion ?? string.Empty);
-        else
-            asignacion.AsignarASeccion(seccionId.Value);
+        asignacion.Modificar(seccionId, motivoSinSeccion, usuarioId, fecha, motivo);
     }
 
     public void MarcarDesactualizada()

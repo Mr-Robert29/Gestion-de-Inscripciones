@@ -6,4 +6,7 @@ public sealed record DatosAsignacionPropuesta(
     Guid? SeccionId,
     int Edad,
     Guid TurnoId,
-    string? MotivoSinSeccion);
+    string? MotivoSinSeccion,
+    Guid? ModificadaPor,
+    DateTimeOffset? ModificadaEn,
+    string? MotivoModificacion);
