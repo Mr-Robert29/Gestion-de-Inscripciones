@@ -408,3 +408,50 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE TABLE inscripciones.mediciones_distancia (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "NumeroRegistro" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        "RevisionUbicacionJardin" integer NOT NULL,
+        "DistanciaMetros" numeric NOT NULL,
+        "Origen" text NOT NULL,
+        "Referencia" text NOT NULL,
+        "Entradas" text NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "UsuarioId" uuid NOT NULL,
+        CONSTRAINT "PK_mediciones_distancia" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_mediciones_distancia_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE INDEX "IX_mediciones_distancia_InstitucionId_SolicitudId" ON inscripciones.mediciones_distancia ("InstitucionId", "SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE UNIQUE INDEX "UX_Distancia_Solicitud_Numero" ON inscripciones.mediciones_distancia ("SolicitudId", "NumeroRegistro");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103191344_DistanciasManuales', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

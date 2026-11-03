@@ -1,5 +1,6 @@
 using Jardin.Api.Integraciones;
 using Jardin.Inscripciones.Application.Configuracion;
+using Jardin.Inscripciones.Application.Geografia;
 using Jardin.Inscripciones.Infrastructure;
 using Jardin.Inscripciones.Application.Seguridad;
 using System.Text;
@@ -35,6 +36,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IContextoUsuarioConfiguracion, ContextoUsuarioConfiguracion>();
 builder.Services.AddScoped<IAccesoInstitucionesInscripciones, AccesoInstitucionesInscripciones>();
 builder.Services.AddScoped<IEjecucionPeriodoSolicitud, EjecucionPeriodoSolicitud>();
+builder.Services.AddScoped<IUbicacionJardin, ConsultaUbicacionJardin>();
 
 builder.Services.AgregarModuloSecciones(builder.Configuration);
 

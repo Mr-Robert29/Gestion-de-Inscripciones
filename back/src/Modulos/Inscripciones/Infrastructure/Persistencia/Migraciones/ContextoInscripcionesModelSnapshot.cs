@@ -173,6 +173,58 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("documentacion_solicitud", "inscripciones");
                 });
 
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.MedicionDistancia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DistanciaMetros")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Entradas")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NumeroRegistro")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RevisionDomicilio")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RevisionUbicacionJardin")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstitucionId", "SolicitudId");
+
+                    b.HasIndex("SolicitudId", "NumeroRegistro")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Distancia_Solicitud_Numero");
+
+                    b.ToTable("mediciones_distancia", "inscripciones");
+                });
+
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.PosibleDuplicado", b =>
                 {
                     b.Property<Guid>("Id")
@@ -438,6 +490,15 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                 {
                     b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
                         .WithMany("Documentos")
+                        .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.MedicionDistancia", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany()
                         .HasForeignKey("SolicitudId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

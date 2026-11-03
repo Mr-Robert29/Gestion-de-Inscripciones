@@ -106,3 +106,9 @@ Inscripciones genera alertas al registrar solicitudes y permite detectar coincid
 Directivo y Root pueden registrar duplicación confirmada o personas diferentes con motivo, usuario, fecha e historial. Incluye consulta paginada, permisos institucionales, migración y protección ante revisiones simultáneas. Repetir una detección sin datos nuevos conserva las decisiones tomadas.
 
 Ambas solicitudes se conservan. Elegir cuál continúa y aplicar esa decisión a procesos posteriores queda pendiente del procedimiento acordado; confirmar una alerta no excluye automáticamente una solicitud.
+
+## HU-11 — Primera versión con distancia manual
+
+Inscripciones permite ingresar provisionalmente una distancia en metros, con decimales, referencia de cómo se obtuvo, usuario y fecha. Corregir agrega una nueva carga y conserva el historial. Las consultas distinguen el último registro y señalan si cambiaron los domicilios utilizados; incluye permisos, migración y protección de concurrencia.
+
+Por decisión del usuario, Geoapify, la localización y el cálculo automático quedan pospuestos. El origen se identifica como ManualProvisional; esta alternativa no completa los criterios automáticos de HU-11 ni verifica la precisión física del dato.

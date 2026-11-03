@@ -5,6 +5,7 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia;
 
 public sealed class ContextoInscripciones : DbContext
 {
+    public DbSet<MedicionDistancia> MedicionesDistancia => Set<MedicionDistancia>();
     public DbSet<DocumentacionSolicitud> DocumentosSolicitud => Set<DocumentacionSolicitud>();
     public DbSet<CondicionPrioridad> CondicionesPrioridad => Set<CondicionPrioridad>();
     public DbSet<PosibleDuplicado> PosiblesDuplicados => Set<PosibleDuplicado>();
@@ -19,6 +20,25 @@ public sealed class ContextoInscripciones : DbContext
 
     public ContextoInscripciones(DbContextOptions<ContextoInscripciones> opciones) : base(opciones) { }
 
+    public override int SaveChanges(bool aceptarTodosLosCambios)
+    {
+        ComprobarHistorialDistancias();
+        return base.SaveChanges(aceptarTodosLosCambios);
+    }
+
+    public override Task<int> SaveChangesAsync(bool aceptarTodosLosCambios, CancellationToken tokenCancelacion = default)
+    {
+        ComprobarHistorialDistancias();
+        return base.SaveChangesAsync(aceptarTodosLosCambios, tokenCancelacion);
+    }
+
+    private void ComprobarHistorialDistancias()
+    {
+        ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<MedicionDistancia>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("El historial de distancias no se modifica ni se borra; agregá otro registro.");
+    }
+
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("inscripciones");
@@ -27,6 +47,7 @@ public sealed class ContextoInscripciones : DbContext
         MapeoSolicitudes.Configurar(modelo);
         MapeoAntecedentesSolicitud.Configurar(modelo);
         MapeoDuplicadosSolicitud.Configurar(modelo);
+        MapeoDistancias.Configurar(modelo);
         var uso = modelo.Entity<UsoDatosSolicitud>();
         uso.ToTable("usos_datos_solicitud");
         uso.HasKey(u => u.Id);
