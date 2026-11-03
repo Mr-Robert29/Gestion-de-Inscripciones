@@ -7,4 +7,8 @@ public interface IAccesoInstitucionesInscripciones
         Guid institucionId,
         bool escritura,
         CancellationToken tokenCancelacion = default);
+    Task<Guid> AutorizarOperacionAsync(
+        Guid institucionId,
+        OperacionInscripciones operacion,
+        CancellationToken tokenCancelacion = default);
 }

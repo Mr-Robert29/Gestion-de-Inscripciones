@@ -87,6 +87,92 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("historial_personas", "inscripciones");
                 });
 
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.CondicionPrioridad", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EstadoVerificacion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EvidenciaReferencia")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("FechaRevision")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observacion")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UsuarioRegistroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UsuarioRevisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ValorDeclarado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolicitudId");
+
+                    b.ToTable("condiciones_prioridad", "inscripciones");
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.DocumentacionSolicitud", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("FechaRevision")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Observacion")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Referencia")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UsuarioRegistroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UsuarioRevisionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolicitudId");
+
+                    b.ToTable("documentacion_solicitud", "inscripciones");
+                });
+
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.RegistroAspiranteInstitucion", b =>
                 {
                     b.Property<Guid>("InstitucionId")
@@ -229,6 +315,24 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("vinculos_responsables", "inscripciones");
                 });
 
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.CondicionPrioridad", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany("Condiciones")
+                        .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.DocumentacionSolicitud", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany("Documentos")
+                        .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.RegistroAspiranteInstitucion", b =>
                 {
                     b.HasOne("Jardin.Inscripciones.Domain.Entidades.Aspirante", null)
@@ -369,6 +473,13 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.Aspirante", b =>
                 {
                     b.Navigation("Vinculos");
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", b =>
+                {
+                    b.Navigation("Condiciones");
+
+                    b.Navigation("Documentos");
                 });
 #pragma warning restore 612, 618
         }

@@ -24,9 +24,19 @@ public sealed class AccesoInstitucionesInscripciones : IAccesoInstitucionesInscr
     }
 
     // Implementa IAccesoInstitucionesInscripciones.AutorizarAsync: obtiene permisos actuales, no roles viejos del JWT.
-    public async Task<Guid> AutorizarAsync(
+    public Task<Guid> AutorizarAsync(
         Guid institucionId,
         bool escritura,
+        CancellationToken tokenCancelacion = default)
+        => AutorizarOperacionAsync(
+            institucionId,
+            escritura ? OperacionInscripciones.RegistrarPersonasOSolicitudes : OperacionInscripciones.Consultar,
+            tokenCancelacion);
+
+    // Implementa IAccesoInstitucionesInscripciones.AutorizarOperacionAsync: valida el permiso concreto.
+    public async Task<Guid> AutorizarOperacionAsync(
+        Guid institucionId,
+        OperacionInscripciones operacion,
         CancellationToken tokenCancelacion = default)
     {
         tokenCancelacion.ThrowIfCancellationRequested();
@@ -36,7 +46,15 @@ public sealed class AccesoInstitucionesInscripciones : IAccesoInstitucionesInscr
             throw new UnauthorizedAccessException();
         var sesion = await _usuarios.ObtenerSesionActualAsync(usuarioId, tokenCancelacion);
         if (sesion is null || !sesion.Activo) throw new UnauthorizedAccessException();
-        var permiso = escritura ? PermisosPersonal.RegistrarSolicitudes : PermisosPersonal.ConsultarSolicitudes;
+        var permiso = operacion switch
+        {
+            OperacionInscripciones.Consultar => PermisosPersonal.ConsultarSolicitudes,
+            OperacionInscripciones.RegistrarPersonasOSolicitudes => PermisosPersonal.RegistrarSolicitudes,
+            OperacionInscripciones.RegistrarDocumentacion => PermisosPersonal.RegistrarDocumentacion,
+            OperacionInscripciones.VerificarCondiciones => PermisosPersonal.VerificarCondicionesPrioridad,
+            OperacionInscripciones.CorregirDespuesDelCierre => PermisosPersonal.CorregirDespuesDelCierre,
+            _ => throw new ArgumentOutOfRangeException(nameof(operacion))
+        };
         var esRoot = sesion.Roles.Contains(RolesPersonal.AdministradorDelSistema);
         if (!esRoot && !sesion.Accesos.Any(a => a.InstitucionId == institucionId &&
             PermisosPersonal.ObtenerPermisosPorRol(a.Rol).Contains(permiso)))

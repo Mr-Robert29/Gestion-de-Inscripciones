@@ -8,6 +8,12 @@ public interface IEjecucionPeriodoSolicitud
         Guid periodoId,
         Func<DatosPeriodoSolicitud, CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default);
+    // Para revisar antecedentes no necesita interpretar versiones actuales de reglas/oferta.
+    Task<T> EjecutarRevisionAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Func<string, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
 }
 
 public sealed record DatosPeriodoSolicitud(
