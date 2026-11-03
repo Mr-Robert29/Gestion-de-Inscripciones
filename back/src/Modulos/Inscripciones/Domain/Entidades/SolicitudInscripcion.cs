@@ -12,6 +12,10 @@ public enum EstadoRecepcionSolicitud
 public sealed class SolicitudInscripcion
 {
     private readonly List<TurnoAlternativoSolicitud> _turnosAlternativos = [];
+    private readonly List<DocumentacionSolicitud> _documentos = [];
+    private readonly List<CondicionPrioridad> _condiciones = [];
+    public IReadOnlyCollection<DocumentacionSolicitud> Documentos => _documentos.AsReadOnly();
+    public IReadOnlyCollection<CondicionPrioridad> Condiciones => _condiciones.AsReadOnly();
     public Guid Id { get; private set; }
     public Guid InstitucionId { get; private set; }
     public Guid PeriodoId { get; private set; }
@@ -76,4 +80,6 @@ public sealed class SolicitudInscripcion
         ReferenciaConsentimiento = string.IsNullOrWhiteSpace(referenciaConsentimiento) ? null : referenciaConsentimiento.Trim();
         RevisionDatos = 1;
     }
+    // Invalida la revisión anterior cuando cambian antecedentes usados para evaluar la solicitud.
+    public void RegistrarRevisionAntecedentes() => RevisionDatos++;
 }

@@ -55,4 +55,19 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
                     datosOferta.Where(o => o.Disponible).Select(o => o.TurnoId).Distinct().ToArray()), token);
             },
             tokenCancelacion);
+    // Implementa IEjecucionPeriodoSolicitud.EjecutarRevisionAsync: revisar no reinterpreta la configuración publicada.
+    public Task<T> EjecutarRevisionAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Func<string, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        return _periodos.EjecutarConPeriodoProtegidoAsync(
+            periodoId,
+            (periodo, token) => periodo.InstitucionId == institucionId
+                ? operacion(periodo.Estado, token)
+                : throw new KeyNotFoundException("El período no pertenece a esta institución."),
+            tokenCancelacion);
+    }
 }

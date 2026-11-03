@@ -86,3 +86,9 @@ La conexión admite ConnectionStrings__Inscripciones y, si se omite, utiliza Def
 Inscripciones permite registrar, consultar y listar solicitudes con domicilio, sala calculada a la fecha de corte publicada, preferencias de turno y versiones utilizadas. Conserva datos históricos e identifica solicitudes fuera de término pendientes de autorización y edades que requieren revisión.
 
 El registro requiere versiones de reglas/oferta asignadas al período. Configuración protege su estado con un bloqueo de fila en PostgreSQL durante el registro para coordinar cierres o reasignaciones simultáneos. La autorización fuera de término, las excepciones de edad y el tratamiento de prioridades/mediciones corresponden a etapas posteriores.
+
+## HU-08 — Documentación y condiciones declaradas
+
+Inscripciones permite registrar documentación pendiente/presentada/observada y condiciones declaradas con revisión separada. Conserva la solicitud ante faltantes, sin exigir archivos digitalizados. Incluye permisos específicos por institución, historial anterior/nuevo, actualización de la revisión de solicitud y protección contra ediciones simultáneas.
+
+La revisión puede continuar después del cierre; incorporar una declaración nueva requiere el permiso especial de corrección. El catálogo de documentos obligatorios y la evaluación automática de prioridades pertenecen a definiciones/procesos posteriores.

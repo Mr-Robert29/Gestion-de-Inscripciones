@@ -5,6 +5,8 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia;
 
 public sealed class ContextoInscripciones : DbContext
 {
+    public DbSet<DocumentacionSolicitud> DocumentosSolicitud => Set<DocumentacionSolicitud>();
+    public DbSet<CondicionPrioridad> CondicionesPrioridad => Set<CondicionPrioridad>();
     public DbSet<SolicitudInscripcion> Solicitudes => Set<SolicitudInscripcion>();
     public DbSet<Aspirante> Aspirantes => Set<Aspirante>();
     public DbSet<Responsable> Responsables => Set<Responsable>();
@@ -19,6 +21,7 @@ public sealed class ContextoInscripciones : DbContext
     {
         modelo.HasDefaultSchema("inscripciones");
         MapeoSolicitudes.Configurar(modelo);
+        MapeoAntecedentesSolicitud.Configurar(modelo);
         var aspirante = modelo.Entity<Aspirante>();
         aspirante.ToTable("aspirantes");
         aspirante.HasKey(a => a.Id);
