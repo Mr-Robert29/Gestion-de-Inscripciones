@@ -18,6 +18,8 @@ public static class ExtensionesInyeccionInscripciones
             postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "inscripciones")));
         servicios.AddScoped<IRepositorioPersonasInscripciones, RepositorioPersonasInscripciones>();
         servicios.AddScoped<IModuloPersonasInscripciones, ServicioPersonasInscripciones>();
+        servicios.AddScoped<IRepositorioSolicitudes, RepositorioSolicitudes>();
+        servicios.AddScoped<IModuloSolicitudes, ServicioSolicitudes>();
         return servicios;
     }
 }

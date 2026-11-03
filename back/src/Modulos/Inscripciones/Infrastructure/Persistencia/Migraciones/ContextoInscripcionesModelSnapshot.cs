@@ -150,6 +150,60 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("responsables", "inscripciones");
                 });
 
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AspiranteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EstadoRecepcion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PeriodoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenciaConsentimiento")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RevisionDatos")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RevisionPeriodoUtilizada")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TurnoPreferidoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioRegistroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VersionOfertaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VersionReglasId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AspiranteId", "PeriodoId");
+
+                    b.HasIndex("InstitucionId", "AspiranteId");
+
+                    b.HasIndex("InstitucionId", "PeriodoId");
+
+                    b.ToTable("solicitudes", "inscripciones");
+                });
+
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.VinculoResponsable", b =>
                 {
                     b.Property<Guid>("AspiranteId")
@@ -191,6 +245,108 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                         .HasForeignKey("ResponsableId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.RegistroAspiranteInstitucion", null)
+                        .WithMany()
+                        .HasForeignKey("InstitucionId", "AspiranteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("Jardin.Inscripciones.Domain.Entidades.TurnoAlternativoSolicitud", "TurnosAlternativos", b1 =>
+                        {
+                            b1.Property<Guid>("SolicitudId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("TurnoId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("SolicitudId", "TurnoId");
+
+                            b1.ToTable("turnos_alternativos_solicitud", "inscripciones");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SolicitudId");
+                        });
+
+                    b.OwnsOne("Jardin.Inscripciones.Domain.ObjetosDeValor.CalculoEdadSolicitud", "CalculoEdad", b1 =>
+                        {
+                            b1.Property<Guid>("SolicitudInscripcionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("EdadCalculada")
+                                .HasColumnType("integer");
+
+                            b1.Property<DateOnly>("FechaCorteUtilizada")
+                                .HasColumnType("date");
+
+                            b1.Property<DateOnly>("FechaNacimientoUtilizada")
+                                .HasColumnType("date");
+
+                            b1.Property<int?>("Sala")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("SolicitudInscripcionId");
+
+                            b1.ToTable("solicitudes", "inscripciones");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SolicitudInscripcionId");
+                        });
+
+                    b.OwnsOne("Jardin.Inscripciones.Domain.ObjetosDeValor.Domicilio", "DomicilioDeclarado", b1 =>
+                        {
+                            b1.Property<Guid>("SolicitudInscripcionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Barrio")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Calle")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("CodigoPostal")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Complemento")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Departamento")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Localidad")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Numero")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Piso")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Provincia")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("SolicitudInscripcionId");
+
+                            b1.ToTable("solicitudes", "inscripciones");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SolicitudInscripcionId");
+                        });
+
+                    b.Navigation("CalculoEdad")
+                        .IsRequired();
+
+                    b.Navigation("DomicilioDeclarado")
+                        .IsRequired();
+
+                    b.Navigation("TurnosAlternativos");
                 });
 
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.VinculoResponsable", b =>

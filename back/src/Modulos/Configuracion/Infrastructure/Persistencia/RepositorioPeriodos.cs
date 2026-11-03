@@ -47,4 +47,22 @@ public sealed class RepositorioPeriodos : IRepositorioPeriodos
         try { await _contexto.SaveChangesAsync(tokenCancelacion); }
         catch (DbUpdateConcurrencyException) { throw new ConflictoInstitucionException(); }
     }
+    // Implementa IRepositorioPeriodos.EjecutarConBloqueoAsync: FOR UPDATE coordina también distintas instancias de la API.
+    public async Task<T> EjecutarConBloqueoAsync<T>(
+        Guid periodoId,
+        Func<PeriodoInscripcion, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        await using var transaccion = await _contexto.Database.BeginTransactionAsync(tokenCancelacion);
+        var consulta = _contexto.Database.IsNpgsql()
+            ? _contexto.Periodos.FromSqlInterpolated($"SELECT * FROM configuracion.periodos WHERE \"Id\" = {periodoId} FOR UPDATE")
+            : _contexto.Periodos.AsQueryable();
+        // La lectura protegida es nueva: no reutiliza una entidad previamente seguida por el contexto.
+        var periodo = await consulta.AsNoTracking().SingleOrDefaultAsync(p => p.Id == periodoId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el período.");
+        var resultado = await operacion(periodo, tokenCancelacion);
+        await transaccion.CommitAsync(tokenCancelacion);
+        return resultado;
+    }
 }

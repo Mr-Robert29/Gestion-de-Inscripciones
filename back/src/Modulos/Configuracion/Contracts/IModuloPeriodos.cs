@@ -17,4 +17,9 @@ public interface IModuloPeriodos
         Guid periodoId,
         CambiarRecepcionPeticion peticion,
         CancellationToken tokenCancelacion = default);
+    // Ejecuta la operación mientras se conserva el estado del período frente a modificaciones concurrentes.
+    Task<T> EjecutarConPeriodoProtegidoAsync<T>(
+        Guid periodoId,
+        Func<ConsultarPeriodoRespuesta, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
 }

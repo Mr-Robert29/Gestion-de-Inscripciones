@@ -80,3 +80,9 @@ Se publican las reglas acordadas del perfil Prototipo-2026-1 con fecha de corte 
 Inscripciones permite registrar y consultar aspirantes y responsables, buscar responsables por institución y vincular una misma persona con varios aspirantes. Incluye registro sin DNI, permisos actuales por institución, auditoría y migración propia en el esquema inscripciones. La solicitud asociada a período/domicilio todavía corresponde a HU-07.
 
 La conexión admite ConnectionStrings__Inscripciones y, si se omite, utiliza DefaultConnection. Aplicar las migraciones de ContextoInscripciones antes de usar estos endpoints en la base local.
+
+## HU-07 — Solicitudes de inscripción
+
+Inscripciones permite registrar, consultar y listar solicitudes con domicilio, sala calculada a la fecha de corte publicada, preferencias de turno y versiones utilizadas. Conserva datos históricos e identifica solicitudes fuera de término pendientes de autorización y edades que requieren revisión.
+
+El registro requiere versiones de reglas/oferta asignadas al período. Configuración protege su estado con un bloqueo de fila en PostgreSQL durante el registro para coordinar cierres o reasignaciones simultáneos. La autorización fuera de término, las excepciones de edad y el tratamiento de prioridades/mediciones corresponden a etapas posteriores.
