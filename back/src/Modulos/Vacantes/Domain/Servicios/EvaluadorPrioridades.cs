@@ -37,6 +37,18 @@ public static class EvaluadorPrioridades
 
         var resultados = new List<ResultadoPrioridad>(lista.Length);
         var posicion = 1;
+        foreach (var pendiente in lista.Where(x => x.Sala is null))
+        {
+            resultados.Add(new ResultadoPrioridad(
+                pendiente.SolicitudId,
+                pendiente.AspiranteId,
+                null,
+                null,
+                true,
+                "No se pudo determinar la sala etaria de la solicitud.",
+                [],
+                ["La edad o la fecha de corte requiere revisión."]));
+        }
         foreach (var sala in ordenSalas)
         {
             var grupo = lista.Where(x => x.Sala == sala).ToArray();
@@ -78,7 +90,7 @@ public static class EvaluadorPrioridades
 
         foreach (var criterio in procedimiento)
         {
-            if (criterio == "SorteoUltimaInstancia")
+            if (criterio is "SorteoUltimaInstancia" or "FueraDeTermino")
                 continue;
 
             if (criterio == "Cercania")

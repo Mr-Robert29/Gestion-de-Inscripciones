@@ -3,7 +3,7 @@ namespace Jardin.Vacantes.Domain.Entidades;
 public sealed record EntradaEvaluacionPrioridad(
     Guid SolicitudId,
     Guid AspiranteId,
-    int Sala,
+    int? Sala,
     bool FueraDeTermino,
     IReadOnlyDictionary<string, bool> CondicionesVerificadas,
     decimal? DistanciaMetros)
