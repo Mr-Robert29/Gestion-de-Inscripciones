@@ -5,5 +5,4 @@ public sealed record DefinirSeccionPeticion(
     Guid AulaId,
     Guid TurnoId,
     string Nombre,
-    IReadOnlyList<int> EdadesAdmitidas,
-    int Capacidad = 25);
+    IReadOnlyList<int> EdadesAdmitidas);

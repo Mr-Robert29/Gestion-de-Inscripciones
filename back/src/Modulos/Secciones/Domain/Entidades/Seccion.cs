@@ -50,9 +50,6 @@ public sealed class Seccion
         EstablecerComposicion(edadesAdmitidas, combinacionesPermitidas);
     }
 
-    /// Modifica las edades admitidas por la sección (cambio de composición pura o multiedad).
-    /// Incrementa la revisión para control de concurrencia y detección de propuestas de distribución desactualizadas.
-
     public void CambiarComposicion(
         IEnumerable<int> nuevasEdades,
         string motivo,
@@ -61,7 +58,7 @@ public sealed class Seccion
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(motivo);
 
-        // Si la sección ya tiene alumnos asignados, valida que ninguna edad de esos alumnos quede excluida
+
         if (edadesAlumnosAsignados is not null)
         {
             ValidarCompatibilidadConAlumnosAsignados(nuevasEdades, edadesAlumnosAsignados);
@@ -77,22 +74,6 @@ public sealed class Seccion
         Revision++;
     }
 
-    /// Actualiza la capacidad máxima de alumnos admitidos en la sección.
-
-    public void CambiarCapacidad(int nuevaCapacidad, string motivo)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(motivo);
-        if (nuevaCapacidad <= 0)
-            throw new ArgumentException("La capacidad debe ser mayor a cero.", nameof(nuevaCapacidad));
-
-        if (Capacidad != nuevaCapacidad)
-        {
-            Capacidad = nuevaCapacidad;
-            Revision++;
-        }
-    }
-
-    /// Actualiza el nombre identificador de la sección.
 
     public void Renombrar(string nuevoNombre)
     {
@@ -104,14 +85,10 @@ public sealed class Seccion
 
     public void Desactivar() => Activa = false;
 
-    /// Comprueba si la sección está activa y admite la edad y el turno del 
-
     public bool EsCompatibleCon(int edad, Guid turnoId)
     {
         return Activa && TurnoId == turnoId && _edadesAdmitidas.Contains(edad);
     }
-
-    /// Valida que la sección esté activa y admita la edad y el turno indicados, lanzando excepción si hay incompatibilidad.
 
     public void ValidarCompatibilidad(int edad, Guid turnoId)
     {
@@ -125,7 +102,7 @@ public sealed class Seccion
             throw new InvalidOperationException($"La edad {edad} no está admitida en la sección '{Nombre}'. Edades admitidas: [{string.Join(", ", _edadesAdmitidas)}].");
     }
 
-    /// Valida que el conjunto de nuevas edades no deje sin compatibilidad a alumnos previamente asignados a la sección.
+
 
     public void ValidarCompatibilidadConAlumnosAsignados(IEnumerable<int> nuevasEdades, IEnumerable<int> edadesAlumnosAsignados)
     {
