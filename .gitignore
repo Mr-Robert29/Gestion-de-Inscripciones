@@ -12,3 +12,4 @@ obj/
 
 # Documentacion local del backend (actual y futura)
 /back/docs/
+.contexto/
