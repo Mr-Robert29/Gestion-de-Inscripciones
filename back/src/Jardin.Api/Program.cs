@@ -44,6 +44,7 @@ builder.Services.AgregarModuloSecciones(builder.Configuration);
 builder.Services.AgregarModuloVacantes(builder.Configuration);
 builder.Services.AddScoped<IAutorizacionVacantes, AccesoVacantes>();
 builder.Services.AddScoped<IProveedorEstadoPeriodo, ProveedorEstadoPeriodo>();
+builder.Services.AddScoped<IProveedorReglasPeriodo, ProveedorReglasPeriodo>();
 
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();
 var claveJwt = !string.IsNullOrWhiteSpace(jwtConfig.ClaveSecreta)

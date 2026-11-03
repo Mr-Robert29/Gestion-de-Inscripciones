@@ -29,6 +29,9 @@ public static class PruebasSorteos
         comprobar(periodoRespuesta.StatusCode == HttpStatusCode.Created, "Se crea el período de prueba para sorteos.");
         var periodo = (await periodoRespuesta.Content.ReadFromJsonAsync<CrearPeriodoRespuesta>())!.Id;
 
+        var prioridadesAntesDelCierre = await cliente.GetAsync($"/api/v1/periodos/{periodo}/prioridades");
+        comprobar(prioridadesAntesDelCierre.StatusCode == HttpStatusCode.Conflict,
+            "La evaluación de prioridades requiere que la recepción esté cerrada.");
         var periodoActual = (await cliente.GetFromJsonAsync<ConsultarPeriodoRespuesta>($"/api/v1/periodos/{periodo}"))!;
         var abrir = await cliente.PostAsJsonAsync(
             $"/api/v1/periodos/{periodo}/abrir",
