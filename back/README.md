@@ -54,3 +54,10 @@ La API requiere Jwt__ClaveSecreta y la conexión de Usuarios existente. Configur
 Antes de arrancar contra una base local, aplicar la migración de Configuración siguiendo el documento de HU-01. Las pruebas no requieren modificar las bases de la aplicación.
 
 Geoapify sigue siendo el proveedor aprobado de coordenadas y distancia para la integración posterior. No se implementó Haversine.
+
+## Primera versión de HU-02
+
+Configuración también permite crear y consultar períodos y abrir/cerrar recepción manualmente. Se pospuso por decisión del usuario la validación de oferta/reglas al abrir.
+
+- [HU-02 — Primera versión](docs/HU-02-Primera-version.md).
+- [Cosas pendientes de las historias trabajadas](<docs/Cosas pendientes.md>).

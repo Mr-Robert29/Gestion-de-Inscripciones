@@ -162,6 +162,52 @@ public static class PruebasPostgres
             comprobar(final.Domicilio.Numero == "999" && final.RevisionUbicacion == consulta.RevisionUbicacion + 1,
                 "El cambio de domicilio conserva la identidad y aumenta la revisión una sola vez.");
         }
+        var periodo = new PeriodoInscripcion(
+            institucion.Id,
+            2027,
+            new DateOnly(2026, 11, 1),
+            new DateOnly(2026, 12, 15));
+        await using (var contexto = new ContextoConfiguracion(opciones))
+        {
+            contexto.Periodos.Add(periodo);
+            await contexto.SaveChangesAsync();
+        }
+        await using var primeraApertura = new ContextoConfiguracion(opciones);
+        await using var segundaApertura = new ContextoConfiguracion(opciones);
+        var periodoA = await primeraApertura.Periodos.SingleAsync(p => p.Id == periodo.Id);
+        var periodoB = await segundaApertura.Periodos.SingleAsync(p => p.Id == periodo.Id);
+        periodoA.Abrir();
+        periodoB.Abrir();
+        await new RepositorioPeriodos(primeraApertura).ActualizarAsync(periodoA, new CambioInstitucion(
+            institucion.Id,
+            autor,
+            "PruebaPeriodo",
+            "Primera apertura",
+            null,
+            "{}"));
+        try
+        {
+            await new RepositorioPeriodos(segundaApertura).ActualizarAsync(periodoB, new CambioInstitucion(
+                institucion.Id,
+                autor,
+                "PruebaPeriodo",
+                "Apertura concurrente",
+                null,
+                "{}"));
+            throw new Exception("Se permitió abrir el período con una revisión anterior.");
+        }
+        catch (ConflictoInstitucionException)
+        {
+            comprobar(true, "Los cambios concurrentes del período no se sobrescriben.");
+        }
+        await using (var contexto = new ContextoConfiguracion(opciones))
+        {
+            var guardado = await contexto.Periodos.SingleAsync(p => p.Id == periodo.Id);
+            comprobar(guardado.Estado == EstadoPeriodo.RecepcionAbierta && guardado.Revision == 2,
+                "El período se reconstruye con su estado y revisión persistidos.");
+            comprobar(await contexto.Cambios.CountAsync(c => c.InstitucionId == institucion.Id && c.Accion == "PruebaPeriodo") == 1,
+                "La apertura concurrente rechazada no duplica el historial.");
+        }
     }
 
     private static CambioInstitucion Cambio(Institucion institucion, Guid autor)

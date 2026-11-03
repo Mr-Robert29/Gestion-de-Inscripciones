@@ -138,6 +138,10 @@ public static class EjecutorPruebas
         }
         await EstadoAsync(await cliente.GetAsync($"/api/v1/instituciones/{identificador}"), HttpStatusCode.Forbidden);
         await IniciarSesionAsync(cliente, "root@prueba.example");
+        await PruebasPeriodos.EjecutarAsync(
+            cliente,
+            correo => IniciarSesionAsync(cliente, correo),
+            Comprobar);
         using (var alcance = aplicacion.Services.CreateScope())
         {
             var cuentas = alcance.ServiceProvider.GetRequiredService<UserManager<IdentityUser<Guid>>>();

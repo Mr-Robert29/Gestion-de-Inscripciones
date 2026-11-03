@@ -46,3 +46,11 @@ Revisar con el usuario el alcance implementado y leer HU-01-Implementacion.md. P
 
 El usuario maneja Git y GitHub. No se ejecutaron comandos Git, no se hizo commit y no se modificó Trello en esta intervención. La tarjeta de HU-01 no fue marcada como terminada ni sus casillas actualizadas.
 
+
+## Continuación: primera versión de HU-02
+
+El usuario autorizó omitir temporalmente la validación de configuración al abrir el período y pidió centralizar lo pendiente en un nuevo README. Se creó docs/Cosas pendientes.md con HU-01, HU-02 y la integración del cierre de HU-13.
+
+Se implementaron PeriodoInscripcion, contratos de períodos, ServicioPeriodos, repositorio, endpoints y migración PeriodosInscripcion. Apertura/cierre manuales, permisos, historial y revisión concurrente. No se implementaron oferta/versiones, bloqueo real de solicitudes en Inscripciones, reapertura, finalización ni edición de fechas/ciclo.
+
+La suite incorpora HU-02: 74 comprobaciones con SQLite, 89 con PostgreSQL aislado y solución compilada sin errores/advertencias. Consultar HU-02-Primera-version.md para rutas y detalles. No se ejecutaron comandos Git ni cambios de Trello.
