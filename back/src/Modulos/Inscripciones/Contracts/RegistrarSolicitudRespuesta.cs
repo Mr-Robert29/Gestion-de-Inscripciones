@@ -4,4 +4,5 @@ public sealed record RegistrarSolicitudRespuesta(
     Guid Id,
     string EstadoRecepcion,
     int? Sala,
-    bool RequiereRevisionEdad);
+    bool RequiereRevisionEdad,
+    int AlertasPosibleDuplicado = 0);

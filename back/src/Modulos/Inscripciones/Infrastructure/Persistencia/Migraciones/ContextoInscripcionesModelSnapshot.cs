@@ -173,6 +173,81 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("documentacion_solicitud", "inscripciones");
                 });
 
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.PosibleDuplicado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Criterios")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DatosEvaluados")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FechaDeteccion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("FechaResolucion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("FechaUltimaDeteccion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HuellaDatos")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MotivoResolucion")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PerfilDeteccion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PeriodoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolicitudAId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SolicitudBId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioDeteccionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UsuarioResolucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioUltimaDeteccionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolicitudBId");
+
+                    b.HasIndex("SolicitudAId", "SolicitudBId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Duplicado_ParSolicitudes");
+
+                    b.HasIndex("InstitucionId", "PeriodoId", "Estado");
+
+                    b.ToTable("posibles_duplicados", "inscripciones");
+                });
+
             modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.RegistroAspiranteInstitucion", b =>
                 {
                     b.Property<Guid>("InstitucionId")
@@ -364,6 +439,21 @@ namespace Jardin.Inscripciones.Infrastructure.Persistencia.Migraciones
                     b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
                         .WithMany("Documentos")
                         .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Inscripciones.Domain.Entidades.PosibleDuplicado", b =>
+                {
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jardin.Inscripciones.Domain.Entidades.SolicitudInscripcion", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudBId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

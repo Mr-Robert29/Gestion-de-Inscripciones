@@ -347,3 +347,64 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE TABLE inscripciones.posibles_duplicados (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "PeriodoId" uuid NOT NULL,
+        "SolicitudAId" uuid NOT NULL,
+        "SolicitudBId" uuid NOT NULL,
+        "PerfilDeteccion" text NOT NULL,
+        "Criterios" text NOT NULL,
+        "HuellaDatos" text NOT NULL,
+        "DatosEvaluados" text NOT NULL,
+        "Estado" text NOT NULL,
+        "Revision" integer NOT NULL,
+        "UsuarioDeteccionId" uuid NOT NULL,
+        "FechaDeteccion" timestamp with time zone NOT NULL,
+        "UsuarioUltimaDeteccionId" uuid NOT NULL,
+        "FechaUltimaDeteccion" timestamp with time zone NOT NULL,
+        "UsuarioResolucionId" uuid,
+        "FechaResolucion" timestamp with time zone,
+        "MotivoResolucion" text,
+        CONSTRAINT "PK_posibles_duplicados" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_posibles_duplicados_solicitudes_SolicitudAId" FOREIGN KEY ("SolicitudAId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_posibles_duplicados_solicitudes_SolicitudBId" FOREIGN KEY ("SolicitudBId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE INDEX "IX_posibles_duplicados_InstitucionId_PeriodoId_Estado" ON inscripciones.posibles_duplicados ("InstitucionId", "PeriodoId", "Estado");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE INDEX "IX_posibles_duplicados_SolicitudBId" ON inscripciones.posibles_duplicados ("SolicitudBId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE UNIQUE INDEX "UX_Duplicado_ParSolicitudes" ON inscripciones.posibles_duplicados ("SolicitudAId", "SolicitudBId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103164516_DeteccionDuplicados', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

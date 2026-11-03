@@ -7,6 +7,7 @@ public sealed class ContextoInscripciones : DbContext
 {
     public DbSet<DocumentacionSolicitud> DocumentosSolicitud => Set<DocumentacionSolicitud>();
     public DbSet<CondicionPrioridad> CondicionesPrioridad => Set<CondicionPrioridad>();
+    public DbSet<PosibleDuplicado> PosiblesDuplicados => Set<PosibleDuplicado>();
     public DbSet<UsoDatosSolicitud> UsosDatosSolicitud => Set<UsoDatosSolicitud>();
     public DbSet<SolicitudInscripcion> Solicitudes => Set<SolicitudInscripcion>();
     public DbSet<Aspirante> Aspirantes => Set<Aspirante>();
@@ -25,6 +26,7 @@ public sealed class ContextoInscripciones : DbContext
             .HasName("upper").IsBuiltIn();
         MapeoSolicitudes.Configurar(modelo);
         MapeoAntecedentesSolicitud.Configurar(modelo);
+        MapeoDuplicadosSolicitud.Configurar(modelo);
         var uso = modelo.Entity<UsoDatosSolicitud>();
         uso.ToTable("usos_datos_solicitud");
         uso.HasKey(u => u.Id);
