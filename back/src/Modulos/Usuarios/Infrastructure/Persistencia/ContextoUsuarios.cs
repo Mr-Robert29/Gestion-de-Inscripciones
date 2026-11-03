@@ -36,6 +36,8 @@ public class ContextoUsuarios : IdentityDbContext<IdentityUser<Guid>, IdentityRo
         {
             b.ToTable("accesos_institucion");
             b.HasKey(a => a.Id);
+            // El dominio genera el Id; EF debe insertar los accesos nuevos, no intentar actualizarlos.
+            b.Property(a => a.Id).ValueGeneratedNever();
             b.Property(a => a.UsuarioId).IsRequired();
             b.Property(a => a.InstitucionId).IsRequired();
             b.Property(a => a.Rol).HasMaxLength(50).IsRequired();

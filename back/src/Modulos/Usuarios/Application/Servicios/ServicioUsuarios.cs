@@ -85,7 +85,8 @@ public sealed class ServicioUsuarios : IModuloUsuarios
         if (usuario is null || !usuario.Activo)
             return null;
 
-        var rolesTotales = new HashSet<string>();
+        var rolesGlobales = await _servicioIdentidad.ObtenerRolesAsync(usuarioId, cancellationToken);
+        var rolesTotales = new HashSet<string>(rolesGlobales);
         foreach (var acceso in usuario.Accesos)
         {
             rolesTotales.Add(acceso.Rol);
