@@ -52,6 +52,8 @@ public sealed class AccesoInstitucionesInscripciones : IAccesoInstitucionesInscr
             OperacionInscripciones.RegistrarPersonasOSolicitudes => PermisosPersonal.RegistrarSolicitudes,
             OperacionInscripciones.RegistrarDocumentacion => PermisosPersonal.RegistrarDocumentacion,
             OperacionInscripciones.VerificarCondiciones => PermisosPersonal.VerificarCondicionesPrioridad,
+            OperacionInscripciones.DetectarDuplicados => PermisosPersonal.RegistrarSolicitudes,
+            OperacionInscripciones.ResolverDuplicados => PermisosPersonal.ResolverDuplicaciones,
             OperacionInscripciones.CorregirDuranteRecepcion => PermisosPersonal.CorregirDuranteRecepcion,
             OperacionInscripciones.CorregirDespuesDelCierre => PermisosPersonal.CorregirDespuesDelCierre,
             _ => throw new ArgumentOutOfRangeException(nameof(operacion))

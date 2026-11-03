@@ -98,3 +98,11 @@ La revisión puede continuar después del cierre; incorporar una declaración nu
 Inscripciones permite buscar solicitudes por identificador o datos del aspirante y corregir dirección, preferencias, consentimiento y condiciones declaradas. Las correcciones conservan historial, requieren la revisión actual y un permiso especial después del cierre; cambiar una declaración reinicia su verificación.
 
 Se conserva la oferta histórica y se distingue RevisionDatos de RevisionDomicilio. El índice de referencias permite consultar usos registrados desactualizados; su integración con mediciones/propuestas reales y bloqueo de confirmación sigue pendiente. La corrección de la persona compartida requiere una operación específica acordada posteriormente.
+
+## Primera versión de HU-10 — Posibles duplicados
+
+Inscripciones genera alertas al registrar solicitudes y permite detectar coincidencias existentes dentro del mismo jardín y período. Los criterios son mismo aspirante, DNI completo coincidente o nombre/apellido/nacimiento iguales, sin comparación aproximada.
+
+Directivo y Root pueden registrar duplicación confirmada o personas diferentes con motivo, usuario, fecha e historial. Incluye consulta paginada, permisos institucionales, migración y protección ante revisiones simultáneas. Repetir una detección sin datos nuevos conserva las decisiones tomadas.
+
+Ambas solicitudes se conservan. Elegir cuál continúa y aplicar esa decisión a procesos posteriores queda pendiente del procedimiento acordado; confirmar una alerta no excluye automáticamente una solicitud.

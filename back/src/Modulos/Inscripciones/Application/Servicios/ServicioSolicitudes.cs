@@ -85,7 +85,7 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     solicitud.Id,
                     "Solicitud.Registro",
                     JsonSerializer.Serialize(MapeoSolicitudes.Convertir(solicitud)));
-                await _solicitudes.AgregarAsync(
+                var alertas = await _solicitudes.AgregarAsync(
                     solicitud,
                     cambio,
                     token);
@@ -93,7 +93,8 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     solicitud.Id,
                     solicitud.EstadoRecepcion.ToString(),
                     solicitud.CalculoEdad.Sala,
-                    solicitud.RequiereRevisionEdad);
+                    solicitud.RequiereRevisionEdad,
+                    alertas);
             },
             tokenCancelacion);
     }

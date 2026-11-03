@@ -4,7 +4,8 @@ namespace Jardin.Inscripciones.Application.Persistencia;
 
 public interface IRepositorioSolicitudes
 {
-    Task AgregarAsync(
+    // Devuelve la cantidad de alertas nuevas guardadas junto con la solicitud.
+    Task<int> AgregarAsync(
         SolicitudInscripcion solicitud,
         CambioInscripciones cambio,
         CancellationToken tokenCancelacion = default);

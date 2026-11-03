@@ -9,15 +9,20 @@ public sealed class RepositorioSolicitudes : IRepositorioSolicitudes
     private readonly ContextoInscripciones _contexto;
     public RepositorioSolicitudes(ContextoInscripciones contexto) { _contexto = contexto; }
 
-    // Implementa IRepositorioSolicitudes.AgregarAsync: solicitud, alternativas e historial se guardan juntos.
-    public async Task AgregarAsync(
+    // Implementa IRepositorioSolicitudes.AgregarAsync: solicitud, alternativas, alertas e historial se guardan juntos.
+    public async Task<int> AgregarAsync(
         SolicitudInscripcion solicitud,
         CambioInscripciones cambio,
         CancellationToken tokenCancelacion = default)
     {
         _contexto.Solicitudes.Add(solicitud);
         _contexto.Cambios.Add(cambio);
+        var alertas = await new RegistroDeteccionDuplicados(_contexto).PrepararNuevaSolicitudAsync(
+            solicitud,
+            cambio.UsuarioId,
+            tokenCancelacion);
         await _contexto.SaveChangesAsync(tokenCancelacion);
+        return alertas;
     }
 
     // Implementa IRepositorioSolicitudes.ObtenerAsync.
