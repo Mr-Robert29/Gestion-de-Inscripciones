@@ -92,6 +92,11 @@ public static class PruebasPostgres
                 "La transacción revierte los datos cuando falla el historial.");
         }
 
+        await PruebasOfertaPersistencia.EjecutarAsync(
+            opciones,
+            institucion.Id,
+            comprobar);
+
         var referencia = new DatosUsoUbicacion(Guid.NewGuid(), "PropuestaIngreso", 1);
         await using (var contexto = new ContextoConfiguracion(opciones))
         {

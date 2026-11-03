@@ -23,6 +23,25 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Aula", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstitucionId");
+
+                    b.ToTable("aulas", "configuracion");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.CambioInstitucion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -93,6 +112,51 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.ToTable("instituciones", "configuracion");
                 });
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.OfertaAulaTurno", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AulaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Capacidad")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Disponible")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OrigenOcupaciones")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PeriodoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenciaCapacidad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TurnoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AulaId");
+
+                    b.HasIndex("TurnoId");
+
+                    b.HasIndex("PeriodoId", "AulaId", "TurnoId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Oferta_Periodo_Aula_Turno");
+
+                    b.ToTable("ofertas_aula_turno", "configuracion");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -125,6 +189,25 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.ToTable("periodos", "configuracion");
                 });
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Turno", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstitucionId");
+
+                    b.ToTable("turnos", "configuracion");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.UsoUbicacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -149,6 +232,15 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         .IsUnique();
 
                     b.ToTable("usos_ubicacion", "configuracion");
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Aula", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
+                        .WithMany()
+                        .HasForeignKey("InstitucionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.CambioInstitucion", b =>
@@ -231,7 +323,58 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.OfertaAulaTurno", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Aula", null)
+                        .WithMany()
+                        .HasForeignKey("AulaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Turno", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("Jardin.Configuracion.Domain.Entidades.OcupacionInicial", "Ocupaciones", b1 =>
+                        {
+                            b1.Property<Guid>("OfertaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Sala")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Cantidad")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("OfertaId", "Sala");
+
+                            b1.ToTable("ocupaciones_iniciales", "configuracion");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OfertaId");
+                        });
+
+                    b.Navigation("Ocupaciones");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
+                        .WithMany()
+                        .HasForeignKey("InstitucionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.Turno", b =>
                 {
                     b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
                         .WithMany()

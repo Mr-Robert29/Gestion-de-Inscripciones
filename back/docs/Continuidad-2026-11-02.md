@@ -54,3 +54,14 @@ El usuario autorizó omitir temporalmente la validación de configuración al ab
 Se implementaron PeriodoInscripcion, contratos de períodos, ServicioPeriodos, repositorio, endpoints y migración PeriodosInscripcion. Apertura/cierre manuales, permisos, historial y revisión concurrente. No se implementaron oferta/versiones, bloqueo real de solicitudes en Inscripciones, reapertura, finalización ni edición de fechas/ciclo.
 
 La suite incorpora HU-02: 74 comprobaciones con SQLite, 89 con PostgreSQL aislado y solución compilada sin errores/advertencias. Consultar HU-02-Primera-version.md para rutas y detalles. No se ejecutaron comandos Git ni cambios de Trello.
+
+## Continuación — HU-03, 2 de noviembre de 2026
+
+Se implementó la primera versión de aulas, turnos y oferta en Configuración. Domain contiene Aula, Turno, OfertaAulaTurno y OcupacionInicial; Contracts expone IModuloOferta y DTO; ServicioOferta coordina permisos y reglas; RepositorioOferta/MapeoOferta implementan persistencia; OfertaController publica HTTP.
+
+La migración AulasTurnosOferta agrega cuatro tablas al esquema configuracion. ConfiguracionCompleta.sql se actualizó para las tres migraciones. Solo se aplicaron en PostgreSQL aislado de pruebas; la base jardin_inscripciones no se modificó.
+
+Comprobaciones: 116 con SQLite y 136 con PostgreSQL aislado, incluyendo conflictos de edición, índice único y rollback del historial/ocupaciones. Revisar HU-03-Primera-version.md para rutas y ejemplos. No se modificó Git ni Trello.
+
+Para continuar: revisar y probar manualmente esta versión en Swagger con datos ficticios; preparar commit/PR a cargo del usuario. Antes de implementar la siguiente historia, revisar su alcance real. HU-04 debe tratar versiones; no confundir la revisión concurrente de una oferta con versiones vinculadas al período. Los pendientes de HU-01/HU-02/HU-03/HU-13 siguen en Cosas pendientes.md.
+

@@ -10,12 +10,16 @@ public sealed class ContextoConfiguracion : DbContext
     public DbSet<CambioInstitucion> Cambios => Set<CambioInstitucion>();
     public DbSet<UsoUbicacion> UsosUbicacion => Set<UsoUbicacion>();
     public DbSet<PeriodoInscripcion> Periodos => Set<PeriodoInscripcion>();
+    public DbSet<Aula> Aulas => Set<Aula>();
+    public DbSet<Turno> Turnos => Set<Turno>();
+    public DbSet<OfertaAulaTurno> Ofertas => Set<OfertaAulaTurno>();
 
     public ContextoConfiguracion(DbContextOptions<ContextoConfiguracion> opciones) : base(opciones) { }
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("configuracion");
+        MapeoOferta.Configurar(modelo);
         var periodo = modelo.Entity<PeriodoInscripcion>();
         periodo.ToTable("periodos");
         periodo.HasKey(p => p.Id);

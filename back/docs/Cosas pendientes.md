@@ -60,3 +60,18 @@ La apertura y el cierre son manuales. No hay un proceso automático que abra/cie
 Las migraciones se comprobaron en PostgreSQL aislado. El usuario debe revisar su conexión y aplicar las migraciones de Configuración en su base de desarrollo antes de probar manualmente contra ella.
 
 No se aplicaron cambios a sus bases existentes ni se ejecutaron comandos de Git. La creación de ramas, el commit y la PR quedan a cargo del usuario.
+
+## Pendientes de HU-03 — Aulas, turnos y oferta
+
+**Ya funcional:** registro y consulta de aulas/turnos, oferta por período/aula/turno, capacidad y disponibilidad explícitas, ocupaciones iniciales por edad, referencia y origen, historial, permisos y concurrencia. Ver [HU-03 — Primera versión](HU-03-Primera-version.md).
+
+| Código | Qué falta | Motivo | Cómo se comprobará |
+|---|---|---|---|
+| HU03-01 | Conciliar ocupaciones iniciales cuando se representen como ingresos confirmados. | El proceso de ingresos no está implementado y falta concretar P-18. No contar dos veces a la misma persona. | Registrar un ingreso que ya estaba incluido en el relevamiento y verificar que se descuenta una sola vez. |
+| HU03-02 | Relacionar límites físicos del aula, por sección y por turno, y cantidad de secciones simultáneas. | Falta precisar P-19 y construir la comprobación real de factibilidad. | Evaluar propuestas reales con límites conjuntos; no sumar capacidades independientes ni aplicar automáticamente 25 como capacidad de aula. |
+| HU03-03 | Asociar versiones de oferta al período y detectar propuestas afectadas por cambios. | Se completa con HU-04 y los procesos reales de propuestas. Revision controla ediciones concurrentes; el historial no sustituye una versión asociada al período. | Cambiar la oferta y comprobar qué versión utiliza el período y qué propuestas deben revisarse. |
+| HU03-04 | Definir y aplicar el procedimiento de cambios con ingresos ya confirmados. | P-12 y los procesos de ingresos aún no permiten implementar ese control completo. | Intentar reducir capacidad o retirar disponibilidad con ingresos confirmados y comprobar el procedimiento acordado sin perderlos. |
+
+CapacidadNetaInicial solo resta las ocupaciones declaradas cuando la oferta está disponible. No incluye reservas ni ingresos posteriores y no garantiza una distribución factible. No debe usarse como autorización automática de nuevos ingresos.
+
+La primera versión permite actualizar la oferta sin consultar ingresos o propuestas reales. Estos puntos siguen pendientes; HU-03 no se declara completamente cerrada. Crear/editar oferta tampoco activa la validación de apertura pospuesta en HU-02.
