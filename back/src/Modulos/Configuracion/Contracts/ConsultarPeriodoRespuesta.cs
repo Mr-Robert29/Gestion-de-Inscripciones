@@ -8,4 +8,6 @@ public sealed record ConsultarPeriodoRespuesta(
     DateOnly Inicio,
     DateOnly Fin,
     string Estado,
-    int Revision);
+    int Revision,
+    Guid? VersionReglasId = null,
+    Guid? VersionOfertaId = null);

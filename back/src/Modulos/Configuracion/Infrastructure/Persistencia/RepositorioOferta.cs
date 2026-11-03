@@ -33,7 +33,7 @@ public sealed class RepositorioOferta : IRepositorioOferta
 
     // Implementa IRepositorioOferta.ListarOfertasAsync.
     public async Task<IReadOnlyList<OfertaAulaTurno>> ListarOfertasAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => await _contexto.Ofertas.AsNoTracking().Include(o => o.Ocupaciones).Where(o => o.PeriodoId == periodoId).OrderBy(o => o.Id).ToArrayAsync(tokenCancelacion);
+        => await _contexto.Ofertas.AsNoTracking().AsSingleQuery().Include(o => o.Ocupaciones).Where(o => o.PeriodoId == periodoId).OrderBy(o => o.Id).ToArrayAsync(tokenCancelacion);
 
     // Implementa IRepositorioOferta.ExisteCombinacionAsync.
     public Task<bool> ExisteCombinacionAsync(

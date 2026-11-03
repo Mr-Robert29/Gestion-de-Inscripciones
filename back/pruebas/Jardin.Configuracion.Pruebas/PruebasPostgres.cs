@@ -97,6 +97,11 @@ public static class PruebasPostgres
             institucion.Id,
             comprobar);
 
+        await PruebasVersionesPersistencia.EjecutarAsync(
+            opciones,
+            institucion.Id,
+            comprobar);
+
         var referencia = new DatosUsoUbicacion(Guid.NewGuid(), "PropuestaIngreso", 1);
         await using (var contexto = new ContextoConfiguracion(opciones))
         {

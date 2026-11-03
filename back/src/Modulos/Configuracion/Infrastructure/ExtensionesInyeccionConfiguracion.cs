@@ -22,6 +22,8 @@ public static class ExtensionesInyeccionConfiguracion
         servicios.AddScoped<IModuloPeriodos, ServicioPeriodos>();
         servicios.AddScoped<IRepositorioOferta, RepositorioOferta>();
         servicios.AddScoped<IModuloOferta, ServicioOferta>();
+        servicios.AddScoped<IRepositorioVersionesConfiguracion, RepositorioVersionesConfiguracion>();
+        servicios.AddScoped<IModuloVersionesConfiguracion, ServicioVersionesConfiguracion>();
         return servicios;
     }
 }

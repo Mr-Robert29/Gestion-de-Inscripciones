@@ -10,16 +10,46 @@ public sealed class ContextoConfiguracion : DbContext
     public DbSet<CambioInstitucion> Cambios => Set<CambioInstitucion>();
     public DbSet<UsoUbicacion> UsosUbicacion => Set<UsoUbicacion>();
     public DbSet<PeriodoInscripcion> Periodos => Set<PeriodoInscripcion>();
+    public DbSet<VersionConfiguracion> VersionesConfiguracion => Set<VersionConfiguracion>();
     public DbSet<Aula> Aulas => Set<Aula>();
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<OfertaAulaTurno> Ofertas => Set<OfertaAulaTurno>();
 
     public ContextoConfiguracion(DbContextOptions<ContextoConfiguracion> opciones) : base(opciones) { }
 
+    // Las publicaciones se agregan; una edición o borrado accidental desde EF queda rechazado.
+    public override int SaveChanges(bool aceptarCambiosAlGuardar)
+    {
+        ProtegerVersiones();
+        return base.SaveChanges(aceptarCambiosAlGuardar);
+    }
+
+    public override Task<int> SaveChangesAsync(bool aceptarCambiosAlGuardar, CancellationToken tokenCancelacion = default)
+    {
+        ProtegerVersiones();
+        return base.SaveChangesAsync(aceptarCambiosAlGuardar, tokenCancelacion);
+    }
+
+    private void ProtegerVersiones()
+    {
+        if (ChangeTracker.Entries<VersionConfiguracion>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Las versiones publicadas no se modifican ni se eliminan. Publicá otra versión.");
+    }
+
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("configuracion");
         MapeoOferta.Configurar(modelo);
+        var version = modelo.Entity<VersionConfiguracion>();
+        version.ToTable("versiones_configuracion");
+        version.HasKey(v => v.Id);
+        version.Property(v => v.Id).ValueGeneratedNever();
+        version.Property(v => v.Tipo).HasConversion<string>().IsRequired();
+        version.Property(v => v.Datos).IsRequired();
+        version.Property(v => v.Motivo).IsRequired();
+        version.Property(v => v.Referencia).IsRequired();
+        version.HasOne<PeriodoInscripcion>().WithMany().HasForeignKey(v => v.PeriodoId).OnDelete(DeleteBehavior.Restrict);
+        version.HasIndex(v => v.PeriodoId);
         var periodo = modelo.Entity<PeriodoInscripcion>();
         periodo.ToTable("periodos");
         periodo.HasKey(p => p.Id);
@@ -28,6 +58,8 @@ public sealed class ContextoConfiguracion : DbContext
         periodo.Property(p => p.Revision).IsConcurrencyToken();
         periodo.HasOne<Institucion>().WithMany().HasForeignKey(p => p.InstitucionId).OnDelete(DeleteBehavior.Restrict);
         periodo.HasIndex(p => p.InstitucionId);
+        periodo.HasOne<VersionConfiguracion>().WithMany().HasForeignKey(p => p.VersionReglasId).OnDelete(DeleteBehavior.Restrict);
+        periodo.HasOne<VersionConfiguracion>().WithMany().HasForeignKey(p => p.VersionOfertaId).OnDelete(DeleteBehavior.Restrict);
         var institucion = modelo.Entity<Institucion>();
         institucion.ToTable("instituciones");
         institucion.HasKey(i => i.Id);
