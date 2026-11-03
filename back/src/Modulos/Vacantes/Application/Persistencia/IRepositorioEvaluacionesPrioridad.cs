@@ -7,4 +7,7 @@ public interface IRepositorioEvaluacionesPrioridad
     Task GuardarAsync(
         EvaluacionPrioridad evaluacion,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EvaluacionPrioridad>> ListarAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default);
 }

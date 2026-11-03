@@ -70,4 +70,21 @@ public sealed class ServicioPrioridades : IModuloPrioridades
             cancellationToken);
         return respuesta;
     }
+
+    public async Task<IReadOnlyList<DatosEvaluacionPrioridad>> ConsultarHistorialAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+    {
+        await _autorizacion.AutorizarAsync(periodoId, cancellationToken);
+        var evaluaciones = await _evaluaciones.ListarAsync(periodoId, cancellationToken);
+        return evaluaciones.Select(x => new DatosEvaluacionPrioridad(
+            x.Id,
+            x.PeriodoId,
+            x.VersionReglasId,
+            x.UsuarioId,
+            x.RevisionPeriodo,
+            x.Fecha,
+            JsonSerializer.Deserialize<DatosPrioridad[]>(x.Datos) ?? []))
+            .ToArray();
+    }
 }

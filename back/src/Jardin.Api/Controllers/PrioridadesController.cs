@@ -22,6 +22,12 @@ public sealed class PrioridadesController : ControllerBase
         CancellationToken cancellationToken)
         => EjecutarAsync(async () => Ok(await _prioridades.EvaluarAsync(periodoId, cancellationToken)));
 
+    [HttpGet("{periodoId:guid}/prioridades/historial")]
+    public Task<IActionResult> Historial(
+        Guid periodoId,
+        CancellationToken cancellationToken)
+        => EjecutarAsync(async () => Ok(await _prioridades.ConsultarHistorialAsync(periodoId, cancellationToken)));
+
     private async Task<IActionResult> EjecutarAsync(Func<Task<IActionResult>> operacion)
     {
         try { return await operacion(); }
