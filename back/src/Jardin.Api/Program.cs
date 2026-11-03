@@ -1,4 +1,7 @@
 using System.Text;
+using Jardin.Configuracion.Infrastructure;
+using Jardin.Configuracion.Application.Seguridad;
+using Jardin.Api.Seguridad;
 using Jardin.Api.Middlewares;
 using Jardin.Secciones.Infrastructure;
 using Jardin.Usuarios.Infrastructure;
@@ -8,8 +11,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
-
-CargarArchivoEnv();
+// Cargar variables de entorno desde archivo .env si existe en desarrollo local
+if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Pruebas")
+    CargarArchivoEnv();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +25,9 @@ builder.Services.AddOpenApi();
 
 
 builder.Services.AgregarModuloUsuarios(builder.Configuration);
+builder.Services.AgregarModuloConfiguracion(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IContextoUsuarioConfiguracion, ContextoUsuarioConfiguracion>();
 
 builder.Services.AgregarModuloSecciones(builder.Configuration);
 
@@ -84,8 +91,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
+// 7. Inicializacion de datos iniciales / Seed
+if (!app.Environment.IsEnvironment("Pruebas"))
 {
+    using var scope = app.Services.CreateScope();
     var inicializador = scope.ServiceProvider.GetService<InicializadorUsuarios>();
     if (inicializador is not null)
     {
@@ -131,4 +140,10 @@ static void CargarArchivoEnv()
         }
         dir = dir.Parent;
     }
+}
+
+namespace Jardin.Api
+{
+    // Identifica el ensamblado de la API al crear el servidor HTTP de pruebas.
+    public sealed class PuntoEntradaApi { }
 }

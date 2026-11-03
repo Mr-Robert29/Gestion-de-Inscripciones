@@ -1,83 +1,76 @@
 # Gestión de inscripciones de jardines
 
-Base de trabajo para un backend en C#/.NET 10 organizado como monolito modular. Esta entrega contiene **la estructura y las clases de Domain**. Las funcionalidades restantes se desarrollarán con el equipo, paso a paso.
+Backend C#/.NET 10 organizado como monolito modular. El frontend vive en ../front y tendrá su propio stack y documentación.
 
 ## Estructura
 
-La solución `Jardin.sln` está en la raíz. Agrupa 21 proyectos: la API y cuatro proyectos por cada uno de los cinco módulos.
+Desde esta carpeta back, Jardin.sln agrupa la API, los veinte proyectos de los cinco módulos y el ejecutable de comprobaciones de Configuración.
 
 ```text
-Jardin.sln
-src/
-  Jardin.Api/                  Arranque mínimo, sin operaciones HTTP
-  Modulos/
-    Usuarios/
-      Domain/                  UsuarioPersonal y RolesPersonal
-      Application/             Proyecto vacío
-      Infrastructure/          Proyecto vacío
-      Contracts/               Proyecto vacío
-    Configuracion/
-      Domain/                  Domicilio y Coordenadas del establecimiento
-      Application/             Proyecto vacío
-      Infrastructure/          Proyecto vacío
-      Contracts/               Proyecto vacío
-    Inscripciones/
-      Domain/                  Aspirante, Responsable, VinculoResponsable,
-                               Domicilio y Coordenadas
-      Application/             Proyecto vacío
-      Infrastructure/          Proyecto vacío
-      Contracts/               Proyecto vacío
-    Vacantes/
-      Domain/                  Proyecto vacío
-      Application/             Proyecto vacío
-      Infrastructure/          Proyecto vacío
-      Contracts/               Proyecto vacío
-    Secciones/
-      Domain/                  Proyecto vacío
-      Application/             Proyecto vacío
-      Infrastructure/          Proyecto vacío
-      Contracts/               Proyecto vacío
-docs/
-  Refactor-estructura-y-clases.md
+back/
+  Jardin.sln
+  src/
+    Jardin.Api/
+    Modulos/
+      Usuarios/
+      Configuracion/
+      Inscripciones/
+      Vacantes/
+      Secciones/
+  pruebas/
+    Jardin.Configuracion.Pruebas/
+  docs/
 ```
 
-Los proyectos vacíos conservan sus referencias para establecer la dirección de las dependencias. Todavía no contienen servicios, repositorios, contratos públicos ni persistencia.
+Cada módulo tiene Domain, Application, Infrastructure y Contracts.
 
-## Responsabilidad de las capas
+- **Domain:** conceptos y reglas del negocio.
+- **Application:** coordinación de casos de uso.
+- **Infrastructure:** persistencia y servicios externos.
+- **Contracts:** operaciones y datos públicos del módulo.
+- **API:** peticiones y respuestas HTTP.
 
-- **Domain:** conceptos y reglas del negocio expresados con clases y métodos; sin acceso a bases de datos ni servicios externos.
-- **Application:** futuros casos de uso y coordinación de las operaciones.
-- **Infrastructure:** futuras implementaciones de persistencia y servicios externos.
-- **Contracts:** futuras interfaces y datos públicos para colaborar entre módulos.
+## Estado actual
 
-`Jardin.Api` será el punto de entrada HTTP. Por ahora únicamente puede arrancar; no tiene controladores ni rutas de negocio.
+Usuarios dispone del trabajo de cuentas, Identity y JWT desarrollado por el compañero. Configuración incorpora registro, consulta, actualización, permisos, historial y migración propia. Inscripciones conserva sus clases iniciales de dominio; los procesos de mediciones y propuestas aún están pendientes.
 
-## Clases conservadas
+La detección de referencias afectadas por cambios de ubicación está preparada, pero la integración con mediciones y confirmaciones reales no puede declararse terminada hasta construir sus procesos de origen.
 
-`Aspirante` reemplaza a `Alumno`. Tiene datos personales, documento opcional, cálculo de edad a una fecha de corte explícita y vínculos con responsables. `Responsable` representa una persona; `VinculoResponsable` guarda su relación con un aspirante, incluyendo tipo de vínculo, contacto principal y tutoría.
+El estado detallado y los comandos de uso están en [HU-01 — Implementación](docs/HU-01-Implementacion.md). Los documentos de continuidad anteriores conservan el contexto histórico de cada fecha.
 
-`UsuarioPersonal` representa el perfil y su estado activo. `RolesPersonal` conserva los nombres Administrativo, Directivo y AdministradorDelSistema. Los nombres de roles todavía no aplican permisos: esa implementación queda pendiente.
-
-`Domicilio` representa una dirección y `Coordenadas` una ubicación. Cada módulo conserva sus propios tipos. En Inscripciones el domicilio está preparado para la futura solicitud, que todavía no existe; no está asociado al registro global de Aspirante. En Configuracion está preparado para el establecimiento, cuya entidad también queda pendiente.
-
-Estas clases son una base inicial de dominio, no el modelo completo del sistema.
-
-## Compilar
-
-Desde la raíz:
+## Compilar y comprobar
 
 ```powershell
 dotnet build Jardin.sln
+dotnet run --project pruebas/Jardin.Configuracion.Pruebas
 ```
 
-Se requiere el SDK de .NET 10. La comprobación de esta entrega es de compilación; no demuestra funcionamiento de procesos de inscripción ni integración con una base de datos.
+Se necesita el SDK de .NET 10. La suite utiliza SQLite aislado por defecto. El documento de HU-01 explica cómo ejecutar también las comprobaciones con PostgreSQL exclusivo de pruebas.
 
-## Trabajo posterior
+## Configuración local
 
-El stack acordado incluye ASP.NET Core Web API, Swagger, PostgreSQL, EF Core con Npgsql, Identity y JWT. En esta base solo está preparado el proyecto de ASP.NET Core; Swagger, persistencia y autenticación se implementarán después. No hay paquetes adicionales para esas funcionalidades, migraciones, conexiones, login ni configuración de Docker.
+La API requiere Jwt__ClaveSecreta y la conexión de Usuarios existente. Configuración admite ConnectionStrings__Configuracion y, si se omite, utiliza DefaultConnection de la API. No subir contraseñas, claves JWT ni tokens al repositorio.
 
-También quedan pendientes los casos de uso, los contratos públicos, los controladores, las reglas restantes de dominio y la integración con Geoapify. Se conserva la decisión de utilizar Geoapify para ubicación y distancia, sin implementar Haversine.
+Antes de arrancar contra una base local, aplicar la migración de Configuración siguiendo el documento de HU-01. Las pruebas no requieren modificar las bases de la aplicación.
 
-Las decisiones funcionales aprobadas mantienen su validez; aprobación e implementación son estados distintos. La documentación funcional del equipo continúa enlazada en `readme.txt`. El registro de alcance y aprendizaje está en [docs/Refactor-estructura-y-clases.md](docs/Refactor-estructura-y-clases.md).
+Geoapify sigue siendo el proveedor aprobado de coordenadas y distancia para la integración posterior. No se implementó Haversine.
 
-Comprobación de esta base: 21 proyectos compilados con 0 errores y 0 advertencias.
+## Primera versión de HU-02
+
+Configuración también permite crear y consultar períodos y abrir/cerrar recepción manualmente. Se pospuso por decisión del usuario la validación de oferta/reglas al abrir.
+
+- [HU-02 — Primera versión](docs/HU-02-Primera-version.md).
+- [Cosas pendientes de las historias trabajadas](<docs/Cosas pendientes.md>).
+
+## Primera versión de HU-03
+
+Configuración permite registrar aulas y turnos, configurar oferta por período, disponibilidad, capacidad documentada y ocupaciones iniciales por edad. Incluye permisos, historial y revisión concurrente.
+
+- [HU-03 — Operaciones, ejemplos, migración y comprobaciones](docs/HU-03-Primera-version.md).
+- La capacidad neta inicial no es el cálculo final de vacantes. Las integraciones y decisiones pendientes se mantienen en Cosas pendientes.md.
+
+## Primera versión de HU-04
+
+Configuración permite publicar versiones inmutables de reglas y oferta y elegir explícitamente cuáles utiliza un período. Las publicaciones anteriores permanecen consultables; cambiar el borrador de oferta no modifica esas copias. Las consultas de períodos incluyen VersionReglasId y VersionOfertaId.
+
+Se publican las reglas acordadas del perfil Prototipo-2026-1 con fecha de corte explícita. La comprobación de vigencia compara las referencias actuales; su integración con propuestas, resultados y confirmación transaccional sigue pendiente. La apertura sin configuración válida de HU-02 conserva la omisión aprobada para el prototipo.
