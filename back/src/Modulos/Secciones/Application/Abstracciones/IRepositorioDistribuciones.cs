@@ -8,4 +8,9 @@ public interface IRepositorioDistribuciones
     Task AgregarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default);
     Task<PropuestaDistribucion?> ObtenerPorIdAsync(Guid propuestaId, CancellationToken cancellationToken = default);
     Task ActualizarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default);
+    Task<bool> ExisteAsignacionActivaAsync(Guid ingresoId, CancellationToken cancellationToken = default);
+    Task ConfirmarAsync(
+        PropuestaDistribucion propuesta,
+        IReadOnlyList<AsignacionSeccion> asignaciones,
+        CancellationToken cancellationToken = default);
 }

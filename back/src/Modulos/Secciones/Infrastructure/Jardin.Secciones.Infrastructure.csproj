@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Application\Jardin.Secciones.Application.csproj" />
     <ProjectReference Include="..\Domain\Jardin.Secciones.Domain.csproj" />
     <ProjectReference Include="..\Contracts\Jardin.Secciones.Contracts.csproj" />
+    <ProjectReference Include="..\..\Vacantes\Contracts\Jardin.Vacantes.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />

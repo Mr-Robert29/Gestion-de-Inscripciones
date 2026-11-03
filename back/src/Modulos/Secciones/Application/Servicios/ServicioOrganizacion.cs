@@ -211,8 +211,64 @@ public sealed class ServicioOrganizacion : IModuloSecciones
     public Task<DatosPropuestaDistribucion?> ConfirmarDistribucionAsync(
         Guid propuestaId,
         Guid usuarioId,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken = default)
+    {
+        return ConfirmarDistribucionInternaAsync(propuestaId, usuarioId, cancellationToken);
+    }
+
+    private async Task<DatosPropuestaDistribucion?> ConfirmarDistribucionInternaAsync(
+        Guid propuestaId,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        if (usuarioId == Guid.Empty)
+            throw new ArgumentException("El usuario no puede estar vacío.", nameof(usuarioId));
+
+        var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken);
+        if (propuesta is null)
+            return null;
+        if (propuesta.Estado != EstadoPropuestaDistribucion.Borrador)
+            throw new InvalidOperationException("Solo se puede confirmar una propuesta vigente.");
+
+        var ingresos = await _vacantes.ObtenerIngresosActivosAsync(propuesta.PeriodoId, cancellationToken);
+        if (ingresos.Revision != propuesta.RevisionIngresos)
+        {
+            propuesta.MarcarDesactualizada();
+            await _repositorioDistribuciones.ActualizarAsync(propuesta, cancellationToken);
+            throw new InvalidOperationException("La propuesta está desactualizada porque cambiaron los ingresos.");
+        }
+
+        var secciones = (await _repositorio.ListarPorPeriodoAsync(propuesta.PeriodoId, cancellationToken)).ToList();
+        if (secciones.Count == 0 || secciones.Max(x => x.Revision) != propuesta.RevisionSecciones)
+        {
+            propuesta.MarcarDesactualizada();
+            await _repositorioDistribuciones.ActualizarAsync(propuesta, cancellationToken);
+            throw new InvalidOperationException("La propuesta está desactualizada porque cambiaron las secciones.");
+        }
+
+        var asignaciones = new List<AsignacionSeccion>();
+        foreach (var propuestaAsignacion in propuesta.Asignaciones.Where(x => x.SeccionId is not null))
+        {
+            var seccion = secciones.FirstOrDefault(x => x.Id == propuestaAsignacion.SeccionId);
+            if (seccion is null || !seccion.EsCompatibleCon(propuestaAsignacion.Edad, propuestaAsignacion.TurnoId))
+                throw new InvalidOperationException("La propuesta contiene una asignación incompatible.");
+            if (await _repositorioDistribuciones.ExisteAsignacionActivaAsync(propuestaAsignacion.IngresoId, cancellationToken))
+                throw new InvalidOperationException("Uno de los ingresos ya tiene una asignación activa.");
+            if (asignaciones.Count(x => x.SeccionId == seccion.Id) >= seccion.Capacidad)
+                throw new InvalidOperationException("La propuesta supera la capacidad de una sección.");
+
+            asignaciones.Add(new AsignacionSeccion(
+                propuestaAsignacion.IngresoId,
+                seccion.Id,
+                usuarioId,
+                DateTimeOffset.UtcNow,
+                propuestaAsignacion.MotivoModificacion));
+        }
+
+        propuesta.Confirmar(usuarioId, DateTimeOffset.UtcNow);
+        await _repositorioDistribuciones.ConfirmarAsync(propuesta, asignaciones, cancellationToken);
+        return Mapear(propuesta);
+    }
 
     private static DatosSeccion Mapear(Seccion seccion) => new(
         seccion.Id,
