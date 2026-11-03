@@ -160,3 +160,83 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE TABLE inscripciones.solicitudes (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "PeriodoId" uuid NOT NULL,
+        "AspiranteId" uuid NOT NULL,
+        "DomicilioDeclarado_Calle" text NOT NULL,
+        "DomicilioDeclarado_Numero" text NOT NULL,
+        "DomicilioDeclarado_Localidad" text NOT NULL,
+        "DomicilioDeclarado_Provincia" text NOT NULL,
+        "DomicilioDeclarado_CodigoPostal" text,
+        "DomicilioDeclarado_Complemento" text,
+        "DomicilioDeclarado_Piso" text,
+        "DomicilioDeclarado_Departamento" text,
+        "DomicilioDeclarado_Barrio" text,
+        "CalculoEdad_FechaNacimientoUtilizada" date NOT NULL,
+        "CalculoEdad_FechaCorteUtilizada" date NOT NULL,
+        "CalculoEdad_EdadCalculada" integer NOT NULL,
+        "CalculoEdad_Sala" integer,
+        "TurnoPreferidoId" uuid NOT NULL,
+        "VersionReglasId" uuid NOT NULL,
+        "VersionOfertaId" uuid NOT NULL,
+        "RevisionPeriodoUtilizada" integer NOT NULL,
+        "EstadoRecepcion" text NOT NULL,
+        "UsuarioRegistroId" uuid NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "ReferenciaConsentimiento" text,
+        "RevisionDatos" integer NOT NULL,
+        CONSTRAINT "PK_solicitudes" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_solicitudes_aspirantes_instituciones_InstitucionId_Aspirant~" FOREIGN KEY ("InstitucionId", "AspiranteId") REFERENCES inscripciones.aspirantes_instituciones ("InstitucionId", "AspiranteId") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE TABLE inscripciones.turnos_alternativos_solicitud (
+        "TurnoId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        CONSTRAINT "PK_turnos_alternativos_solicitud" PRIMARY KEY ("SolicitudId", "TurnoId"),
+        CONSTRAINT "FK_turnos_alternativos_solicitud_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_AspiranteId_PeriodoId" ON inscripciones.solicitudes ("AspiranteId", "PeriodoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_InstitucionId_AspiranteId" ON inscripciones.solicitudes ("InstitucionId", "AspiranteId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_InstitucionId_PeriodoId" ON inscripciones.solicitudes ("InstitucionId", "PeriodoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103142502_SolicitudesInscripcion', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

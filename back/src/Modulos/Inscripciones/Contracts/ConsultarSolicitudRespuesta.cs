@@ -1,0 +1,24 @@
+namespace Jardin.Inscripciones.Contracts;
+
+public sealed record ConsultarSolicitudRespuesta(
+    Guid Id,
+    Guid InstitucionId,
+    Guid PeriodoId,
+    Guid AspiranteId,
+    DatosDomicilioSolicitud Domicilio,
+    DateOnly FechaNacimientoUtilizada,
+    DateOnly FechaCorteUtilizada,
+    int EdadCalculada,
+    int? Sala,
+    bool RequiereRevisionEdad,
+    Guid TurnoPreferidoId,
+    IReadOnlyList<Guid> TurnosAlternativosAceptados,
+    Guid VersionReglasId,
+    Guid VersionOfertaId,
+    int RevisionPeriodoUtilizada,
+    string EstadoRecepcion,
+    bool FueraDeTermino,
+    Guid UsuarioRegistroId,
+    DateTimeOffset FechaRegistro,
+    string? ReferenciaConsentimiento,
+    int RevisionDatos);

@@ -95,6 +95,25 @@ public sealed class ServicioPeriodos : IModuloPeriodos
             tokenCancelacion);
     }
 
+    // Implementa IModuloPeriodos.EjecutarConPeriodoProtegidoAsync: el consumidor recibe datos públicos, no entidades.
+    public async Task<T> EjecutarConPeriodoProtegidoAsync<T>(
+        Guid periodoId,
+        Func<ConsultarPeriodoRespuesta, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        var periodo = await _periodos.ObtenerAsync(periodoId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el período.");
+        await AutorizarAsync(
+            periodo.InstitucionId,
+            false,
+            tokenCancelacion);
+        return await _periodos.EjecutarConBloqueoAsync(
+            periodoId,
+            (actual, token) => operacion(Mapear(actual), token),
+            tokenCancelacion);
+    }
+
     private async Task<CambiarRecepcionRespuesta> CambiarRecepcionAsync(
         Guid periodoId,
         CambiarRecepcionPeticion peticion,

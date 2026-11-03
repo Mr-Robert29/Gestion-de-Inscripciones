@@ -1,6 +1,6 @@
 namespace Jardin.Inscripciones.Domain.ObjetosDeValor;
 
-// Se incorporará a SolicitudInscripcion; no pertenece al registro global de Aspirante.
+// Dirección propia de una solicitud; no modifica el domicilio de otras solicitudes.
 public sealed record Domicilio
 {
     public string Calle { get; }
@@ -12,14 +12,32 @@ public sealed record Domicilio
     public string? Piso { get; }
     public string? Departamento { get; }
     public string? Barrio { get; }
-    public Domicilio(string calle, string numero, string localidad, string provincia,
-        string? codigoPostal = null, string? complemento = null,
-        string? piso = null, string? departamento = null, string? barrio = null)
+
+    public Domicilio(
+        string calle,
+        string numero,
+        string localidad,
+        string provincia,
+        string? codigoPostal = null,
+        string? complemento = null,
+        string? piso = null,
+        string? departamento = null,
+        string? barrio = null)
     {
-        Calle = calle?.Trim() ?? ""; Numero = numero?.Trim() ?? "";
-        Localidad = localidad?.Trim() ?? ""; Provincia = provincia?.Trim() ?? "";
-        CodigoPostal = codigoPostal; Complemento = complemento;
-        Piso = piso; Departamento = departamento; Barrio = barrio;
-        // La obligatoriedad por tipo de dirección se completa con P-14.
+        ArgumentException.ThrowIfNullOrWhiteSpace(calle);
+        ArgumentException.ThrowIfNullOrWhiteSpace(numero);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localidad);
+        ArgumentException.ThrowIfNullOrWhiteSpace(provincia);
+        Calle = calle.Trim();
+        Numero = numero.Trim();
+        Localidad = localidad.Trim();
+        Provincia = provincia.Trim();
+        CodigoPostal = Normalizar(codigoPostal);
+        Complemento = Normalizar(complemento);
+        Piso = Normalizar(piso);
+        Departamento = Normalizar(departamento);
+        Barrio = Normalizar(barrio);
     }
+
+    private static string? Normalizar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 }
