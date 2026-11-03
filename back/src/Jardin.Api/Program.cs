@@ -9,6 +9,8 @@ using Jardin.Configuracion.Application.Seguridad;
 using Jardin.Api.Seguridad;
 using Jardin.Api.Middlewares;
 using Jardin.Secciones.Infrastructure;
+using Jardin.Vacantes.Application.Seguridad;
+using Jardin.Vacantes.Infrastructure;
 using Jardin.Usuarios.Infrastructure;
 using Jardin.Usuarios.Infrastructure.Inicializacion;
 using Jardin.Usuarios.Infrastructure.Tokens;
@@ -39,6 +41,8 @@ builder.Services.AddScoped<IEjecucionPeriodoSolicitud, EjecucionPeriodoSolicitud
 builder.Services.AddScoped<IUbicacionJardin, ConsultaUbicacionJardin>();
 
 builder.Services.AgregarModuloSecciones(builder.Configuration);
+builder.Services.AgregarModuloVacantes(builder.Configuration);
+builder.Services.AddScoped<IAutorizacionVacantes, AccesoVacantes>();
 
 var jwtConfig = builder.Configuration.GetSection(ConfiguracionJwt.Seccion).Get<ConfiguracionJwt>() ?? new ConfiguracionJwt();
 var claveJwt = !string.IsNullOrWhiteSpace(jwtConfig.ClaveSecreta)

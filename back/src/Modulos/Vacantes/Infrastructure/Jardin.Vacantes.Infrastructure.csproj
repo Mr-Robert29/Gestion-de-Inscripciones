@@ -12,4 +12,9 @@
     <ProjectReference Include="..\Contracts\Jardin.Vacantes.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
 </Project>
