@@ -87,7 +87,7 @@ public sealed class ServicioComposicionSecciones(
         Guid seccionId,
         CancellationToken tokenCancelacion = default)
     {
-        await autorizacion.AutorizarCambioAsync(periodoId, tokenCancelacion);
+        await autorizacion.AutorizarConsultaHistorialAsync(periodoId, tokenCancelacion);
         var seccion = await secciones.ObtenerPorIdAsync(seccionId, tokenCancelacion);
         if (seccion is null || seccion.PeriodoId != periodoId) throw new KeyNotFoundException("No se encontró la sección en el período.");
         return (await repositorio.ConsultarHistorialAsync(seccionId, tokenCancelacion)).Select(x => new DatosCambioComposicion(

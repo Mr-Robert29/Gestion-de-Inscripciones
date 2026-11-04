@@ -9,6 +9,10 @@ public interface IAutorizacionVacantes
     Task<AutorizacionVacantes> AutorizarResolucionAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default);
+
+    Task<AutorizacionVacantes> AutorizarConsultaReportesAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record AutorizacionVacantes(

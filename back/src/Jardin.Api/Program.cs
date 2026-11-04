@@ -4,6 +4,7 @@ using Jardin.Inscripciones.Application.Geografia;
 using Jardin.Inscripciones.Infrastructure;
 using Jardin.Inscripciones.Application.Seguridad;
 using System.Text;
+using Jardin.Api.Reportes;
 using Jardin.Configuracion.Infrastructure;
 using Jardin.Configuracion.Application.Seguridad;
 using Jardin.Api.Seguridad;
@@ -48,6 +49,7 @@ builder.Services.AddScoped<IAutorizacionListaEspera, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionOfrecimientos, AccesoVacantes>();
 builder.Services.AddScoped<Jardin.Secciones.Application.Abstracciones.IAutorizacionComposicion, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionNominaDistrito, AccesoVacantes>();
+builder.Services.AddScoped<IAutorizacionReportes, AccesoVacantes>();
 
 builder.Services.AddScoped<
     Jardin.Vacantes.Application.Propuestas.IIntegracionSeccionesEspera,

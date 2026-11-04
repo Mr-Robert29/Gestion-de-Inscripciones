@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Jardin.Api.Reportes;
 using Jardin.Configuracion.Contracts;
 using Jardin.Usuarios.Contracts;
 using Jardin.Usuarios.Domain;
@@ -12,6 +13,7 @@ public sealed class AccesoVacantes :
     IAutorizacionListaEspera,
     IAutorizacionOfrecimientos,
     IAutorizacionNominaDistrito,
+    IAutorizacionReportes,
     Jardin.Secciones.Application.Abstracciones.IAutorizacionComposicion
 {
     private readonly IHttpContextAccessor _http;
@@ -46,12 +48,28 @@ public sealed class AccesoVacantes :
             "No tenés permiso para resolver casos especiales en esta institución.",
             cancellationToken);
 
+    public Task<AutorizacionVacantes> AutorizarConsultaReportesAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+        => AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.ConsultarReportes,
+            "No tenés permiso para consultar los reportes de esta institución.",
+            cancellationToken);
+
     // Implementa IAutorizacionComposicion.AutorizarCambioAsync con el permiso institucional de Secciones.
     public async Task<Guid> AutorizarCambioAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
         => (await AutorizarConPermisoAsync(
             periodoId,
             PermisosPersonal.DefinirSecciones,
             "No tenés permiso para cambiar la composición en esta institución.",
+            tokenCancelacion)).UsuarioId;
+
+    public async Task<Guid> AutorizarConsultaHistorialAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => (await AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.ConsultarReportes,
+            "No tenés permiso para consultar el historial de composición.",
             tokenCancelacion)).UsuarioId;
 
     private async Task<AutorizacionVacantes> AutorizarConPermisoAsync(

@@ -7,6 +7,7 @@ public interface IRepositorioDistribuciones
     Task<int> ObtenerUltimaVersionAsync(Guid periodoId, CancellationToken cancellationToken = default);
     Task AgregarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default);
     Task<PropuestaDistribucion?> ObtenerPorIdAsync(Guid propuestaId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PropuestaDistribucion>> ListarPorPeriodoAsync(Guid periodoId, CancellationToken cancellationToken = default);
     Task ActualizarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default);
     Task<bool> ExisteAsignacionActivaAsync(Guid ingresoId, CancellationToken cancellationToken = default);
     Task ConfirmarAsync(

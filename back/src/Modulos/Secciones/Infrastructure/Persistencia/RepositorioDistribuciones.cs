@@ -31,6 +31,13 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
             .Include("_asignaciones")
             .FirstOrDefaultAsync(x => x.Id == propuestaId, cancellationToken);
 
+    public async Task<IReadOnlyList<PropuestaDistribucion>> ListarPorPeriodoAsync(Guid periodoId, CancellationToken cancellationToken = default)
+        => await _contexto.PropuestasDistribucion
+            .Include("_asignaciones")
+            .Where(x => x.PeriodoId == periodoId)
+            .OrderByDescending(x => x.Version)
+            .ToArrayAsync(cancellationToken);
+
     public async Task ActualizarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default)
     {
         _contexto.PropuestasDistribucion.Update(propuesta);
