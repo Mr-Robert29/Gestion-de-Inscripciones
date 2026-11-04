@@ -1,0 +1,363 @@
+.acceso {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: #fff;
+}
+.acceso__presentacion {
+  position: relative;
+  background: #214c3b;
+  color: #f5f0df;
+  padding: 3.25rem clamp(2rem, 6vw, 6.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.acceso__presentacion .marca {
+  color: #fff9eb;
+}
+.acceso__presentacion .marca__leyenda {
+  color: #b6c9b6;
+}
+.acceso__mensaje {
+  margin: auto 0 0;
+  padding-top: 5rem;
+  position: relative;
+  z-index: 1;
+}
+.acceso__epigrafe {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  color: #c7d4bb;
+  margin-bottom: 1.3rem;
+}
+.acceso__titulo {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: clamp(2.7rem, 4.8vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  max-width: 28rem;
+  margin-bottom: 1.5rem;
+}
+.acceso__titulo em {
+  color: #e4cc9b;
+  font-weight: 400;
+}
+.acceso__descripcion {
+  color: #c0d0c0;
+  max-width: 23rem;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+.acceso__ilustracion {
+  width: min(100%, 27rem);
+  align-self: center;
+  margin: 2rem 0 0.8rem;
+}
+.acceso__pie {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  color: #b5c7b5;
+  font-size: 0.67rem;
+}
+.acceso__formulario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  background: #fbfcf9;
+}
+.acceso__panel {
+  max-width: 24rem;
+  width: 100%;
+}
+.acceso__saludo {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #6e806b;
+  margin-bottom: 1rem;
+}
+.acceso__panel h1 {
+  font-size: 2rem;
+  margin-bottom: 0.6rem;
+}
+.acceso__instruccion {
+  color: var(--color-texto-suave);
+  font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+.acceso__clave {
+  position: relative;
+}
+.acceso__clave input {
+  padding-right: 3rem;
+}
+.acceso__mostrar {
+  position: absolute;
+  right: 0.3rem;
+  top: 0.2rem;
+}
+.acceso__detalle {
+  border-top: 1px solid var(--color-borde);
+  margin-top: 1.8rem;
+  padding-top: 1.4rem;
+  font-size: 0.73rem;
+  color: var(--color-texto-suave);
+}
+.acceso__detalle summary {
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+.acceso__previa {
+  text-align: center;
+  border-top: 1px solid var(--color-borde);
+  margin-top: 1.7rem;
+  padding-top: 1.5rem;
+}
+.acceso__previa p {
+  color: var(--color-texto-suave);
+  font-size: 0.71rem;
+  margin-top: 0.6rem;
+}
+.acceso__seguridad {
+  text-align: center;
+  color: #7f8b7b;
+  font-size: 0.69rem;
+  margin-top: 1.7rem;
+}
+.bienvenida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12rem;
+  background: #eaf0e4;
+  border: 1px solid #dde6d4;
+  border-radius: var(--radio);
+  overflow: hidden;
+  margin-bottom: 1.4rem;
+  min-height: 11.3rem;
+}
+.bienvenida__texto {
+  padding: 1.6rem 1.8rem;
+}
+.bienvenida__epigrafe {
+  color: #6a8064;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 0.62rem;
+  margin-bottom: 0.65rem;
+}
+.bienvenida__titulo {
+  font-family: Georgia, serif;
+  font-size: 1.85rem;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.55rem;
+}
+.bienvenida__descripcion {
+  color: #5e7258;
+  font-size: 0.78rem;
+  max-width: 31rem;
+  margin-bottom: 1rem;
+}
+.bienvenida__imagen {
+  width: 100%;
+  height: 100%;
+  min-height: 10rem;
+}
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.6rem;
+}
+.indicador {
+  display: flex;
+  flex-direction: column;
+  padding: 1.2rem 1.3rem;
+  border-radius: var(--radio);
+  background: white;
+  border: 1px solid var(--color-borde);
+}
+.indicador__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-texto-suave);
+  font-size: 0.72rem;
+  gap: 0.4rem;
+}
+.indicador__icono {
+  border-radius: 0.6rem;
+  padding: 0.5rem;
+  background: #f1f4ec;
+  color: #6b8260;
+}
+.indicador__numero {
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  font-weight: 650;
+  margin-top: 0.9rem;
+}
+.indicador__detalle {
+  color: #84907e;
+  font-size: 0.64rem;
+  margin-top: 0.6rem;
+}
+.acceso-rapido {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 1rem 0;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #edf0e9;
+}
+.acceso-rapido:last-child {
+  border: 0;
+}
+.acceso-rapido__icono {
+  background: #f1f4ec;
+  color: var(--color-principal);
+  padding: 0.65rem;
+  border-radius: 0.7rem;
+}
+.acceso-rapido__texto {
+  flex: 1;
+}
+.acceso-rapido__titulo {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.acceso-rapido__descripcion {
+  color: var(--color-texto-suave);
+  display: block;
+  font-size: 0.69rem;
+  margin-top: 0.15rem;
+}
+.proceso {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 0;
+}
+.proceso__numero {
+  border: 1px solid var(--color-borde);
+  border-radius: 50%;
+  width: 1.8rem;
+  height: 1.8rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  color: #77856f;
+}
+.proceso__texto {
+  font-size: 0.78rem;
+}
+.proceso__detalle {
+  font-size: 0.68rem;
+  color: var(--color-texto-suave);
+}
+.pendiente {
+  padding: 2.4rem;
+}
+.pendiente__pasos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.pendiente__paso {
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  padding: 1.3rem;
+  background: #fafbf8;
+}
+.pendiente__paso h3 {
+  margin-block: 0.8rem 0.5rem;
+}
+.pendiente__paso p {
+  font-size: 0.78rem;
+  color: var(--color-texto-suave);
+  margin: 0;
+}
+.ficha__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.ficha__titulo .avatar {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1rem;
+}
+.ficha__referencia {
+  font-size: 0.75rem;
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1000px) {
+  .indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .acceso__presentacion {
+    padding: 2rem;
+  }
+}
+@media (max-width: 760px) {
+  .acceso {
+    grid-template-columns: 1fr;
+  }
+  .acceso__presentacion {
+    min-height: 12rem;
+    padding: 1.5rem;
+  }
+  .acceso__mensaje {
+    padding-top: 2rem;
+    margin-top: 0;
+  }
+  .acceso__titulo {
+    font-size: 2.4rem;
+    max-width: 20rem;
+  }
+  .acceso__descripcion,
+  .acceso__ilustracion,
+  .acceso__pie {
+    display: none;
+  }
+  .acceso__formulario {
+    padding: 2rem 1.5rem;
+  }
+  .bienvenida {
+    grid-template-columns: 1fr 5rem;
+  }
+  .bienvenida__texto {
+    padding: 1.25rem;
+  }
+  .bienvenida__titulo {
+    font-size: 1.5rem;
+  }
+  .pendiente {
+    padding: 1.3rem;
+  }
+  .pendiente__pasos {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 350px) {
+  .indicadores {
+    grid-template-columns: 1fr;
+  }
+  .bienvenida {
+    grid-template-columns: 1fr;
+  }
+  .bienvenida__imagen {
+    display: none;
+  }
+}
+.pendiente__titulo {
+  margin-top: 1.3rem;
+}

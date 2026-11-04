@@ -1,0 +1,28 @@
+/* Valores compartidos: cambiar estos colores actualiza todos los componentes. */
+:root {
+  --color-principal: #214c3b;
+  --color-principal-fuerte: #163a2c;
+  --color-principal-suave: #e9f0e9;
+  --color-acento: #c89b57;
+  --color-fondo: #f6f7f3;
+  --color-superficie: #fff;
+  --color-texto: #24382e;
+  --color-texto-suave: #66736a;
+  --color-borde: #e0e5dc;
+  --color-error: #a33738;
+  --color-error-fondo: #fff0ee;
+  --color-aviso: #875c1e;
+  --color-aviso-fondo: #fbf2df;
+  --color-foco: #356bca;
+  --fuente: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radio: 0.85rem;
+  --radio-pequeno: 0.45rem;
+  --sombra: 0 4px 22px #233b2a06;
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-6: 1.5rem;
+  --espacio-8: 2rem;
+  --ancho-menu: 15.5rem;
+}
