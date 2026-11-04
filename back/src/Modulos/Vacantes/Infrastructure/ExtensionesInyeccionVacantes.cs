@@ -28,9 +28,10 @@ public static class ExtensionesInyeccionVacantes
         servicios.AddScoped<IModuloPropuestasIngresos, ServicioPropuestasIngresos>();
         servicios.AddScoped<IModuloListaEspera, ServicioListaEspera>();
         servicios.AddScoped<IRepositorioOfrecimientos, RepositorioOfrecimientos>();
-        servicios.AddScoped<IModuloOfrecimientos, ServicioOfrecimientos>();
+        servicios.AddScoped<IModuloOfrecimientos, ServicioOfrecimientos>();  
         servicios.AddScoped<IModuloBajasIngresos, ServicioBajasIngresos>();
         servicios.AddScoped<EjecucionEspera>();
+        servicios.AddScoped<IModuloNominaDistrito, ServicioNominaDistrito>();
         servicios.AddScoped<IModuloVacantes, ServicioVacantes>();
         servicios.AddScoped<IModuloSorteos, ServicioSorteos>();
         servicios.AddScoped<IModuloPrioridades, ServicioPrioridades>();

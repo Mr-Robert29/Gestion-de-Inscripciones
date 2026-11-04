@@ -6,7 +6,12 @@ using Jardin.Vacantes.Application.Seguridad;
 
 namespace Jardin.Api.Seguridad;
 
-public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos, IAutorizacionListaEspera, IAutorizacionOfrecimientos
+public sealed class AccesoVacantes :
+    IAutorizacionVacantes,
+    IAutorizacionPropuestasIngresos,
+    IAutorizacionListaEspera,
+    IAutorizacionOfrecimientos,
+    IAutorizacionNominaDistrito
 {
     private readonly IHttpContextAccessor _http;
     private readonly IModuloUsuarios _usuarios;
@@ -96,16 +101,52 @@ public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropues
             "No tenés permiso para consultar la lista de espera de esta institución.",
             tokenCancelacion);
 
-    // Implementa IAutorizacionOfrecimientos.AutorizarOfertaAsync.
-    public Task<AutorizacionVacantes> AutorizarOfertaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.RegistrarOfrecimientos, "No tenés permiso para ofrecer vacantes.", tokenCancelacion);
-    // Implementa IAutorizacionOfrecimientos.AutorizarRespuestaAsync.
-    public Task<AutorizacionVacantes> AutorizarRespuestaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.RegistrarRespuestaOfrecimiento, "No tenés permiso para registrar respuestas.", tokenCancelacion);
-    // Implementa IAutorizacionOfrecimientos.AutorizarConfirmacionEsperaAsync.
-    public Task<AutorizacionVacantes> AutorizarConfirmacionEsperaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.ConfirmarIngresoDesdeEspera, "No tenés permiso para confirmar ingresos desde espera.", tokenCancelacion);
-    // Implementa IAutorizacionOfrecimientos.AutorizarBajaAsync.
-    public Task<AutorizacionVacantes> AutorizarBajaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.RegistrarBajaDefinitiva, "No tenés permiso para registrar bajas.", tokenCancelacion);
+public Task<AutorizacionVacantes> AutorizarOfertaAsync(
+    Guid periodoId,
+    CancellationToken tokenCancelacion = default)
+    => AutorizarConPermisoAsync(
+        periodoId,
+        PermisosPersonal.RegistrarOfrecimientos,
+        "No tenés permiso para ofrecer vacantes.",
+        tokenCancelacion);
+
+// Implementa IAutorizacionOfrecimientos.AutorizarRespuestaAsync.
+public Task<AutorizacionVacantes> AutorizarRespuestaAsync(
+    Guid periodoId,
+    CancellationToken tokenCancelacion = default)
+    => AutorizarConPermisoAsync(
+        periodoId,
+        PermisosPersonal.RegistrarRespuestaOfrecimiento,
+        "No tenés permiso para registrar respuestas.",
+        tokenCancelacion);
+
+// Implementa IAutorizacionOfrecimientos.AutorizarConfirmacionEsperaAsync.
+public Task<AutorizacionVacantes> AutorizarConfirmacionEsperaAsync(
+    Guid periodoId,
+    CancellationToken tokenCancelacion = default)
+    => AutorizarConPermisoAsync(
+        periodoId,
+        PermisosPersonal.ConfirmarIngresoDesdeEspera,
+        "No tenés permiso para confirmar ingresos desde espera.",
+        tokenCancelacion);
+
+// Implementa IAutorizacionOfrecimientos.AutorizarBajaAsync.
+public Task<AutorizacionVacantes> AutorizarBajaAsync(
+    Guid periodoId,
+    CancellationToken tokenCancelacion = default)
+    => AutorizarConPermisoAsync(
+        periodoId,
+        PermisosPersonal.RegistrarBajaDefinitiva,
+        "No tenés permiso para registrar bajas.",
+        tokenCancelacion);
+
+// Implementa IAutorizacionNominaDistrito.AutorizarConsultaAsync.
+public Task<AutorizacionVacantes> AutorizarConsultaAsync(
+    Guid periodoId,
+    CancellationToken tokenCancelacion = default)
+    => AutorizarConPermisoAsync(
+        periodoId,
+        PermisosPersonal.ConsultarReportes,
+        "No tenés permiso para consultar la nómina distrital de esta institución.",
+        tokenCancelacion);
 }

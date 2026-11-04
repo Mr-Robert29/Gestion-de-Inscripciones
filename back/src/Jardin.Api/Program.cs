@@ -46,8 +46,15 @@ builder.Services.AddScoped<IAutorizacionVacantes, AccesoVacantes>();
 builder.Services.AddScoped<Jardin.Vacantes.Application.Seguridad.IAutorizacionPropuestasIngresos, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionListaEspera, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionOfrecimientos, AccesoVacantes>();
-builder.Services.AddScoped<Jardin.Vacantes.Application.Propuestas.IIntegracionSeccionesEspera, IntegracionSeccionesEspera>();
-builder.Services.AddScoped<Jardin.Secciones.Application.Abstracciones.IProveedorOfertaSecciones, ConsultaOfertaSeccionesPublicada>();
+builder.Services.AddScoped<IAutorizacionNominaDistrito, AccesoVacantes>();
+
+builder.Services.AddScoped<
+    Jardin.Vacantes.Application.Propuestas.IIntegracionSeccionesEspera,
+    IntegracionSeccionesEspera>();
+
+builder.Services.AddScoped<
+    Jardin.Secciones.Application.Abstracciones.IProveedorOfertaSecciones,
+    ConsultaOfertaSeccionesPublicada>();
 builder.Services.AddScoped<Jardin.Vacantes.Application.Propuestas.IContextoPropuestaIngresos, ContextoPropuestaIngresos>();
 builder.Services.AddScoped<IProveedorEstadoPeriodo, ProveedorEstadoPeriodo>();
 builder.Services.AddScoped<IProveedorReglasPeriodo, ProveedorReglasPeriodo>();
