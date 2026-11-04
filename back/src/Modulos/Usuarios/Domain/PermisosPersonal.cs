@@ -23,6 +23,7 @@ public static class PermisosPersonal
     public const string ModificarPropuestasIngreso = "Admision.ModificarPropuestas";
     public const string ResolverCasosEspeciales = "Admision.ResolverCasosEspeciales";
     public const string ConfirmarIngresos = "Admision.ConfirmarIngresos";
+    public const string ConsultarListaEspera = "Admision.ConsultarListaEspera";
     public const string RegistrarBajaDefinitiva = "Admision.RegistrarBaja";
     public const string RegistrarOfrecimientos = "Admision.RegistrarOfrecimientos";
     public const string RegistrarRespuestaOfrecimiento = "Admision.RegistrarRespuestaOfrecimiento";
@@ -47,6 +48,7 @@ public static class PermisosPersonal
         RevisarDomicilios,
         RegistrarSorteo,
         GenerarPropuestasIngreso,
+        ConsultarListaEspera,
         RegistrarOfrecimientos,
         RegistrarRespuestaOfrecimiento,
         GenerarDistribucion,
