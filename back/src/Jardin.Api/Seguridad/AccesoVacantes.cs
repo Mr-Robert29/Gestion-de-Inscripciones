@@ -6,7 +6,7 @@ using Jardin.Vacantes.Application.Seguridad;
 
 namespace Jardin.Api.Seguridad;
 
-public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos, IAutorizacionListaEspera
+public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos, IAutorizacionListaEspera, IAutorizacionNominaDistrito
 {
     private readonly IHttpContextAccessor _http;
     private readonly IModuloUsuarios _usuarios;
@@ -94,5 +94,12 @@ public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropues
             periodoId,
             PermisosPersonal.ConsultarListaEspera,
             "No tenés permiso para consultar la lista de espera de esta institución.",
+            tokenCancelacion);
+
+    public Task<AutorizacionVacantes> AutorizarConsultaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.ConsultarReportes,
+            "No tenés permiso para consultar la nómina distrital de esta institución.",
             tokenCancelacion);
 }
