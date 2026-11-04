@@ -26,6 +26,8 @@ public static class ExtensionesInyeccionSecciones
         });
 
         servicios.AddScoped<IRepositorioSecciones, RepositorioSecciones>();
+        servicios.AddScoped<IRepositorioComposiciones, RepositorioComposiciones>();
+        servicios.AddScoped<IModuloComposicionSecciones, ServicioComposicionSecciones>();
         servicios.AddScoped<IRepositorioDistribuciones, RepositorioDistribuciones>();
         servicios.AddScoped<IModuloSecciones, ServicioOrganizacion>();
         servicios.AddScoped<IRepositorioSeccionesEspera, RepositorioSeccionesEspera>();

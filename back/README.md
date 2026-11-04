@@ -152,3 +152,12 @@ La baja que no logra completar la coordinación devuelve 202 y conserva ocupada 
 Antes de utilizarlo en PostgreSQL, aplicar los scripts `src/Modulos/Vacantes/Infrastructure/Persistencia/Migraciones/006_bajas_ofrecimientos.sql` y `src/Modulos/Secciones/Infrastructure/Persistencia/Migrations/002_bajas_ingresos.sql` sobre los esquemas previos. No se ejecutaron sobre la base local durante este trabajo.
 
 Detalle, operaciones y pendientes: `docs/HU-21-Primera-version.md`. La integración con el frontend y las pruebas específicas con PostgreSQL siguen pendientes.
+
+
+### HU-26: cambio de sección pura a multiedad
+
+El backend permite ampliar edades conservando la edad original, con permiso institucional, revisión vigente, capacidad libre y compatibilidad de alumnos y reservas. Guarda historial y marca borradores de distribución para revisión; los ingresos posteriores siguen el ofrecimiento de HU-21.
+
+- POST `/api/v1/periodos/{periodoId}/secciones/{seccionId}/composicion`: `nuevasEdades`, `motivo` y `revision`.
+- GET `/api/v1/periodos/{periodoId}/secciones/{seccionId}/composicion/historial`.
+- Script adicional de Secciones: `src/Modulos/Secciones/Infrastructure/Persistencia/Migrations/003_cambios_composicion.sql`. Su aplicación es manual y requiere validar previamente la base y los scripts anteriores.

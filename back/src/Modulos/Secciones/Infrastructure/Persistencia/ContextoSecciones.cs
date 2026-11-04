@@ -6,6 +6,7 @@ namespace Jardin.Secciones.Infrastructure.Persistencia;
 
 public sealed class ContextoSecciones : DbContext
 {
+    public DbSet<CambioComposicionSeccion> CambiosComposicion => Set<CambioComposicionSeccion>();
     public DbSet<Seccion> Secciones => Set<Seccion>();
     public DbSet<PropuestaDistribucion> PropuestasDistribucion => Set<PropuestaDistribucion>();
     public DbSet<AsignacionPropuesta> AsignacionesPropuesta => Set<AsignacionPropuesta>();
@@ -19,6 +20,13 @@ public sealed class ContextoSecciones : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasDefaultSchema("secciones");
+        builder.Entity<CambioComposicionSeccion>(b =>
+        {
+            b.ToTable("cambios_composicion");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.HasIndex(x => new { x.SeccionId, x.RevisionNueva }).IsUnique();
+        });
         builder.Entity<CambioBajaAsignacion>(b =>
         {
             b.ToTable("cambios_baja_asignaciones");
@@ -52,7 +60,11 @@ public sealed class ContextoSecciones : DbContext
                 .IsRequired()
                 .HasConversion(
                     value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
-                    value => JsonSerializer.Deserialize<List<int>>(value, (JsonSerializerOptions?)null) ?? new List<int>());
+                    value => JsonSerializer.Deserialize<List<int>>(value, (JsonSerializerOptions?)null) ?? new List<int>())
+                .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<int>>(
+                    (primera, segunda) => primera != null && segunda != null && primera.SequenceEqual(segunda),
+                    edades => edades.Aggregate(0, (actual, edad) => HashCode.Combine(actual, edad)),
+                    edades => edades.ToList()));
             b.HasIndex(x => new { x.PeriodoId, x.AulaId, x.TurnoId });
         });
 

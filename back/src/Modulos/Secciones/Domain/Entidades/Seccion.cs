@@ -57,6 +57,7 @@ public sealed class Seccion
         IEnumerable<int>? edadesAlumnosAsignados = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(motivo);
+        ArgumentNullException.ThrowIfNull(nuevasEdades);
 
 
         if (edadesAlumnosAsignados is not null)
