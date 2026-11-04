@@ -30,4 +30,60 @@ public sealed class RepositorioPropuestasIngresos : IRepositorioPropuestasIngres
     public async Task<IReadOnlyList<OcupacionPlaza>> ListarOcupacionesAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
         => await _contexto.OcupacionesPlazas.AsNoTracking().Where(x => x.PeriodoId == periodoId && x.Activa)
             .OrderBy(x => x.Id).ToArrayAsync(tokenCancelacion);
+
+    public Task<AceptacionTurnoFamiliar?> ObtenerAceptacionAsync(Guid propuestaId, Guid solicitudId, Guid turnoId, CancellationToken tokenCancelacion = default)
+        => _contexto.AceptacionesTurno.AsNoTracking().SingleOrDefaultAsync(
+            x => x.PropuestaId == propuestaId && x.SolicitudId == solicitudId && x.TurnoId == turnoId,
+            tokenCancelacion);
+
+    public async Task GuardarAceptacionAsync(AceptacionTurnoFamiliar aceptacion, CancellationToken tokenCancelacion = default)
+    {
+        _contexto.AceptacionesTurno.Add(aceptacion);
+        await _contexto.SaveChangesAsync(tokenCancelacion);
+    }
+
+    public Task<IngresoConfirmado?> ObtenerIngresoAsync(Guid periodoId, Guid aspiranteId, CancellationToken tokenCancelacion = default)
+        => _contexto.IngresosConfirmados.AsNoTracking().SingleOrDefaultAsync(
+            x => x.PeriodoId == periodoId && x.AspiranteId == aspiranteId,
+            tokenCancelacion);
+
+    public async Task<IReadOnlyList<IngresoConfirmado>> GuardarConfirmacionesAsync(IReadOnlyList<IngresoConfirmado> ingresos, CancellationToken tokenCancelacion = default)
+    {
+        await using var transaccion = await _contexto.Database.BeginTransactionAsync(tokenCancelacion);
+        var confirmados = new List<IngresoConfirmado>();
+        foreach (var ingreso in ingresos)
+        {
+            var existente = await _contexto.IngresosConfirmados.SingleOrDefaultAsync(
+                x => x.PeriodoId == ingreso.PeriodoId && x.AspiranteId == ingreso.AspiranteId,
+                tokenCancelacion);
+            if (existente is not null)
+            {
+                confirmados.Add(existente);
+                continue;
+            }
+
+            var ocupacion = await _contexto.OcupacionesPlazas.SingleOrDefaultAsync(
+                x => x.PeriodoId == ingreso.PeriodoId && x.AspiranteId == ingreso.AspiranteId && x.Activa,
+                tokenCancelacion);
+            if (ocupacion is null)
+                _contexto.OcupacionesPlazas.Add(new OcupacionPlaza(
+                    ingreso.PeriodoId,
+                    ingreso.AspiranteId,
+                    ingreso.OfertaId,
+                    ingreso.Sala,
+                    "Ingreso"));
+            else
+            {
+                if (ocupacion.OfertaId != ingreso.OfertaId)
+                    throw new InvalidOperationException("El aspirante ya ocupa otra plaza activa.");
+                ocupacion.ConfirmarIngreso();
+            }
+
+            _contexto.IngresosConfirmados.Add(ingreso);
+            confirmados.Add(ingreso);
+        }
+        await _contexto.SaveChangesAsync(tokenCancelacion);
+        await transaccion.CommitAsync(tokenCancelacion);
+        return confirmados;
+    }
 }
