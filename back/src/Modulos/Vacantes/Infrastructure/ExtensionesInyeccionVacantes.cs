@@ -23,6 +23,7 @@ public static class ExtensionesInyeccionVacantes
                 postgres.MigrationsHistoryTable("__EFMigrationsHistory", "vacantes")));
         servicios.AddScoped<IRepositorioSorteos, RepositorioSorteos>();
         servicios.AddScoped<IRepositorioEvaluacionesPrioridad, RepositorioEvaluacionesPrioridad>();
+        servicios.AddScoped<IRepositorioCasosRevision, RepositorioCasosRevision>();
         servicios.AddScoped<IModuloSorteos, ServicioSorteos>();
         servicios.AddScoped<IModuloPrioridades, ServicioPrioridades>();
         return servicios;

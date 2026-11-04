@@ -7,6 +7,7 @@ public sealed class ContextoVacantes : DbContext
 {
     public DbSet<Sorteo> Sorteos => Set<Sorteo>();
     public DbSet<EvaluacionPrioridad> EvaluacionesPrioridad => Set<EvaluacionPrioridad>();
+    public DbSet<CasoRevision> CasosRevision => Set<CasoRevision>();
 
     public ContextoVacantes(DbContextOptions<ContextoVacantes> opciones)
         : base(opciones) { }
@@ -44,5 +45,22 @@ public sealed class ContextoVacantes : DbContext
         evaluacion.Property(x => x.Fecha).IsRequired();
         evaluacion.Property(x => x.Datos).IsRequired().HasColumnType("jsonb");
         evaluacion.HasIndex(x => new { x.PeriodoId, x.Fecha });
+
+        var caso = modelo.Entity<CasoRevision>();
+        caso.ToTable("casos_revision");
+        caso.HasKey(x => x.Id);
+        caso.Property(x => x.Id).ValueGeneratedNever();
+        caso.Property(x => x.PeriodoId).IsRequired();
+        caso.Property(x => x.Sala).IsRequired();
+        caso.Property(x => x.Tipo).HasConversion<string>().IsRequired();
+        caso.Property(x => x.Estado).HasConversion<string>().IsRequired();
+        caso.Property(x => x.SolicitudesAfectadas).IsRequired().HasColumnType("jsonb");
+        caso.Property(x => x.OrdenDecidido).IsRequired().HasColumnType("jsonb");
+        caso.Property(x => x.HuellaOrigen).IsRequired().HasMaxLength(500);
+        caso.Property(x => x.MotivoResolucion).HasMaxLength(1000);
+        caso.Property(x => x.FechaCreacion).IsRequired();
+        caso.Property(x => x.Revision).IsConcurrencyToken();
+        caso.HasIndex(x => new { x.PeriodoId, x.Sala, x.Tipo, x.HuellaOrigen }).IsUnique();
+        caso.HasIndex(x => new { x.PeriodoId, x.Estado });
     }
 }
