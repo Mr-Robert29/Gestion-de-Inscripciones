@@ -1,0 +1,11 @@
+{
+  "name": "jardin-front",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Frontend HTML, CSS BEM y JavaScript para gestión de inscripciones",
+  "scripts": {
+    "start": "python -m http.server 4173 --bind 127.0.0.1",
+    "test": "node --test pruebas/*.test.js"
+  }
+}
