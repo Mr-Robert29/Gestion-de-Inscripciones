@@ -14,19 +14,25 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
     private readonly IModuloPrioridades _prioridades;
     private readonly IModuloSorteos _sorteos;
     private readonly IModuloDistancias _distancias;
+    private readonly IModuloRevisionDomicilios _revisionesDomicilio;
+    private readonly IProveedorReglasPeriodo _reglas;
 
     public ServicioCasosRevision(
         IRepositorioCasosRevision repositorio,
         IAutorizacionVacantes autorizacion,
         IModuloPrioridades prioridades,
         IModuloSorteos sorteos,
-        IModuloDistancias distancias)
+        IModuloDistancias distancias,
+        IModuloRevisionDomicilios revisionesDomicilio,
+        IProveedorReglasPeriodo reglas)
     {
         _repositorio = repositorio;
         _autorizacion = autorizacion;
         _prioridades = prioridades;
         _sorteos = sorteos;
         _distancias = distancias;
+        _revisionesDomicilio = revisionesDomicilio;
+        _reglas = reglas;
     }
 
     public async Task<IReadOnlyList<DatosCasoRevision>> ListarAsync(
@@ -127,6 +133,7 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
     {
         var autorizacion = await _autorizacion.AutorizarResolucionAsync(periodoId, cancellationToken);
         var prioridades = await _prioridades.EvaluarAsync(periodoId, cancellationToken);
+        var reglas = await _reglas.ConsultarAsync(periodoId, cancellationToken);
         var versionReglas = prioridades.FirstOrDefault()?.VersionReglasId;
         foreach (var sala in prioridades.Where(x => x.Sala.HasValue).Select(x => x.Sala!.Value).Distinct())
         {
@@ -146,7 +153,8 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
                     cancellationToken);
             }
 
-            await GenerarEmpatesDistanciaAsync(periodoId, autorizacion.InstitucionId, sala, orden, versionReglas, cancellationToken);
+            await GenerarEmpatesDistanciaAsync(periodoId, autorizacion.InstitucionId, sala, orden, versionReglas, reglas.PrecisionDistanciaDecimales, cancellationToken);
+            await GenerarDomiciliosPendientesAsync(periodoId, autorizacion.InstitucionId, sala, orden, versionReglas, cancellationToken);
         }
     }
 
@@ -156,6 +164,7 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
         int sala,
         IReadOnlyList<DatosOrdenSorteo> orden,
         Guid? versionReglas,
+        int precisionDecimales,
         CancellationToken cancellationToken)
     {
         var mediciones = new List<(DatosOrdenSorteo Orden, ConsultarDistanciaRespuesta Distancia)>();
@@ -169,11 +178,11 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
                 mediciones.Add((participante, vigente));
         }
 
-        foreach (var grupo in mediciones.GroupBy(x => x.Distancia.DistanciaMetros)
+        foreach (var grupo in mediciones.GroupBy(x => Math.Round(x.Distancia.DistanciaMetros, precisionDecimales, MidpointRounding.AwayFromZero))
                      .Where(x => x.Count() > 1))
         {
             var elementos = grupo.ToArray();
-            var huella = $"sorteo:{orden[0].SorteoId:N}:v{orden[0].VersionSorteo}:distancia:{grupo.Key.ToString(CultureInfo.InvariantCulture)}:revisiones:{string.Join(',', elementos.Select(x => $"{x.Orden.SolicitudId:N}-{x.Distancia.RevisionDomicilio}-{x.Distancia.RevisionUbicacionJardin}").OrderBy(x => x))}";
+            var huella = $"sorteo:{orden[0].SorteoId:N}:v{orden[0].VersionSorteo}:precision:{precisionDecimales}:distancia:{grupo.Key.ToString(CultureInfo.InvariantCulture)}:revisiones:{string.Join(',', elementos.Select(x => $"{x.Orden.SolicitudId:N}-{x.Distancia.RevisionDomicilio}-{x.Distancia.RevisionUbicacionJardin}").OrderBy(x => x))}";
             await CrearSiNoExisteAsync(
                 periodoId,
                 sala,
@@ -182,6 +191,36 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
                 huella,
                 orden[0].SorteoId,
                 orden[0].VersionSorteo,
+                versionReglas,
+                cancellationToken);
+        }
+    }
+
+    private async Task GenerarDomiciliosPendientesAsync(
+        Guid periodoId,
+        Guid institucionId,
+        int sala,
+        IReadOnlyList<DatosOrdenSorteo> orden,
+        Guid? versionReglas,
+        CancellationToken cancellationToken)
+    {
+        foreach (var participante in orden)
+        {
+            var revision = await _revisionesDomicilio.ConsultarAsync(
+                institucionId,
+                participante.SolicitudId,
+                cancellationToken);
+            if (string.Equals(revision.Estado, "RevisadoManualmente", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            await CrearSiNoExisteAsync(
+                periodoId,
+                sala,
+                TipoCasoRevision.DomicilioPendiente,
+                [participante.SolicitudId],
+                $"sorteo:{participante.SorteoId:N}:v{participante.VersionSorteo}:domicilio:{participante.SolicitudId:N}:revision:{revision.RevisionDomicilio}:{revision.Estado}",
+                participante.SorteoId,
+                participante.VersionSorteo,
                 versionReglas,
                 cancellationToken);
         }

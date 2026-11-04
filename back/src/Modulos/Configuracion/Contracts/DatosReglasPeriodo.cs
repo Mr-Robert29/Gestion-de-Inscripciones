@@ -9,4 +9,5 @@ public sealed record DatosReglasPeriodo(
     string ProcedimientoSorteo,
     string ReglaDistancia,
     IReadOnlyList<int[]> CombinacionesEdades,
-    int CapacidadReferenciaSeccion);
+    int CapacidadReferenciaSeccion,
+    int PrecisionDistanciaDecimales = 2);

@@ -10,4 +10,5 @@ public interface IProveedorReglasPeriodo
 public sealed record ReglasPeriodoVacantes(
     Guid VersionReglasId,
     IReadOnlyList<int> OrdenSalas,
-    IReadOnlyList<string> OrdenProcedimiento);
+    IReadOnlyList<string> OrdenProcedimiento,
+    int PrecisionDistanciaDecimales);

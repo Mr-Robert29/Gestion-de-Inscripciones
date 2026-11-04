@@ -6,7 +6,8 @@ public enum TipoCasoRevision
 {
     EmpateTerminacionDni,
     SinDni,
-    EmpateDistancia
+    EmpateDistancia,
+    DomicilioPendiente
 }
 
 public enum EstadoCasoRevision

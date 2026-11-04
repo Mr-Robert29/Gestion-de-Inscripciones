@@ -233,8 +233,9 @@ public sealed class ServicioVersionesConfiguracion : IModuloVersionesConfiguraci
             [5, 4, 3],
             ["ArticulacionPedagogica", "HermanosYGruposConvivientes", "Cercania", "HijosDelPersonal", "SorteoUltimaInstancia", "FueraDeTermino"],
             "Últimos tres dígitos de DNI: desde el número público hasta 999 y desde 000 al anterior; solo en última instancia. Terminaciones repetidas y casos sin DNI requieren revisión manual.",
-            "Distancia directa en metros devuelta por Geoapify, sin redondear para comparar ni sustituir valores desconocidos por cero. Sin Haversine local.",
+            "Distancia directa en metros devuelta por Geoapify, redondeada a dos decimales para comparar y sin sustituir valores desconocidos por cero. Sin Haversine local.",
             [[3], [4], [5], [3, 4], [4, 5]],
-            25);
+            25,
+            2);
     }
 }

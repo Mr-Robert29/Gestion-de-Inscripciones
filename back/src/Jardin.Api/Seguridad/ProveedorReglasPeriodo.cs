@@ -33,6 +33,12 @@ public sealed class ProveedorReglasPeriodo : IProveedorReglasPeriodo
             ?? throw new InvalidOperationException("La versión de reglas está vacía.");
         if (datos.OrdenGruposEtarios.Count == 0 || datos.OrdenProcedimiento.Count == 0)
             throw new InvalidOperationException("La versión de reglas no define el orden de evaluación.");
-        return new ReglasPeriodoVacantes(version.Id, datos.OrdenGruposEtarios, datos.OrdenProcedimiento);
+        if (datos.PrecisionDistanciaDecimales is < 1 or > 2)
+            throw new InvalidOperationException("La precisión de distancia debe estar entre uno y dos decimales.");
+        return new ReglasPeriodoVacantes(
+            version.Id,
+            datos.OrdenGruposEtarios,
+            datos.OrdenProcedimiento,
+            datos.PrecisionDistanciaDecimales);
     }
 }
