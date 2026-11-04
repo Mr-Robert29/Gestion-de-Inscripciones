@@ -35,6 +35,27 @@ public sealed class PropuestasIngresosController : ControllerBase
             return propuesta is null ? NotFound() : Ok(propuesta);
         });
 
+    [HttpPatch("api/v1/propuestas-ingresos/{propuestaId:guid}")]
+    public Task<IActionResult> Modificar(
+        Guid propuestaId,
+        ModificarPropuestaIngresosPeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.ModificarAsync(propuestaId, peticion, tokenCancelacion)));
+
+    [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/aceptaciones-turno")]
+    public Task<IActionResult> AceptarTurno(
+        Guid propuestaId,
+        RegistrarAceptacionTurnoPeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.RegistrarAceptacionTurnoAsync(propuestaId, peticion, tokenCancelacion)));
+
+    [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/confirmacion")]
+    public Task<IActionResult> Confirmar(
+        Guid propuestaId,
+        ConfirmarPropuestaIngresosPeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.ConfirmarAsync(propuestaId, peticion, tokenCancelacion)));
+
     private static async Task<IActionResult> EjecutarAsync(Func<Task<IActionResult>> operacion)
     {
         try { return await operacion(); }

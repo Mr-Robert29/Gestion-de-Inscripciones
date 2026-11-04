@@ -93,6 +93,133 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         return respuesta;
     }
 
+    public async Task<ConsultarPropuestaIngresosRespuesta> ModificarAsync(
+        Guid propuestaId,
+        ModificarPropuestaIngresosPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.HuellaEsperada);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+        if (peticion.Cambios.Count == 0 || peticion.Cambios.Select(x => x.SolicitudId).Distinct().Count() != peticion.Cambios.Count)
+            throw new ArgumentException("Indicá cambios distintos para la propuesta.");
+
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        var autor = await _autorizacion.AutorizarModificacionAsync(propuesta.PeriodoId, tokenCancelacion);
+        if (!string.Equals(propuesta.HuellaEntradas, peticion.HuellaEsperada, StringComparison.Ordinal) ||
+            !await EstaVigenteAsync(propuesta, tokenCancelacion))
+            throw new InvalidOperationException("La propuesta está desactualizada. Generá una nueva propuesta.");
+
+        var resultados = DeserializarResultados(propuesta).ToDictionary(x => x.SolicitudId);
+        foreach (var cambio in peticion.Cambios)
+        {
+            if (!resultados.TryGetValue(cambio.SolicitudId, out var anterior))
+                throw new ArgumentException("La solicitud no pertenece a la propuesta.");
+            ValidarResultadoManual(cambio, anterior);
+            resultados[cambio.SolicitudId] = new DatosResultadoPropuesta(
+                cambio.SolicitudId,
+                anterior.AspiranteId,
+                anterior.Sala,
+                cambio.Estado,
+                cambio.OfertaId,
+                cambio.TurnoId,
+                cambio.EsTurnoAlternativo,
+                cambio.Explicacion);
+        }
+
+        var nueva = new PropuestaIngresos(
+            propuesta.PeriodoId,
+            autor.InstitucionId,
+            autor.UsuarioId,
+            peticion.Motivo,
+            propuesta.HuellaEntradas,
+            propuesta.Entradas,
+            JsonSerializer.Serialize(resultados.Values.OrderBy(x => x.SolicitudId)),
+            propuesta.Id);
+        await _propuestas.GuardarAsync(nueva, tokenCancelacion);
+        return Mapear(nueva, true);
+    }
+
+    public async Task<DatosAceptacionTurno> RegistrarAceptacionTurnoAsync(
+        Guid propuestaId,
+        RegistrarAceptacionTurnoPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        var autor = await _autorizacion.AutorizarAceptacionTurnoAsync(propuesta.PeriodoId, tokenCancelacion);
+        var resultado = DeserializarResultados(propuesta).SingleOrDefault(x => x.SolicitudId == peticion.SolicitudId)
+            ?? throw new ArgumentException("La solicitud no pertenece a la propuesta.");
+        if (!resultado.EsTurnoAlternativo || resultado.TurnoId != peticion.TurnoId)
+            throw new ArgumentException("La solicitud no tiene ese turno alternativo pendiente de aceptación.");
+        if (!await EstaVigenteAsync(propuesta, tokenCancelacion))
+            throw new InvalidOperationException("La propuesta está desactualizada.");
+
+        var existente = await _propuestas.ObtenerAceptacionAsync(propuesta.Id, peticion.SolicitudId, peticion.TurnoId, tokenCancelacion);
+        if (existente is not null) return Mapear(existente);
+        var aceptacion = new AceptacionTurnoFamiliar(
+            propuesta.PeriodoId,
+            propuesta.Id,
+            peticion.SolicitudId,
+            peticion.TurnoId,
+            autor.UsuarioId,
+            peticion.Referencia);
+        await _propuestas.GuardarAceptacionAsync(aceptacion, tokenCancelacion);
+        return Mapear(aceptacion);
+    }
+
+    public async Task<IReadOnlyList<DatosConfirmacionIngreso>> ConfirmarAsync(
+        Guid propuestaId,
+        ConfirmarPropuestaIngresosPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        var autor = await _autorizacion.AutorizarConfirmacionAsync(propuesta.PeriodoId, tokenCancelacion);
+        if (!string.Equals(propuesta.HuellaEntradas, peticion.HuellaEsperada, StringComparison.Ordinal) ||
+            !await EstaVigenteAsync(propuesta, tokenCancelacion))
+            throw new InvalidOperationException("La propuesta está desactualizada y no puede confirmarse.");
+
+        return await _contexto.ConPeriodoProtegidoAsync(
+            propuesta.PeriodoId,
+            async token =>
+            {
+                var datos = await LeerAsync(propuesta.PeriodoId, token);
+                var resultados = DeserializarResultados(propuesta)
+                    .Where(x => x.Estado == "IngresoPropuesto")
+                    .ToArray();
+                if (resultados.Length == 0)
+                    throw new InvalidOperationException("La propuesta no tiene ingresos confirmables.");
+                ValidarConfirmacion(datos, resultados);
+                var ingresos = new List<IngresoConfirmado>();
+                foreach (var resultado in resultados)
+                {
+                    if (resultado.EsTurnoAlternativo)
+                    {
+                        if (resultado.TurnoId is null || await _propuestas.ObtenerAceptacionAsync(propuesta.Id, resultado.SolicitudId, resultado.TurnoId.Value, token) is null)
+                            throw new InvalidOperationException("Falta la aceptación familiar del turno alternativo.");
+                    }
+                    var solicitud = datos.Entradas.Solicitudes.Single(x => x.Id == resultado.SolicitudId);
+                    var oferta = datos.Entradas.Ofertas.Single(x => x.Id == resultado.OfertaId);
+                    ingresos.Add(new IngresoConfirmado(
+                        propuesta.PeriodoId,
+                        solicitud.Id,
+                        solicitud.AspiranteId,
+                        oferta.Id,
+                        resultado.TurnoId!.Value,
+                        solicitud.Sala!.Value,
+                        propuesta.Id,
+                        autor.UsuarioId));
+                }
+                var confirmados = await _propuestas.GuardarConfirmacionesAsync(ingresos, token);
+                return confirmados.Select(Mapear).ToArray();
+            },
+            tokenCancelacion);
+    }
+
     private async Task<bool> EstaVigenteAsync(PropuestaIngresos propuesta, CancellationToken tokenCancelacion)
     {
         try { return Huella(await LeerAsync(propuesta.PeriodoId, tokenCancelacion)) == propuesta.HuellaEntradas; }
@@ -127,6 +254,63 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
             propuesta.HuellaEntradas,
             JsonSerializer.Deserialize<DatosResultadoPropuesta[]>(propuesta.Resultados)!);
     }
+
+    private static IReadOnlyList<DatosResultadoPropuesta> DeserializarResultados(PropuestaIngresos propuesta)
+        => JsonSerializer.Deserialize<DatosResultadoPropuesta[]>(propuesta.Resultados) ?? [];
+
+    private static void ValidarResultadoManual(
+        ModificarResultadoPropuestaPeticion cambio,
+        DatosResultadoPropuesta anterior)
+    {
+        if (cambio.Estado is not ("IngresoPropuesto" or "EsperaPropuesta" or "PendienteRevision"))
+            throw new ArgumentException("El estado manual no es válido.");
+        if (cambio.Estado == "IngresoPropuesto" && (cambio.OfertaId is null || cambio.TurnoId is null))
+            throw new ArgumentException("Un ingreso propuesto requiere oferta y turno.");
+        if (cambio.Estado != "IngresoPropuesto" && cambio.EsTurnoAlternativo)
+            throw new ArgumentException("Solo un ingreso propuesto puede usar turno alternativo.");
+        if (anterior.Estado == "YaOcupaPlaza")
+            throw new InvalidOperationException("No se puede modificar una solicitud que ya ocupa una plaza.");
+    }
+
+    private static void ValidarConfirmacion(Instantanea datos, IReadOnlyList<DatosResultadoPropuesta> resultados)
+    {
+        var ofertas = datos.Entradas.Ofertas.Where(x => x.Disponible).ToDictionary(x => x.Id);
+        var cantidades = datos.Ocupaciones.GroupBy(x => x.OfertaId).ToDictionary(x => x.Key, x => x.Count());
+        foreach (var resultado in resultados)
+        {
+            if (resultado.OfertaId is null || resultado.TurnoId is null || resultado.Sala is null || !ofertas.TryGetValue(resultado.OfertaId.Value, out var oferta))
+                throw new InvalidOperationException("La propuesta contiene una asignación sin oferta vigente.");
+            if (oferta.TurnoId != resultado.TurnoId.Value)
+                throw new InvalidOperationException("La propuesta contiene un turno incompatible con la oferta.");
+            cantidades[oferta.Id] = cantidades.GetValueOrDefault(oferta.Id) + 1;
+            if (cantidades[oferta.Id] > oferta.Capacidad)
+                throw new InvalidOperationException("La capacidad disponible cambió durante la confirmación.");
+        }
+        if (resultados.Select(x => x.AspiranteId).Distinct().Count() != resultados.Count)
+            throw new InvalidOperationException("Un aspirante aparece más de una vez en la confirmación.");
+    }
+
+    private static DatosAceptacionTurno Mapear(AceptacionTurnoFamiliar aceptacion) => new(
+        aceptacion.Id,
+        aceptacion.PropuestaId,
+        aceptacion.SolicitudId,
+        aceptacion.TurnoId,
+        aceptacion.UsuarioId,
+        aceptacion.Fecha,
+        aceptacion.Referencia);
+
+    private static DatosConfirmacionIngreso Mapear(IngresoConfirmado ingreso) => new(
+        ingreso.Id,
+        ingreso.PeriodoId,
+        ingreso.SolicitudId,
+        ingreso.AspiranteId,
+        ingreso.OfertaId,
+        ingreso.TurnoId,
+        ingreso.Sala,
+        ingreso.PropuestaId,
+        ingreso.UsuarioId,
+        ingreso.Fecha,
+        ingreso.Revision);
 
     private sealed record Instantanea(
         EntradasPropuestaIngresos Entradas,

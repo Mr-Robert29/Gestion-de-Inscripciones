@@ -78,4 +78,13 @@ public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropues
             PermisosPersonal.GenerarPropuestasIngreso,
             "No tenés permiso para generar o consultar propuestas en esta institución.",
             tokenCancelacion);
+
+    public Task<AutorizacionVacantes> AutorizarModificacionAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.ModificarPropuestasIngreso, "No tenés permiso para modificar propuestas en esta institución.", tokenCancelacion);
+
+    public Task<AutorizacionVacantes> AutorizarAceptacionTurnoAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.RegistrarRespuestaOfrecimiento, "No tenés permiso para registrar aceptaciones en esta institución.", tokenCancelacion);
+
+    public Task<AutorizacionVacantes> AutorizarConfirmacionAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(periodoId, PermisosPersonal.ConfirmarIngresos, "No tenés permiso para confirmar ingresos en esta institución.", tokenCancelacion);
 }
