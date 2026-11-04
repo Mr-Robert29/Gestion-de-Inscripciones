@@ -194,6 +194,16 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                 if (resultados.Length == 0)
                     throw new InvalidOperationException("La propuesta no tiene ingresos confirmables.");
                 ValidarConfirmacion(datos, resultados);
+                ValidarCasosPendientes(datos, resultados);
+                var reevaluados = PlanificadorPropuestaIngresos.Generar(
+                    datos.Entradas,
+                    datos.Sorteos,
+                    datos.Casos,
+                    datos.Ocupaciones,
+                    token);
+                var reevaluadosPorSolicitud = reevaluados.ToDictionary(x => x.SolicitudId);
+                if (resultados.Any(x => !reevaluadosPorSolicitud.TryGetValue(x.SolicitudId, out var reevaluado) || reevaluado.Estado != "IngresoPropuesto"))
+                    throw new InvalidOperationException("La factibilidad cambió; la propuesta debe revisarse antes de confirmar.");
                 var ingresos = new List<IngresoConfirmado>();
                 foreach (var resultado in resultados)
                 {
@@ -288,6 +298,15 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         }
         if (resultados.Select(x => x.AspiranteId).Distinct().Count() != resultados.Count)
             throw new InvalidOperationException("Un aspirante aparece más de una vez en la confirmación.");
+    }
+
+    private static void ValidarCasosPendientes(Instantanea datos, IReadOnlyList<DatosResultadoPropuesta> resultados)
+    {
+        var solicitudes = resultados.Select(x => x.SolicitudId).ToHashSet();
+        var pendientes = datos.Casos.Where(x => x.Estado != EstadoCasoRevision.Resuelto &&
+            x.ObtenerSolicitudesAfectadas().Any(solicitudes.Contains)).ToArray();
+        if (pendientes.Length > 0)
+            throw new InvalidOperationException("La propuesta tiene casos de revisión pendientes que afectan los ingresos a confirmar.");
     }
 
     private static DatosAceptacionTurno Mapear(AceptacionTurnoFamiliar aceptacion) => new(
