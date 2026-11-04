@@ -58,10 +58,9 @@ public sealed class RepositorioPropuestasIngresos : IRepositorioPropuestasIngres
             tokenCancelacion);
 
     public async Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosActivosAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
-        => await _contexto.IngresosConfirmados.AsNoTracking()
+        => (await _contexto.IngresosConfirmados.AsNoTracking()
             .Where(x => x.PeriodoId == periodoId)
-            .OrderBy(x => x.Fecha)
-            .ToArrayAsync(tokenCancelacion);
+            .ToArrayAsync(tokenCancelacion)).OrderBy(x => x.Fecha).ThenBy(x => x.Id).ToArray();
 
     public async Task<IReadOnlyList<IngresoConfirmado>> GuardarConfirmacionesAsync(IReadOnlyList<IngresoConfirmado> ingresos, CancellationToken tokenCancelacion = default)
     {

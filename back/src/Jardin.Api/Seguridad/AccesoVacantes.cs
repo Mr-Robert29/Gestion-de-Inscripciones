@@ -6,7 +6,7 @@ using Jardin.Vacantes.Application.Seguridad;
 
 namespace Jardin.Api.Seguridad;
 
-public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos
+public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos, IAutorizacionListaEspera
 {
     private readonly IHttpContextAccessor _http;
     private readonly IModuloUsuarios _usuarios;
@@ -87,4 +87,12 @@ public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropues
 
     public Task<AutorizacionVacantes> AutorizarConfirmacionAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
         => AutorizarConPermisoAsync(periodoId, PermisosPersonal.ConfirmarIngresos, "No tenés permiso para confirmar ingresos en esta institución.", tokenCancelacion);
+
+    // Implementa IAutorizacionListaEspera.AutorizarConsultaEsperaAsync: consulta sin permiso de confirmación.
+    public Task<AutorizacionVacantes> AutorizarConsultaEsperaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.ConsultarListaEspera,
+            "No tenés permiso para consultar la lista de espera de esta institución.",
+            tokenCancelacion);
 }

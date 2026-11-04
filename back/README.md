@@ -134,3 +134,11 @@ Incluye API con permiso institucional, instantáneas protegidas, vigencia inform
 Vacantes mantiene scripts SQL manuales numerados: aplicar `src/Modulos/Vacantes/Infrastructure/Persistencia/Migraciones/004_propuestas_ingresos.sql` después de los tres anteriores antes de usar estas operaciones en PostgreSQL. No se aplicó el script sobre la base local durante la implementación.
 
 El detalle y los pendientes están en `docs/HU-18-Primera-version.md` y `docs/Cosas pendientes.md`.
+
+## HU-20 — Consulta de lista de espera
+
+Vacantes permite consultar la espera por institución y período a partir de una propuesta confirmada de HU-19. Separa aspirantes elegibles de casos pendientes, excluye ingresos existentes y conserva preferencias, condiciones, distancia y antecedentes del sorteo/resoluciones. Los filtros por grupo etario, turno o estado y la paginación mantienen una misma lista y su orden general.
+
+Operación: `GET /api/v1/instituciones/{institucionId}/periodos/{periodoId}/lista-espera`. Requiere el permiso institucional `Admision.ConsultarListaEspera`. No confirma ingresos ni gestiona ofrecimientos. No agrega tablas ni migraciones; necesita los scripts previos de Vacantes, incluido 005 de HU-19.
+
+El detalle, los resultados de prueba y las limitaciones están en `docs/HU-20-Primera-version.md` y `docs/Cosas pendientes.md`. La página del frontend continúa pendiente de integración.
