@@ -107,7 +107,8 @@ public sealed class ContextoPropuestaIngresos : IContextoPropuestaIngresos
                 dni.GetValueOrDefault(solicitud.Id),
                 medicion?.Id,
                 ultimoCambio,
-                duplicaciones.Contains(solicitud.Id)));
+                duplicaciones.Contains(solicitud.Id),
+                solicitud.EdadCalculada));
         }
         return new EntradasPropuestaIngresos(
             periodo.InstitucionId,

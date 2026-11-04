@@ -128,6 +128,14 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                 cambio.Explicacion);
         }
 
+        var datosActuales = await LeerAsync(propuesta.PeriodoId, tokenCancelacion);
+        if (Huella(datosActuales) != propuesta.HuellaEntradas)
+            throw new InvalidOperationException("La propuesta está desactualizada. Generá una nueva propuesta.");
+        var resultadosModificados = resultados.Values.Where(x => x.Estado == "IngresoPropuesto").ToArray();
+        ValidarConfirmacion(datosActuales, resultadosModificados);
+        ValidarCasosPendientes(datosActuales, resultadosModificados);
+        await _propuestas.ActualizarEstadoAsync(propuesta.Id, EstadoPropuestaIngreso.Desactualizada, propuesta.Revision, tokenCancelacion);
+
         var nueva = new PropuestaIngresos(
             propuesta.PeriodoId,
             autor.InstitucionId,
@@ -179,6 +187,17 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
             ?? throw new KeyNotFoundException("No se encontró la propuesta.");
         var autor = await _autorizacion.AutorizarConfirmacionAsync(propuesta.PeriodoId, tokenCancelacion);
+        var resultadosPropuesta = DeserializarResultados(propuesta)
+            .Where(x => x.Estado == "IngresoPropuesto")
+            .ToArray();
+        if (propuesta.Estado == EstadoPropuestaIngreso.Confirmada)
+        {
+            var ingresosExistentes = await ObtenerIngresosConfirmadosAsync(propuesta.PeriodoId, resultadosPropuesta, tokenCancelacion);
+            if (ingresosExistentes.Count == resultadosPropuesta.Length)
+                return ingresosExistentes.Select(Mapear).ToArray();
+
+            throw new InvalidOperationException("La propuesta está confirmada, pero sus ingresos no están completos.");
+        }
         if (!string.Equals(propuesta.HuellaEntradas, peticion.HuellaEsperada, StringComparison.Ordinal) ||
             !await EstaVigenteAsync(propuesta, tokenCancelacion))
             throw new InvalidOperationException("La propuesta está desactualizada y no puede confirmarse.");
@@ -188,9 +207,7 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
             async token =>
             {
                 var datos = await LeerAsync(propuesta.PeriodoId, token);
-                var resultados = DeserializarResultados(propuesta)
-                    .Where(x => x.Estado == "IngresoPropuesto")
-                    .ToArray();
+                var resultados = resultadosPropuesta;
                 if (resultados.Length == 0)
                     throw new InvalidOperationException("La propuesta no tiene ingresos confirmables.");
                 ValidarConfirmacion(datos, resultados);
@@ -218,6 +235,7 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                         propuesta.PeriodoId,
                         solicitud.Id,
                         solicitud.AspiranteId,
+                        solicitud.Edad,
                         oferta.Id,
                         resultado.TurnoId!.Value,
                         solicitud.Sala!.Value,
@@ -225,9 +243,34 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                         autor.UsuarioId));
                 }
                 var confirmados = await _propuestas.GuardarConfirmacionesAsync(ingresos, token);
+                try
+                {
+                    await _propuestas.ActualizarEstadoAsync(propuesta.Id, EstadoPropuestaIngreso.Confirmada, propuesta.Revision, token);
+                }
+                catch (InvalidOperationException)
+                {
+                    var propuestaActualizada = await _propuestas.ObtenerAsync(propuesta.Id, token);
+                    var ingresosExistentes = propuestaActualizada?.Estado == EstadoPropuestaIngreso.Confirmada
+                        ? await ObtenerIngresosConfirmadosAsync(propuesta.PeriodoId, resultados, token)
+                        : [];
+                    if (propuestaActualizada?.Estado != EstadoPropuestaIngreso.Confirmada || ingresosExistentes.Count != resultados.Length)
+                        throw;
+                    confirmados = ingresosExistentes;
+                }
                 return confirmados.Select(Mapear).ToArray();
             },
             tokenCancelacion);
+    }
+
+    private async Task<IReadOnlyList<IngresoConfirmado>> ObtenerIngresosConfirmadosAsync(
+        Guid periodoId,
+        IReadOnlyList<DatosResultadoPropuesta> resultados,
+        CancellationToken tokenCancelacion)
+    {
+        var aspirantes = resultados.Select(x => x.AspiranteId).ToHashSet();
+        if (aspirantes.Count == 0) return [];
+        var ingresos = await _propuestas.ListarIngresosActivosAsync(periodoId, tokenCancelacion);
+        return ingresos.Where(x => aspirantes.Contains(x.AspiranteId)).ToArray();
     }
 
     private async Task<bool> EstaVigenteAsync(PropuestaIngresos propuesta, CancellationToken tokenCancelacion)
@@ -260,6 +303,9 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
             propuesta.Motivo,
             entradas.VersionReglasId,
             entradas.VersionOfertaId,
+            vigente ? propuesta.Estado.ToString() : nameof(EstadoPropuestaIngreso.Desactualizada),
+            propuesta.Revision,
+            propuesta.PropuestaAnteriorId,
             vigente,
             propuesta.HuellaEntradas,
             JsonSerializer.Deserialize<DatosResultadoPropuesta[]>(propuesta.Resultados)!);
@@ -286,6 +332,9 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
     {
         var ofertas = datos.Entradas.Ofertas.Where(x => x.Disponible).ToDictionary(x => x.Id);
         var cantidades = datos.Ocupaciones.GroupBy(x => x.OfertaId).ToDictionary(x => x.Key, x => x.Count());
+        var edades = datos.Entradas.Ofertas.ToDictionary(
+            x => x.Id,
+            x => x.EdadesOcupacionesIniciales.Concat(datos.Ocupaciones.Where(o => o.OfertaId == x.Id).Select(o => o.Sala)).ToList());
         foreach (var resultado in resultados)
         {
             if (resultado.OfertaId is null || resultado.TurnoId is null || resultado.Sala is null || !ofertas.TryGetValue(resultado.OfertaId.Value, out var oferta))
@@ -295,6 +344,10 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
             cantidades[oferta.Id] = cantidades.GetValueOrDefault(oferta.Id) + 1;
             if (cantidades[oferta.Id] > oferta.Capacidad)
                 throw new InvalidOperationException("La capacidad disponible cambió durante la confirmación.");
+            var solicitud = datos.Entradas.Solicitudes.Single(x => x.Id == resultado.SolicitudId);
+            edades[oferta.Id].Add(solicitud.Edad);
+            if (!datos.Entradas.Combinaciones.Any(combinacion => edades[oferta.Id].Distinct().All(combinacion.Contains)))
+                throw new InvalidOperationException("La modificación no es compatible con las combinaciones de edades permitidas.");
         }
         if (resultados.Select(x => x.AspiranteId).Distinct().Count() != resultados.Count)
             throw new InvalidOperationException("Un aspirante aparece más de una vez en la confirmación.");
@@ -323,6 +376,7 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         ingreso.PeriodoId,
         ingreso.SolicitudId,
         ingreso.AspiranteId,
+        ingreso.Edad,
         ingreso.OfertaId,
         ingreso.TurnoId,
         ingreso.Sala,

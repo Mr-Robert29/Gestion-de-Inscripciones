@@ -10,6 +10,9 @@ public sealed record ConsultarPropuestaIngresosRespuesta(
     string Motivo,
     Guid VersionReglasId,
     Guid VersionOfertaId,
+    string Estado,
+    int Revision,
+    Guid? PropuestaAnteriorId,
     bool EntradasVigentes,
     string HuellaEntradas,
     IReadOnlyList<DatosResultadoPropuesta> Resultados);

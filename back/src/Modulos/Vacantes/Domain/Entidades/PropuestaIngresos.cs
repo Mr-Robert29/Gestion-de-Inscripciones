@@ -13,6 +13,8 @@ public sealed class PropuestaIngresos
     public string Entradas { get; private set; } = "";
     public string Resultados { get; private set; } = "";
     public Guid? PropuestaAnteriorId { get; private set; }
+    public EstadoPropuestaIngreso Estado { get; private set; }
+    public int Revision { get; private set; }
 
     private PropuestaIngresos() { }
 
@@ -39,5 +41,18 @@ public sealed class PropuestaIngresos
         Entradas = entradas;
         Resultados = resultados;
         PropuestaAnteriorId = propuestaAnteriorId;
+        Estado = EstadoPropuestaIngreso.Borrador;
+        Revision = 1;
+    }
+
+    public void CambiarEstado(EstadoPropuestaIngreso estado, int revisionEsperada)
+    {
+        if (revisionEsperada != Revision)
+            throw new InvalidOperationException("La propuesta cambió mientras se la estaba editando.");
+        if (Estado == estado) return;
+        if (Estado == EstadoPropuestaIngreso.Confirmada && estado != EstadoPropuestaIngreso.Confirmada)
+            throw new InvalidOperationException("Una propuesta confirmada no puede volver a editarse.");
+        Estado = estado;
+        Revision++;
     }
 }

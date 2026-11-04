@@ -31,8 +31,12 @@ public sealed class ContextoVacantes : DbContext
 
     private void ProtegerPropuestas()
     {
-        if (ChangeTracker.Entries<PropuestaIngresos>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
-            throw new InvalidOperationException("Las propuestas históricas no se modifican ni se eliminan. Generá otra propuesta.");
+        foreach (var entry in ChangeTracker.Entries<PropuestaIngresos>())
+        {
+            if (entry.State == EntityState.Deleted ||
+                entry.State == EntityState.Modified && entry.Properties.Any(x => x.IsModified && x.Metadata.Name is not ("Estado" or "Revision")))
+                throw new InvalidOperationException("El contenido histórico de una propuesta no se modifica ni se elimina.");
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelo)
@@ -48,6 +52,8 @@ public sealed class ContextoVacantes : DbContext
         propuesta.Property(x => x.Entradas).HasColumnType("jsonb").IsRequired();
         propuesta.Property(x => x.Resultados).HasColumnType("jsonb").IsRequired();
         propuesta.Property(x => x.PropuestaAnteriorId);
+        propuesta.Property(x => x.Estado).HasConversion<string>().IsRequired();
+        propuesta.Property(x => x.Revision).IsConcurrencyToken();
         propuesta.HasIndex(x => new { x.PeriodoId, x.Fecha });
 
         var ocupacion = modelo.Entity<OcupacionPlaza>();

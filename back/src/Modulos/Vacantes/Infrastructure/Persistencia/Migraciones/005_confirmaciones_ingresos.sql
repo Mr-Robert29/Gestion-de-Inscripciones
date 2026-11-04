@@ -2,6 +2,10 @@ CREATE SCHEMA IF NOT EXISTS vacantes;
 
 ALTER TABLE vacantes.propuestas_ingresos
     ADD COLUMN IF NOT EXISTS "PropuestaAnteriorId" uuid;
+ALTER TABLE vacantes.propuestas_ingresos
+    ADD COLUMN IF NOT EXISTS "Estado" text NOT NULL DEFAULT 'Borrador';
+ALTER TABLE vacantes.propuestas_ingresos
+    ADD COLUMN IF NOT EXISTS "Revision" integer NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS vacantes.aceptaciones_turno (
     "Id" uuid PRIMARY KEY,
@@ -21,6 +25,7 @@ CREATE TABLE IF NOT EXISTS vacantes.ingresos_confirmados (
     "PeriodoId" uuid NOT NULL,
     "SolicitudId" uuid NOT NULL,
     "AspiranteId" uuid NOT NULL,
+    "Edad" integer NOT NULL,
     "OfertaId" uuid NOT NULL,
     "TurnoId" uuid NOT NULL,
     "Sala" integer NOT NULL,

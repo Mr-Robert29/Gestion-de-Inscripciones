@@ -5,6 +5,7 @@ public sealed record DatosConfirmacionIngreso(
     Guid PeriodoId,
     Guid SolicitudId,
     Guid AspiranteId,
+    int Edad,
     Guid OfertaId,
     Guid TurnoId,
     int Sala,
