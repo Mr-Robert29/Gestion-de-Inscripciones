@@ -12,6 +12,7 @@ public sealed class PropuestaIngresos
     public string HuellaEntradas { get; private set; } = "";
     public string Entradas { get; private set; } = "";
     public string Resultados { get; private set; } = "";
+    public Guid? PropuestaAnteriorId { get; private set; }
 
     private PropuestaIngresos() { }
 
@@ -22,7 +23,8 @@ public sealed class PropuestaIngresos
         string motivo,
         string huellaEntradas,
         string entradas,
-        string resultados)
+        string resultados,
+        Guid? propuestaAnteriorId = null)
     {
         if (periodoId == Guid.Empty || institucionId == Guid.Empty || usuarioId == Guid.Empty)
             throw new ArgumentException("La propuesta requiere período, institución y autor.");
@@ -36,5 +38,6 @@ public sealed class PropuestaIngresos
         HuellaEntradas = huellaEntradas;
         Entradas = entradas;
         Resultados = resultados;
+        PropuestaAnteriorId = propuestaAnteriorId;
     }
 }
