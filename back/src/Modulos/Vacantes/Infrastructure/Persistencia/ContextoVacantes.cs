@@ -7,6 +7,8 @@ public sealed class ContextoVacantes : DbContext
 {
     public DbSet<PropuestaIngresos> PropuestasIngresos => Set<PropuestaIngresos>();
     public DbSet<OcupacionPlaza> OcupacionesPlazas => Set<OcupacionPlaza>();
+    public DbSet<AceptacionTurnoFamiliar> AceptacionesTurno => Set<AceptacionTurnoFamiliar>();
+    public DbSet<IngresoConfirmado> IngresosConfirmados => Set<IngresoConfirmado>();
     public DbSet<Sorteo> Sorteos => Set<Sorteo>();
     public DbSet<EvaluacionPrioridad> EvaluacionesPrioridad => Set<EvaluacionPrioridad>();
     public DbSet<CasoRevision> CasosRevision => Set<CasoRevision>();
@@ -29,8 +31,12 @@ public sealed class ContextoVacantes : DbContext
 
     private void ProtegerPropuestas()
     {
-        if (ChangeTracker.Entries<PropuestaIngresos>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
-            throw new InvalidOperationException("Las propuestas históricas no se modifican ni se eliminan. Generá otra propuesta.");
+        foreach (var entry in ChangeTracker.Entries<PropuestaIngresos>())
+        {
+            if (entry.State == EntityState.Deleted ||
+                entry.State == EntityState.Modified && entry.Properties.Any(x => x.IsModified && x.Metadata.Name is not ("Estado" or "Revision")))
+                throw new InvalidOperationException("El contenido histórico de una propuesta no se modifica ni se elimina.");
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelo)
@@ -45,6 +51,9 @@ public sealed class ContextoVacantes : DbContext
         propuesta.Property(x => x.HuellaEntradas).HasMaxLength(64).IsRequired();
         propuesta.Property(x => x.Entradas).HasColumnType("jsonb").IsRequired();
         propuesta.Property(x => x.Resultados).HasColumnType("jsonb").IsRequired();
+        propuesta.Property(x => x.PropuestaAnteriorId);
+        propuesta.Property(x => x.Estado).HasConversion<string>().IsRequired();
+        propuesta.Property(x => x.Revision).IsConcurrencyToken();
         propuesta.HasIndex(x => new { x.PeriodoId, x.Fecha });
 
         var ocupacion = modelo.Entity<OcupacionPlaza>();
@@ -54,6 +63,20 @@ public sealed class ContextoVacantes : DbContext
         ocupacion.Property(x => x.Tipo).HasMaxLength(20).IsRequired();
         ocupacion.Property(x => x.Revision).IsConcurrencyToken();
         ocupacion.HasIndex(x => new { x.PeriodoId, x.AspiranteId }).IsUnique().HasFilter("\"Activa\" = true");
+
+        var aceptacion = modelo.Entity<AceptacionTurnoFamiliar>();
+        aceptacion.ToTable("aceptaciones_turno");
+        aceptacion.HasKey(x => x.Id);
+        aceptacion.Property(x => x.Id).ValueGeneratedNever();
+        aceptacion.Property(x => x.Referencia).HasMaxLength(250);
+        aceptacion.HasIndex(x => new { x.PropuestaId, x.SolicitudId, x.TurnoId }).IsUnique();
+
+        var ingreso = modelo.Entity<IngresoConfirmado>();
+        ingreso.ToTable("ingresos_confirmados");
+        ingreso.HasKey(x => x.Id);
+        ingreso.Property(x => x.Id).ValueGeneratedNever();
+        ingreso.Property(x => x.Revision).IsConcurrencyToken();
+        ingreso.HasIndex(x => new { x.PeriodoId, x.AspiranteId }).IsUnique();
 
         var sorteo = modelo.Entity<Sorteo>();
         sorteo.ToTable("sorteos");

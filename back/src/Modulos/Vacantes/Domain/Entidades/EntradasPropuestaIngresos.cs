@@ -37,5 +37,6 @@ public sealed record SolicitudPropuesta(
     string? Dni,
     Guid? MedicionId,
     DateTimeOffset UltimoCambio,
-    bool DuplicacionPendiente);
+    bool DuplicacionPendiente,
+    int Edad = 3);
 

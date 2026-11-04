@@ -29,7 +29,6 @@ public static class ExtensionesInyeccionSecciones
         servicios.AddScoped<IRepositorioSecciones, RepositorioSecciones>();
         servicios.AddScoped<IRepositorioDistribuciones, RepositorioDistribuciones>();
         servicios.AddScoped<IProveedorOfertaSecciones, ProveedorOfertaSeccionesPorConfiguracion>();
-        servicios.AddScoped<IModuloVacantes, ProveedorIngresosConfirmadosPorConfiguracion>();
         servicios.AddScoped<IModuloSecciones, ServicioOrganizacion>();
         return servicios;
     }

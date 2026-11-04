@@ -12,6 +12,9 @@ public sealed class PropuestaIngresos
     public string HuellaEntradas { get; private set; } = "";
     public string Entradas { get; private set; } = "";
     public string Resultados { get; private set; } = "";
+    public Guid? PropuestaAnteriorId { get; private set; }
+    public EstadoPropuestaIngreso Estado { get; private set; }
+    public int Revision { get; private set; }
 
     private PropuestaIngresos() { }
 
@@ -22,7 +25,8 @@ public sealed class PropuestaIngresos
         string motivo,
         string huellaEntradas,
         string entradas,
-        string resultados)
+        string resultados,
+        Guid? propuestaAnteriorId = null)
     {
         if (periodoId == Guid.Empty || institucionId == Guid.Empty || usuarioId == Guid.Empty)
             throw new ArgumentException("La propuesta requiere período, institución y autor.");
@@ -36,5 +40,19 @@ public sealed class PropuestaIngresos
         HuellaEntradas = huellaEntradas;
         Entradas = entradas;
         Resultados = resultados;
+        PropuestaAnteriorId = propuestaAnteriorId;
+        Estado = EstadoPropuestaIngreso.Borrador;
+        Revision = 1;
+    }
+
+    public void CambiarEstado(EstadoPropuestaIngreso estado, int revisionEsperada)
+    {
+        if (revisionEsperada != Revision)
+            throw new InvalidOperationException("La propuesta cambió mientras se la estaba editando.");
+        if (Estado == estado) return;
+        if (Estado == EstadoPropuestaIngreso.Confirmada && estado != EstadoPropuestaIngreso.Confirmada)
+            throw new InvalidOperationException("Una propuesta confirmada no puede volver a editarse.");
+        Estado = estado;
+        Revision++;
     }
 }
