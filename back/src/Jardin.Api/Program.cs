@@ -43,6 +43,8 @@ builder.Services.AddScoped<IUbicacionJardin, ConsultaUbicacionJardin>();
 builder.Services.AgregarModuloSecciones(builder.Configuration);
 builder.Services.AgregarModuloVacantes(builder.Configuration);
 builder.Services.AddScoped<IAutorizacionVacantes, AccesoVacantes>();
+builder.Services.AddScoped<Jardin.Vacantes.Application.Seguridad.IAutorizacionPropuestasIngresos, AccesoVacantes>();
+builder.Services.AddScoped<Jardin.Vacantes.Application.Propuestas.IContextoPropuestaIngresos, ContextoPropuestaIngresos>();
 builder.Services.AddScoped<IProveedorEstadoPeriodo, ProveedorEstadoPeriodo>();
 builder.Services.AddScoped<IProveedorReglasPeriodo, ProveedorReglasPeriodo>();
 

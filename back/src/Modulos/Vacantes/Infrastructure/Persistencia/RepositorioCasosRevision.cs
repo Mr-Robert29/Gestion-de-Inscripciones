@@ -29,12 +29,12 @@ public sealed class RepositorioCasosRevision : IRepositorioCasosRevision
     public async Task<IReadOnlyList<CasoRevision>> ListarAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default)
-        => await _contexto.CasosRevision.AsNoTracking()
+        => (await _contexto.CasosRevision.AsNoTracking()
             .Where(x => x.PeriodoId == periodoId)
-            .OrderBy(x => x.Sala)
+            .ToArrayAsync(cancellationToken)).OrderBy(x => x.Sala)
             .ThenBy(x => x.Estado)
             .ThenBy(x => x.FechaCreacion)
-            .ToArrayAsync(cancellationToken);
+            .ToArray();
 
     public async Task<IReadOnlyList<HistorialCasoRevision>> ListarHistorialAsync(
         Guid casoId,

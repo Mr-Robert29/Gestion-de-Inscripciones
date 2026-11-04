@@ -108,6 +108,8 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
         await CrearUsuarioAsync("administrativo@prueba.example", RolesPersonal.Administrativo);
         await CrearUsuarioAsync("directivo@prueba.example", RolesPersonal.Directivo);
         await CrearUsuarioAsync("ajeno@prueba.example", RolesPersonal.Directivo);
+        await CrearUsuarioAsync("propuestas@prueba.example", RolesPersonal.Administrativo);
+        await CrearUsuarioAsync("propuestas-ajeno@prueba.example", RolesPersonal.Directivo);
     }
 
     private async Task CrearUsuarioAsync(string correo, string rol)

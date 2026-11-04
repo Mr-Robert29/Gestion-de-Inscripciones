@@ -49,7 +49,8 @@ public sealed class ServicioPrioridades : IModuloPrioridades
                 x.CondicionesVerificadas.ToDictionary(c => c, _ => true, StringComparer.Ordinal),
                 x.DistanciaMetros)),
             reglas.OrdenSalas,
-            reglas.OrdenProcedimiento);
+            reglas.OrdenProcedimiento,
+            reglas.PrecisionDistanciaDecimales);
         var respuesta = resultados.Select(x => new DatosPrioridad(
             x.SolicitudId,
             x.AspiranteId,
