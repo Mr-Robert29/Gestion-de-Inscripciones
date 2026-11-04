@@ -1,6 +1,6 @@
 # Gestión de inscripciones de jardines
 
-Backend C#/.NET 10 organizado como monolito modular. El frontend vive en ../front y tendrá su propio stack y documentación.
+Backend C#/.NET 10 organizado como monolito modular. El frontend vive en ../front, utiliza HTML, CSS y JavaScript y tiene su propia documentación.
 
 ## Estructura
 
@@ -32,7 +32,7 @@ Cada módulo tiene Domain, Application, Infrastructure y Contracts.
 
 ## Estado actual
 
-Usuarios dispone del trabajo de cuentas, Identity y JWT desarrollado por el compañero. Configuración incorpora registro, consulta, actualización, permisos, historial y migración propia. Inscripciones conserva sus clases iniciales de dominio; los procesos de mediciones y propuestas aún están pendientes.
+Usuarios dispone de cuentas, Identity y JWT. Configuración incorpora instituciones, períodos, oferta y versiones. Inscripciones implementa personas, solicitudes, antecedentes, correcciones, duplicados y revisión/carga manual de domicilios y distancias. Vacantes incorpora prioridades, sorteo, casos de revisión y la primera versión de propuestas de HU-18; la confirmación de ingresos y los procesos posteriores siguen pendientes.
 
 La detección de referencias afectadas por cambios de ubicación está preparada, pero la integración con mediciones y confirmaciones reales no puede declararse terminada hasta construir sus procesos de origen.
 
@@ -124,3 +124,13 @@ Quedan pendientes el procedimiento de autorización fuera de término y los proc
 Inscripciones permite registrar domicilios pendientes, observados o revisados manualmente con motivo, referencia, usuario, fecha e historial. Cada decisión conserva la dirección y su revisión; corregirla deja la versión nueva pendiente, mientras que cambiar otros datos conserva la comprobación actual.
 
 Reutiliza la corrección de HU-09 y la carga de distancia manual de HU-11. La revisión puede continuar tras el cierre con permisos, control de concurrencia y migración propia. Localización, reintentos y cálculo automático con Geoapify siguen pendientes; revisar no certifica coordenadas ni genera distancias.
+
+## HU-18 — Primera versión de propuestas
+
+Vacantes incorpora generación, consulta e historial de propuestas con distribución provisional factible por edad, turno y capacidad; distingue ingreso propuesto, espera y pendientes. Respeta prioridades antes de aplicar sorteo y utiliza resoluciones manuales suficientes y vigentes. La comparación de cercanía utiliza la precisión publicada, actualmente dos decimales, conservando el valor original.
+
+Incluye API con permiso institucional, instantáneas protegidas, vigencia informativa y registro para descontar ocupaciones activas. Generar no confirma ingresos ni reserva plazas. HU-19/HU-21 deben mantener ese registro en sus operaciones reales; las páginas de Vacantes del frontend todavía no lo consumen.
+
+Vacantes mantiene scripts SQL manuales numerados: aplicar `src/Modulos/Vacantes/Infrastructure/Persistencia/Migraciones/004_propuestas_ingresos.sql` después de los tres anteriores antes de usar estas operaciones en PostgreSQL. No se aplicó el script sobre la base local durante la implementación.
+
+El detalle y los pendientes están en `docs/HU-18-Primera-version.md` y `docs/Cosas pendientes.md`.

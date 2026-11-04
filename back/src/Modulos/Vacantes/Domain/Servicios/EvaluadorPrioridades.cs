@@ -17,11 +17,14 @@ public static class EvaluadorPrioridades
     public static IReadOnlyList<ResultadoPrioridad> Evaluar(
         IEnumerable<EntradaEvaluacionPrioridad> entradas,
         IReadOnlyList<int> ordenSalas,
-        IReadOnlyList<string> ordenProcedimiento)
+        IReadOnlyList<string> ordenProcedimiento,
+        int? precisionDistanciaDecimales = null)
     {
         ArgumentNullException.ThrowIfNull(entradas);
         ArgumentNullException.ThrowIfNull(ordenSalas);
         ArgumentNullException.ThrowIfNull(ordenProcedimiento);
+        if (precisionDistanciaDecimales is < 0 or > 28)
+            throw new ArgumentOutOfRangeException(nameof(precisionDistanciaDecimales));
         if (ordenSalas.Count == 0 || ordenSalas.Distinct().Count() != ordenSalas.Count)
             throw new ArgumentException("El orden de salas debe tener valores únicos.", nameof(ordenSalas));
         if (ordenProcedimiento.Count == 0 || ordenProcedimiento.Distinct(StringComparer.Ordinal).Count() != ordenProcedimiento.Count)
@@ -53,7 +56,7 @@ public static class EvaluadorPrioridades
         {
             var grupo = lista.Where(x => x.Sala == sala).ToArray();
             var ordenado = grupo
-                .Select(x => EvaluarEntrada(x, ordenProcedimiento))
+                .Select(x => EvaluarEntrada(x, ordenProcedimiento, precisionDistanciaDecimales))
                 .OrderBy(x => x, ComparadorInterno.Instance)
                 .ToArray();
 
@@ -80,7 +83,8 @@ public static class EvaluadorPrioridades
 
     private static EvaluacionInterna EvaluarEntrada(
         EntradaEvaluacionPrioridad entrada,
-        IReadOnlyList<string> procedimiento)
+        IReadOnlyList<string> procedimiento,
+        int? precisionDistanciaDecimales)
     {
         var claves = new List<decimal>(procedimiento.Count);
         var aplicados = new List<string>();
@@ -105,9 +109,13 @@ public static class EvaluadorPrioridades
                 var distancia = entrada.DistanciaMetros.Value;
                 if (distancia < 0)
                     throw new ArgumentException("La distancia no puede ser negativa.");
-                claves.Add(distancia);
+                claves.Add(precisionDistanciaDecimales is int precision
+                    ? Math.Round(distancia, precision, MidpointRounding.AwayFromZero)
+                    : distancia);
                 aplicados.Add(criterio);
                 explicacion.Add($"Cercanía: {distancia} metros.");
+                if (precisionDistanciaDecimales is int decimales)
+                    explicacion.Add($"Comparación con {decimales} decimales; se conserva el valor original.");
                 continue;
             }
 

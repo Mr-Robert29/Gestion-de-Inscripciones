@@ -6,7 +6,7 @@ using Jardin.Vacantes.Application.Seguridad;
 
 namespace Jardin.Api.Seguridad;
 
-public sealed class AccesoVacantes : IAutorizacionVacantes
+public sealed class AccesoVacantes : IAutorizacionVacantes, IAutorizacionPropuestasIngresos
 {
     private readonly IHttpContextAccessor _http;
     private readonly IModuloUsuarios _usuarios;
@@ -70,4 +70,12 @@ public sealed class AccesoVacantes : IAutorizacionVacantes
 
         return new AutorizacionVacantes(usuarioId, periodo.InstitucionId);
     }
+
+    // Implementa IAutorizacionPropuestasIngresos.AutorizarPropuestaAsync con el permiso específico de HU-18.
+    public Task<AutorizacionVacantes> AutorizarPropuestaAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.GenerarPropuestasIngreso,
+            "No tenés permiso para generar o consultar propuestas en esta institución.",
+            tokenCancelacion);
 }

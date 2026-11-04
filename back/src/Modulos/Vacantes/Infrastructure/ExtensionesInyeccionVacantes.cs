@@ -24,6 +24,8 @@ public static class ExtensionesInyeccionVacantes
         servicios.AddScoped<IRepositorioSorteos, RepositorioSorteos>();
         servicios.AddScoped<IRepositorioEvaluacionesPrioridad, RepositorioEvaluacionesPrioridad>();
         servicios.AddScoped<IRepositorioCasosRevision, RepositorioCasosRevision>();
+        servicios.AddScoped<IRepositorioPropuestasIngresos, RepositorioPropuestasIngresos>();
+        servicios.AddScoped<IModuloPropuestasIngresos, ServicioPropuestasIngresos>();
         servicios.AddScoped<IModuloSorteos, ServicioSorteos>();
         servicios.AddScoped<IModuloPrioridades, ServicioPrioridades>();
         servicios.AddScoped<IModuloCasosRevision, ServicioCasosRevision>();
