@@ -11,7 +11,8 @@ public sealed class AccesoVacantes :
     IAutorizacionPropuestasIngresos,
     IAutorizacionListaEspera,
     IAutorizacionOfrecimientos,
-    IAutorizacionNominaDistrito
+    IAutorizacionNominaDistrito,
+    Jardin.Secciones.Application.Abstracciones.IAutorizacionComposicion
 {
     private readonly IHttpContextAccessor _http;
     private readonly IModuloUsuarios _usuarios;
@@ -44,6 +45,14 @@ public sealed class AccesoVacantes :
             PermisosPersonal.ResolverCasosEspeciales,
             "No tenés permiso para resolver casos especiales en esta institución.",
             cancellationToken);
+
+    // Implementa IAutorizacionComposicion.AutorizarCambioAsync con el permiso institucional de Secciones.
+    public async Task<Guid> AutorizarCambioAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => (await AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.DefinirSecciones,
+            "No tenés permiso para cambiar la composición en esta institución.",
+            tokenCancelacion)).UsuarioId;
 
     private async Task<AutorizacionVacantes> AutorizarConPermisoAsync(
         Guid periodoId,

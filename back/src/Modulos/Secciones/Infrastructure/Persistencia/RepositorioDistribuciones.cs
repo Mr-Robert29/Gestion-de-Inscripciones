@@ -28,7 +28,7 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
 
     public Task<PropuestaDistribucion?> ObtenerPorIdAsync(Guid propuestaId, CancellationToken cancellationToken = default) =>
         _contexto.PropuestasDistribucion
-            .Include(x => x.Asignaciones)
+            .Include("_asignaciones")
             .FirstOrDefaultAsync(x => x.Id == propuestaId, cancellationToken);
 
     public async Task ActualizarAsync(PropuestaDistribucion propuesta, CancellationToken cancellationToken = default)
@@ -58,6 +58,30 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
                     await ProteccionSecciones.BloquearAsync(_contexto, $"ingreso:{ingresoId:N}", cancellationToken);
                     if (await _contexto.IngresosRetirados.AnyAsync(x => x.IngresoId == ingresoId, cancellationToken))
                         throw new InvalidOperationException("El ingreso fue retirado y no admite una asignación activa.");
+                }
+                var secciones = new List<Seccion>();
+                foreach (var seccionId in asignaciones.Select(x => x.SeccionId).Distinct().Order())
+                {
+                    var referencia = await _contexto.Secciones.AsNoTracking().SingleAsync(x => x.Id == seccionId, cancellationToken);
+                    await ProteccionSecciones.BloquearAsync(
+                        _contexto,
+                        ProteccionSecciones.Oferta(referencia.PeriodoId, referencia.AulaId, referencia.TurnoId),
+                        cancellationToken);
+                    secciones.Add(await _contexto.Secciones.AsNoTracking().SingleAsync(x => x.Id == seccionId, cancellationToken));
+                }
+                var guardada = await _contexto.PropuestasDistribucion.AsNoTracking().SingleOrDefaultAsync(x => x.Id == propuesta.Id, cancellationToken);
+                if (guardada is not null && guardada.Estado != Domain.EstadoPropuestaDistribucion.Borrador)
+                    throw new InvalidOperationException("La propuesta dejó de estar vigente; revisá la composición actual.");
+                var edades = await _contexto.AsignacionesPropuesta.AsNoTracking()
+                    .Where(x => x.PropuestaDistribucionId == propuesta.Id).ToArrayAsync(cancellationToken);
+                foreach (var seccion in secciones)
+                {
+                    var nuevas = asignaciones.Where(x => x.SeccionId == seccion.Id).ToArray();
+                    if (!seccion.Activa || nuevas.Any(x => !edades.Any(e => e.IngresoId == x.IngresoId && seccion.EsCompatibleCon(e.Edad, e.TurnoId))))
+                        throw new InvalidOperationException("La composición cambió o hay una asignación incompatible.");
+                    var existentes = await _contexto.AsignacionesSeccion.CountAsync(x => x.SeccionId == seccion.Id && x.Estado == Domain.EstadoAsignacionSeccion.Activa, cancellationToken);
+                    if (existentes + nuevas.Length > seccion.Capacidad)
+                        throw new InvalidOperationException("La sección no dispone de capacidad para confirmar.");
                 }
                 _contexto.PropuestasDistribucion.Update(propuesta);
                 await _contexto.AsignacionesSeccion.AddRangeAsync(asignaciones, cancellationToken);

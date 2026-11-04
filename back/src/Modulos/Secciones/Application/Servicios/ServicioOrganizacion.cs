@@ -12,17 +12,20 @@ public sealed class ServicioOrganizacion : IModuloSecciones
     private readonly IRepositorioDistribuciones _repositorioDistribuciones;
     private readonly IProveedorOfertaSecciones _oferta;
     private readonly IModuloVacantes _vacantes;
+    private readonly IModuloComposicionSecciones _composicion;
 
     public ServicioOrganizacion(
         IRepositorioSecciones repositorio,
         IRepositorioDistribuciones repositorioDistribuciones,
         IProveedorOfertaSecciones oferta,
-        IModuloVacantes vacantes)
+        IModuloVacantes vacantes,
+        IModuloComposicionSecciones composicion)
     {
         _repositorio = repositorio;
         _repositorioDistribuciones = repositorioDistribuciones;
         _oferta = oferta;
         _vacantes = vacantes;
+        _composicion = composicion;
     }
 
     public async Task<Guid> DefinirSeccionAsync(
@@ -72,6 +75,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         return secciones.Select(Mapear).ToList();
     }
 
+    // Implementa IModuloSecciones.CambiarComposicionSeccionAsync mediante la operación protegida de HU-26.
     public async Task<bool> CambiarComposicionSeccionAsync(
         Guid seccionId,
         CambiarComposicionSeccionPeticion peticion,
@@ -82,21 +86,11 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         if (seccion is null)
             return false;
 
-        var oferta = await _oferta.ObtenerAsync(
+        await _composicion.CambiarAsync(
             seccion.PeriodoId,
-            seccion.AulaId,
-            seccion.TurnoId,
+            seccionId,
+            peticion,
             cancellationToken);
-
-        if (oferta is null)
-            throw new InvalidOperationException("La oferta del período ya no está disponible.");
-        seccion.CambiarComposicion(
-            peticion.NuevasEdades,
-            peticion.Motivo,
-            oferta.CombinacionesPermitidas,
-            edadesAlumnosAsignados: null);
-
-        await _repositorio.ActualizarAsync(seccion, cancellationToken);
         return true;
     }
 
@@ -120,7 +114,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
             periodoId,
             version,
             ingresos.Revision,
-            secciones.Max(x => x.Revision),
+            secciones.Sum(x => x.Revision),
             usuarioId,
             DateTimeOffset.UtcNow);
 
@@ -239,7 +233,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         }
 
         var secciones = (await _repositorio.ListarPorPeriodoAsync(propuesta.PeriodoId, cancellationToken)).ToList();
-        if (secciones.Count == 0 || secciones.Max(x => x.Revision) != propuesta.RevisionSecciones)
+        if (secciones.Count == 0 || secciones.Sum(x => x.Revision) != propuesta.RevisionSecciones)
         {
             propuesta.MarcarDesactualizada();
             await _repositorioDistribuciones.ActualizarAsync(propuesta, cancellationToken);
