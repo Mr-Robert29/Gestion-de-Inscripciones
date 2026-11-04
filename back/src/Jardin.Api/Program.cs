@@ -50,6 +50,7 @@ builder.Services.AddScoped<IAutorizacionOfrecimientos, AccesoVacantes>();
 builder.Services.AddScoped<Jardin.Secciones.Application.Abstracciones.IAutorizacionComposicion, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionNominaDistrito, AccesoVacantes>();
 builder.Services.AddScoped<IAutorizacionReportes, AccesoVacantes>();
+builder.Services.AddScoped<IConsultaReportes, ServicioReportes>();
 
 builder.Services.AddScoped<
     Jardin.Vacantes.Application.Propuestas.IIntegracionSeccionesEspera,
