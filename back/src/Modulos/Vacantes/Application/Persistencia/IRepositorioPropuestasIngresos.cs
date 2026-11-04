@@ -13,5 +13,6 @@ public interface IRepositorioPropuestasIngresos
     Task GuardarAceptacionAsync(AceptacionTurnoFamiliar aceptacion, CancellationToken tokenCancelacion = default);
     Task<IngresoConfirmado?> ObtenerIngresoAsync(Guid periodoId, Guid aspiranteId, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosActivosAsync(Guid periodoId, CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosAsync(Guid periodoId, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<IngresoConfirmado>> GuardarConfirmacionesAsync(IReadOnlyList<IngresoConfirmado> ingresos, CancellationToken tokenCancelacion = default);
 }

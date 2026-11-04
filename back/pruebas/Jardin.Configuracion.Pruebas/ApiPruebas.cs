@@ -5,6 +5,7 @@ using Jardin.Usuarios.Domain;
 using Jardin.Usuarios.Domain.Entidades;
 using Jardin.Usuarios.Infrastructure.Persistencia;
 using Jardin.Vacantes.Infrastructure.Persistencia;
+using Jardin.Secciones.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -21,10 +22,12 @@ namespace Jardin.Configuracion.Pruebas;
 // Bases aisladas por módulo: nunca se usa la conexión local de la aplicación.
 public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
 {
+    public bool FallarBajaSecciones { get; set; }
     private readonly SqliteConnection _configuracion = new("Data Source=:memory:");
     private readonly SqliteConnection _inscripciones = new("Data Source=:memory:");
     private readonly SqliteConnection _usuarios = new("Data Source=:memory:");
     private readonly SqliteConnection _vacantes = new("Data Source=:memory:");
+    private readonly SqliteConnection _secciones = new("Data Source=:memory:");
     private readonly string _contenidoApi;
 
     public ApiPruebas(string contenidoApi)
@@ -34,6 +37,7 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
         _inscripciones.Open();
         _usuarios.Open();
         _vacantes.Open();
+        _secciones.Open();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder constructor)
@@ -57,6 +61,8 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
             servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoUsuarios>>();
             servicios.RemoveAll<DbContextOptions<ContextoVacantes>>();
             servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoVacantes>>();
+            servicios.RemoveAll<DbContextOptions<ContextoSecciones>>();
+            servicios.RemoveAll<IDbContextOptionsConfiguration<ContextoSecciones>>();
             var conexionPostgres = Environment.GetEnvironmentVariable("HU01_POSTGRES_PRUEBAS");
             if (!string.IsNullOrWhiteSpace(conexionPostgres) &&
                 new Npgsql.NpgsqlConnectionStringBuilder(conexionPostgres).Database?.StartsWith("hu01_pruebas_", StringComparison.Ordinal) != true)
@@ -77,6 +83,11 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
             });
             servicios.AddDbContext<ContextoUsuarios>(opciones => opciones.UseSqlite(_usuarios));
             servicios.AddDbContext<ContextoVacantes>(opciones => opciones.UseSqlite(_vacantes));
+            servicios.AddDbContext<ContextoSecciones>(opciones => opciones.UseSqlite(_secciones));
+            servicios.RemoveAll<Jardin.Secciones.Contracts.IModuloSeccionesEspera>();
+            servicios.AddScoped<Jardin.Secciones.Contracts.IModuloSeccionesEspera>(proveedor => new SeccionesEsperaControladas(
+                new Jardin.Secciones.Application.Servicios.ServicioSeccionesEspera(proveedor.GetRequiredService<Jardin.Secciones.Application.Abstracciones.IRepositorioSeccionesEspera>()),
+                () => FallarBajaSecciones));
         });
     }
 
@@ -95,6 +106,7 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
             await contextoInscripciones.Database.EnsureCreatedAsync();
         await alcance.ServiceProvider.GetRequiredService<ContextoUsuarios>().Database.EnsureCreatedAsync();
         await alcance.ServiceProvider.GetRequiredService<ContextoVacantes>().Database.EnsureCreatedAsync();
+        await alcance.ServiceProvider.GetRequiredService<ContextoSecciones>().Database.EnsureCreatedAsync();
         var roles = alcance.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         foreach (var rol in RolesPersonal.Todos)
             await roles.CreateAsync(new IdentityRole<Guid>(rol));

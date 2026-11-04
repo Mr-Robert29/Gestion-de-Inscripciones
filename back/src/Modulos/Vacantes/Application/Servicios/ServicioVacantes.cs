@@ -12,15 +12,16 @@ public sealed class ServicioVacantes : IModuloVacantes
         _repositorio = repositorio;
     }
 
+    // Implementa IModuloVacantes.ObtenerIngresosActivosAsync: la revisión incluye cambios de pertenencia y bajas.
     public async Task<RevisionIngresosActivos> ObtenerIngresosActivosAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default)
     {
-        var ingresos = await _repositorio.ListarIngresosActivosAsync(periodoId, cancellationToken);
-        var revision = ingresos.Count == 0 ? 0 : ingresos.Max(x => x.Revision);
+        var ingresos = await _repositorio.ListarIngresosAsync(periodoId, cancellationToken);
+        var revision = checked((int)ingresos.Sum(x => (long)x.Revision));
         return new RevisionIngresosActivos(
             revision,
-            ingresos.Select(x => new DatosIngresoConfirmado(
+            ingresos.Where(x => x.Activo && !x.BajaEnProceso).Select(x => new DatosIngresoConfirmado(
                 x.Id,
                 x.AspiranteId,
                 x.Edad,

@@ -9,6 +9,8 @@ public sealed class ContextoVacantes : DbContext
     public DbSet<OcupacionPlaza> OcupacionesPlazas => Set<OcupacionPlaza>();
     public DbSet<AceptacionTurnoFamiliar> AceptacionesTurno => Set<AceptacionTurnoFamiliar>();
     public DbSet<IngresoConfirmado> IngresosConfirmados => Set<IngresoConfirmado>();
+    public DbSet<OfrecimientoVacante> Ofrecimientos => Set<OfrecimientoVacante>();
+    public DbSet<CambioOfrecimiento> CambiosOfrecimientos => Set<CambioOfrecimiento>();
     public DbSet<Sorteo> Sorteos => Set<Sorteo>();
     public DbSet<EvaluacionPrioridad> EvaluacionesPrioridad => Set<EvaluacionPrioridad>();
     public DbSet<CasoRevision> CasosRevision => Set<CasoRevision>();
@@ -42,6 +44,17 @@ public sealed class ContextoVacantes : DbContext
     protected override void OnModelCreating(ModelBuilder modelo)
     {
         modelo.HasDefaultSchema("vacantes");
+        var ofrecimiento = modelo.Entity<OfrecimientoVacante>();
+        ofrecimiento.ToTable("ofrecimientos");
+        ofrecimiento.HasKey(x => x.Id);
+        ofrecimiento.Property(x => x.Id).ValueGeneratedNever();
+        ofrecimiento.Property(x => x.Revision).IsConcurrencyToken();
+        ofrecimiento.HasIndex(x => new { x.PeriodoId, x.OperacionId }).IsUnique();
+        var cambioOferta = modelo.Entity<CambioOfrecimiento>();
+        cambioOferta.ToTable("cambios_ofrecimientos");
+        cambioOferta.HasKey(x => x.Id);
+        cambioOferta.Property(x => x.Id).ValueGeneratedNever();
+        cambioOferta.HasIndex(x => x.OfrecimientoId);
 
         var propuesta = modelo.Entity<PropuestaIngresos>();
         propuesta.ToTable("propuestas_ingresos");
@@ -76,6 +89,7 @@ public sealed class ContextoVacantes : DbContext
         ingreso.HasKey(x => x.Id);
         ingreso.Property(x => x.Id).ValueGeneratedNever();
         ingreso.Property(x => x.Revision).IsConcurrencyToken();
+        ingreso.HasIndex(x => x.OfrecimientoId).IsUnique().HasFilter("\"OfrecimientoId\" IS NOT NULL");
         ingreso.HasIndex(x => new { x.PeriodoId, x.AspiranteId }).IsUnique();
 
         var sorteo = modelo.Entity<Sorteo>();
