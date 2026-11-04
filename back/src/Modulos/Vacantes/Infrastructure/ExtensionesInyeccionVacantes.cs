@@ -26,6 +26,7 @@ public static class ExtensionesInyeccionVacantes
         servicios.AddScoped<IRepositorioCasosRevision, RepositorioCasosRevision>();
         servicios.AddScoped<IModuloSorteos, ServicioSorteos>();
         servicios.AddScoped<IModuloPrioridades, ServicioPrioridades>();
+        servicios.AddScoped<IModuloCasosRevision, ServicioCasosRevision>();
         return servicios;
     }
 }

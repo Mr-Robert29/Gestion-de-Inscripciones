@@ -124,8 +124,8 @@ public sealed class CasoRevision
     private static void ValidarSolicitudes(IEnumerable<Guid> solicitudes)
     {
         var ids = solicitudes?.ToArray() ?? throw new ArgumentNullException(nameof(solicitudes));
-        if (ids.Length < 2 || ids.Any(x => x == Guid.Empty) || ids.Distinct().Count() != ids.Length)
-            throw new ArgumentException("Un caso debe afectar al menos dos solicitudes distintas.", nameof(solicitudes));
+        if (ids.Length < 1 || ids.Any(x => x == Guid.Empty) || ids.Distinct().Count() != ids.Length)
+            throw new ArgumentException("El caso debe afectar al menos una solicitud válida.", nameof(solicitudes));
     }
 
     private static string Serializar(IEnumerable<Guid> ids) => JsonSerializer.Serialize(ids.ToArray());

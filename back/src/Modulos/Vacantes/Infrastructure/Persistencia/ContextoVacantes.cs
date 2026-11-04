@@ -8,6 +8,7 @@ public sealed class ContextoVacantes : DbContext
     public DbSet<Sorteo> Sorteos => Set<Sorteo>();
     public DbSet<EvaluacionPrioridad> EvaluacionesPrioridad => Set<EvaluacionPrioridad>();
     public DbSet<CasoRevision> CasosRevision => Set<CasoRevision>();
+    public DbSet<HistorialCasoRevision> CambiosCasosRevision => Set<HistorialCasoRevision>();
 
     public ContextoVacantes(DbContextOptions<ContextoVacantes> opciones)
         : base(opciones) { }
@@ -62,5 +63,20 @@ public sealed class ContextoVacantes : DbContext
         caso.Property(x => x.Revision).IsConcurrencyToken();
         caso.HasIndex(x => new { x.PeriodoId, x.Sala, x.Tipo, x.HuellaOrigen }).IsUnique();
         caso.HasIndex(x => new { x.PeriodoId, x.Estado });
+
+        var historialCaso = modelo.Entity<HistorialCasoRevision>();
+        historialCaso.ToTable("historial_casos_revision");
+        historialCaso.HasKey(x => x.Id);
+        historialCaso.Property(x => x.Id).ValueGeneratedNever();
+        historialCaso.Property(x => x.CasoRevisionId).IsRequired();
+        historialCaso.Property(x => x.Accion).IsRequired().HasMaxLength(100);
+        historialCaso.Property(x => x.EstadoAnterior).HasConversion<string>().IsRequired();
+        historialCaso.Property(x => x.EstadoNuevo).HasConversion<string>().IsRequired();
+        historialCaso.Property(x => x.OrdenAnterior).IsRequired().HasColumnType("jsonb");
+        historialCaso.Property(x => x.OrdenNueva).IsRequired().HasColumnType("jsonb");
+        historialCaso.Property(x => x.Motivo).IsRequired().HasMaxLength(1000);
+        historialCaso.Property(x => x.UsuarioId).IsRequired();
+        historialCaso.Property(x => x.Fecha).IsRequired();
+        historialCaso.HasIndex(x => new { x.CasoRevisionId, x.Fecha });
     }
 }

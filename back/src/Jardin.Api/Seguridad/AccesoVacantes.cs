@@ -25,6 +25,26 @@ public sealed class AccesoVacantes : IAutorizacionVacantes
     public async Task<AutorizacionVacantes> AutorizarAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default)
+        => await AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.RegistrarSorteo,
+            "No tenés permiso para registrar sorteos en esta institución.",
+            cancellationToken);
+
+    public async Task<AutorizacionVacantes> AutorizarResolucionAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+        => await AutorizarConPermisoAsync(
+            periodoId,
+            PermisosPersonal.ResolverCasosEspeciales,
+            "No tenés permiso para resolver casos especiales en esta institución.",
+            cancellationToken);
+
+    private async Task<AutorizacionVacantes> AutorizarConPermisoAsync(
+        Guid periodoId,
+        string permiso,
+        string mensajeSinPermiso,
+        CancellationToken cancellationToken)
     {
         var periodo = await _periodos.ConsultarPeriodoAsync(periodoId, cancellationToken)
             ?? throw new KeyNotFoundException("No se encontró el período.");
@@ -43,10 +63,10 @@ public sealed class AccesoVacantes : IAutorizacionVacantes
         var tieneAcceso = esRoot || sesion.Accesos.Any(acceso =>
             acceso.InstitucionId == periodo.InstitucionId &&
             PermisosPersonal.ObtenerPermisosPorRol(acceso.Rol)
-                .Contains(PermisosPersonal.RegistrarSorteo));
+                .Contains(permiso));
 
         if (!tieneAcceso)
-            throw new UnauthorizedAccessException("No tenés permiso para registrar sorteos en esta institución.");
+            throw new UnauthorizedAccessException(mensajeSinPermiso);
 
         return new AutorizacionVacantes(usuarioId, periodo.InstitucionId);
     }

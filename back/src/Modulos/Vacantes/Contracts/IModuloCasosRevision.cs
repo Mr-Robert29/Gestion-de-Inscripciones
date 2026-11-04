@@ -10,6 +10,10 @@ public interface IModuloCasosRevision
         Guid casoId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DatosHistorialCasoRevision>> ConsultarHistorialAsync(
+        Guid casoId,
+        CancellationToken cancellationToken = default);
+
     Task<DatosCasoRevision> ResolverAsync(
         Guid casoId,
         ResolverCasoRevisionPeticion peticion,
