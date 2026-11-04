@@ -57,9 +57,15 @@ public sealed class RepositorioPropuestasIngresos : IRepositorioPropuestasIngres
             x => x.PeriodoId == periodoId && x.AspiranteId == aspiranteId,
             tokenCancelacion);
 
+    // Implementa IRepositorioPropuestasIngresos.ListarIngresosActivosAsync sin perder el historial de bajas.
     public async Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosActivosAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
         => (await _contexto.IngresosConfirmados.AsNoTracking()
-            .Where(x => x.PeriodoId == periodoId)
+            .Where(x => x.PeriodoId == periodoId && x.Activo)
+            .ToArrayAsync(tokenCancelacion)).OrderBy(x => x.Fecha).ThenBy(x => x.Id).ToArray();
+
+    // Implementa IRepositorioPropuestasIngresos.ListarIngresosAsync: conserva también las bajas históricas.
+    public async Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
+        => (await _contexto.IngresosConfirmados.AsNoTracking().Where(x => x.PeriodoId == periodoId)
             .ToArrayAsync(tokenCancelacion)).OrderBy(x => x.Fecha).ThenBy(x => x.Id).ToArray();
 
     public async Task<IReadOnlyList<IngresoConfirmado>> GuardarConfirmacionesAsync(IReadOnlyList<IngresoConfirmado> ingresos, CancellationToken tokenCancelacion = default)

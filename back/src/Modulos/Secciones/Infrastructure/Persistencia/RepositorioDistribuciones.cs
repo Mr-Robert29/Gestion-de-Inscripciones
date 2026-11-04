@@ -42,15 +42,28 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
             x => x.IngresoId == ingresoId && x.Estado == Domain.EstadoAsignacionSeccion.Activa,
             cancellationToken);
 
+    // Implementa IRepositorioDistribuciones.ConfirmarAsync sin reactivar ingresos retirados.
     public async Task ConfirmarAsync(
         PropuestaDistribucion propuesta,
         IReadOnlyList<AsignacionSeccion> asignaciones,
         CancellationToken cancellationToken = default)
     {
-        await using var transaccion = await _contexto.Database.BeginTransactionAsync(cancellationToken);
-        _contexto.PropuestasDistribucion.Update(propuesta);
-        await _contexto.AsignacionesSeccion.AddRangeAsync(asignaciones, cancellationToken);
-        await _contexto.SaveChangesAsync(cancellationToken);
-        await transaccion.CommitAsync(cancellationToken);
+        await ProteccionSecciones.EjecutarAsync(
+            _contexto,
+            $"distribucion:{propuesta.PeriodoId:N}",
+            async () =>
+            {
+                foreach (var ingresoId in asignaciones.Select(x => x.IngresoId).Distinct().Order())
+                {
+                    await ProteccionSecciones.BloquearAsync(_contexto, $"ingreso:{ingresoId:N}", cancellationToken);
+                    if (await _contexto.IngresosRetirados.AnyAsync(x => x.IngresoId == ingresoId, cancellationToken))
+                        throw new InvalidOperationException("El ingreso fue retirado y no admite una asignación activa.");
+                }
+                _contexto.PropuestasDistribucion.Update(propuesta);
+                await _contexto.AsignacionesSeccion.AddRangeAsync(asignaciones, cancellationToken);
+                await _contexto.SaveChangesAsync(cancellationToken);
+                return true;
+            },
+            cancellationToken);
     }
 }

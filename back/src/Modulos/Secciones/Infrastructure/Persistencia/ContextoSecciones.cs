@@ -10,6 +10,8 @@ public sealed class ContextoSecciones : DbContext
     public DbSet<PropuestaDistribucion> PropuestasDistribucion => Set<PropuestaDistribucion>();
     public DbSet<AsignacionPropuesta> AsignacionesPropuesta => Set<AsignacionPropuesta>();
     public DbSet<AsignacionSeccion> AsignacionesSeccion => Set<AsignacionSeccion>();
+    public DbSet<IngresoRetiradoSecciones> IngresosRetirados => Set<IngresoRetiradoSecciones>();
+    public DbSet<CambioBajaAsignacion> CambiosBajaAsignaciones => Set<CambioBajaAsignacion>();
 
     public ContextoSecciones(DbContextOptions<ContextoSecciones> opciones)
         : base(opciones) { }
@@ -17,9 +19,24 @@ public sealed class ContextoSecciones : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasDefaultSchema("secciones");
+        builder.Entity<CambioBajaAsignacion>(b =>
+        {
+            b.ToTable("cambios_baja_asignaciones");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.HasIndex(x => x.IngresoId);
+        });
+        builder.Entity<IngresoRetiradoSecciones>(b =>
+        {
+            b.ToTable("ingresos_retirados");
+            b.HasKey(x => x.IngresoId);
+            b.Property(x => x.IngresoId).ValueGeneratedNever();
+            b.Property(x => x.Motivo).IsRequired();
+        });
 
         builder.Entity<Seccion>(b =>
         {
+            b.Ignore(x => x.EdadesAdmitidas);
             b.ToTable("secciones");
             b.HasKey(x => x.Id);
             b.Property(x => x.PeriodoId).IsRequired();
@@ -41,6 +58,7 @@ public sealed class ContextoSecciones : DbContext
 
         builder.Entity<PropuestaDistribucion>(b =>
         {
+            b.Ignore(x => x.Asignaciones);
             b.ToTable("propuestas_distribucion");
             b.HasKey(x => x.Id);
             b.Property(x => x.Estado).HasConversion<string>().HasMaxLength(30).IsRequired();

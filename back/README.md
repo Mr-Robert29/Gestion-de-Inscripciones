@@ -142,3 +142,13 @@ Vacantes permite consultar la espera por institución y período a partir de una
 Operación: `GET /api/v1/instituciones/{institucionId}/periodos/{periodoId}/lista-espera`. Requiere el permiso institucional `Admision.ConsultarListaEspera`. No confirma ingresos ni gestiona ofrecimientos. No agrega tablas ni migraciones; necesita los scripts previos de Vacantes, incluido 005 de HU-19.
 
 El detalle, los resultados de prueba y las limitaciones están en `docs/HU-20-Primera-version.md` y `docs/Cosas pendientes.md`. La página del frontend continúa pendiente de integración.
+
+## HU-21 — Bajas y ofrecimientos desde espera
+
+Vacantes incorpora bajas con motivo/autor/fecha y coordinación con Secciones; ofrecimientos con reservas activas; aceptación, rechazo y cancelación; y confirmación manual revalidada. Un rechazo de turno alternativo no retira al aspirante de la espera. Las operaciones repetidas no duplican reservas ni ingresos.
+
+La baja que no logra completar la coordinación devuelve 202 y conserva ocupada la plaza hasta el reintento autorizado. Secciones conserva el historial de su asignación y utiliza oferta/reglas publicadas de Configuración.
+
+Antes de utilizarlo en PostgreSQL, aplicar los scripts `src/Modulos/Vacantes/Infrastructure/Persistencia/Migraciones/006_bajas_ofrecimientos.sql` y `src/Modulos/Secciones/Infrastructure/Persistencia/Migrations/002_bajas_ingresos.sql` sobre los esquemas previos. No se ejecutaron sobre la base local durante este trabajo.
+
+Detalle, operaciones y pendientes: `docs/HU-21-Primera-version.md`. La integración con el frontend y las pruebas específicas con PostgreSQL siguen pendientes.

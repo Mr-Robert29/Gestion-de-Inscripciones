@@ -13,10 +13,14 @@ public sealed class RepositorioSecciones : IRepositorioSecciones
         _contexto = contexto;
     }
 
+    // Implementa IRepositorioSecciones.AgregarAsync con protección de la oferta compartida.
     public async Task AgregarAsync(Seccion seccion, CancellationToken cancellationToken = default)
     {
-        await _contexto.Secciones.AddAsync(seccion, cancellationToken);
-        await _contexto.SaveChangesAsync(cancellationToken);
+        await ProteccionSecciones.EjecutarAsync(
+            _contexto,
+            ProteccionSecciones.Oferta(seccion.PeriodoId, seccion.AulaId, seccion.TurnoId),
+            async () => { await _contexto.Secciones.AddAsync(seccion, cancellationToken); await _contexto.SaveChangesAsync(cancellationToken); return true; },
+            cancellationToken);
     }
 
     public Task<Seccion?> ObtenerPorIdAsync(Guid seccionId, CancellationToken cancellationToken = default) =>
@@ -31,9 +35,13 @@ public sealed class RepositorioSecciones : IRepositorioSecciones
             .OrderBy(x => x.Nombre)
             .ToListAsync(cancellationToken);
 
+    // Implementa IRepositorioSecciones.ActualizarAsync con protección de la composición leída por Vacantes.
     public async Task ActualizarAsync(Seccion seccion, CancellationToken cancellationToken = default)
     {
-        _contexto.Secciones.Update(seccion);
-        await _contexto.SaveChangesAsync(cancellationToken);
+        await ProteccionSecciones.EjecutarAsync(
+            _contexto,
+            ProteccionSecciones.Oferta(seccion.PeriodoId, seccion.AulaId, seccion.TurnoId),
+            async () => { _contexto.Secciones.Update(seccion); await _contexto.SaveChangesAsync(cancellationToken); return true; },
+            cancellationToken);
     }
 }

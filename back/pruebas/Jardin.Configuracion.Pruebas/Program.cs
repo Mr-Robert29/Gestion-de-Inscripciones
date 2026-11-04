@@ -190,7 +190,13 @@ public static class EjecutorPruebas
             correo => IniciarSesionAsync(cliente, correo),
             Comprobar);
         PruebasListaEspera.Ejecutar(Comprobar);
+        PruebasOfrecimientos.Ejecutar(Comprobar);
         await PruebasListaEsperaApi.EjecutarAsync(
+            cliente,
+            aplicacion,
+            correo => IniciarSesionAsync(cliente, correo),
+            Comprobar);
+        await PruebasOfrecimientosApi.EjecutarAsync(
             cliente,
             aplicacion,
             correo => IniciarSesionAsync(cliente, correo),

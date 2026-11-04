@@ -1,7 +1,6 @@
 using Jardin.Secciones.Application.Abstracciones;
 using Jardin.Secciones.Application.Servicios;
 using Jardin.Secciones.Contracts;
-using Jardin.Secciones.Infrastructure.Configuracion;
 using Jardin.Secciones.Infrastructure.Persistencia;
 using Jardin.Vacantes.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +27,9 @@ public static class ExtensionesInyeccionSecciones
 
         servicios.AddScoped<IRepositorioSecciones, RepositorioSecciones>();
         servicios.AddScoped<IRepositorioDistribuciones, RepositorioDistribuciones>();
-        servicios.AddScoped<IProveedorOfertaSecciones, ProveedorOfertaSeccionesPorConfiguracion>();
         servicios.AddScoped<IModuloSecciones, ServicioOrganizacion>();
+        servicios.AddScoped<IRepositorioSeccionesEspera, RepositorioSeccionesEspera>();
+        servicios.AddScoped<IModuloSeccionesEspera, ServicioSeccionesEspera>();
         return servicios;
     }
 }

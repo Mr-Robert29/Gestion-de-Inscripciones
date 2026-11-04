@@ -46,7 +46,7 @@ public sealed class ServicioListaEspera : IModuloListaEspera
         if (acceso.InstitucionId != institucionId) throw new KeyNotFoundException("El período no pertenece a la institución indicada.");
         ValidarFiltros(peticion);
         var propuestas = await _repositorio.ListarAsync(periodoId, tokenCancelacion);
-        var ingresos = await _repositorio.ListarIngresosActivosAsync(periodoId, tokenCancelacion);
+        var ingresos = await _repositorio.ListarIngresosAsync(periodoId, tokenCancelacion);
         var confirmadas = propuestas.Where(x => x.Estado == EstadoPropuestaIngreso.Confirmada).ToArray();
         if (confirmadas.Length == 0)
             return RespuestaVacia(institucionId, periodoId, peticion, ingresos.Count > 0);
@@ -68,7 +68,8 @@ public sealed class ServicioListaEspera : IModuloListaEspera
             actuales = null;
             avisos.Add("La configuración actual no permite comprobar la vigencia del orden histórico.");
         }
-        var cambianEntradas = actuales is null || CambioOrden(fuente.Entradas, actuales);
+        var conIngresoHistorico = ingresos.Select(x => x.AspiranteId).ToHashSet();
+        var cambianEntradas = actuales is null || CambioOrden(fuente.Entradas, actuales, conIngresoHistorico);
         var casos = await _casos.ListarAsync(periodoId, tokenCancelacion);
         var sorteos = await _sorteos.ListarVigentesAsync(periodoId, tokenCancelacion);
         if (!MismasRevisiones(fuente.Casos, casos.Select(x => (x.Id, x.Revision))) ||
@@ -135,11 +136,14 @@ public sealed class ServicioListaEspera : IModuloListaEspera
             .ToDictionary(x => x.SolicitudId, _ => ++posicion);
     }
 
-    private static bool CambioOrden(EntradasPropuestaIngresos anteriores, EntradasPropuestaIngresos actuales)
+    private static bool CambioOrden(
+        EntradasPropuestaIngresos anteriores,
+        EntradasPropuestaIngresos actuales,
+        IReadOnlySet<Guid> conIngreso)
         => anteriores.VersionReglasId != actuales.VersionReglasId || anteriores.VersionOfertaId != actuales.VersionOfertaId ||
             actuales.EstadoPeriodo != "RecepcionCerrada" ||
-            JsonSerializer.Serialize(anteriores.Solicitudes.Where(x => !x.FueraDeTermino).OrderBy(x => x.Id)) !=
-            JsonSerializer.Serialize(actuales.Solicitudes.Where(x => !x.FueraDeTermino).OrderBy(x => x.Id));
+            JsonSerializer.Serialize(anteriores.Solicitudes.Where(x => !x.FueraDeTermino && !conIngreso.Contains(x.AspiranteId)).OrderBy(x => x.Id)) !=
+            JsonSerializer.Serialize(actuales.Solicitudes.Where(x => !x.FueraDeTermino && !conIngreso.Contains(x.AspiranteId)).OrderBy(x => x.Id));
 
     private static bool MismasRevisiones(
         IReadOnlyList<JsonElement> historicas,

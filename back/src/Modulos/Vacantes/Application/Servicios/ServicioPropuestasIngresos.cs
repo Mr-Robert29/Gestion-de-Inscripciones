@@ -269,7 +269,7 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
     {
         var aspirantes = resultados.Select(x => x.AspiranteId).ToHashSet();
         if (aspirantes.Count == 0) return [];
-        var ingresos = await _propuestas.ListarIngresosActivosAsync(periodoId, tokenCancelacion);
+        var ingresos = await _propuestas.ListarIngresosAsync(periodoId, tokenCancelacion);
         return ingresos.Where(x => aspirantes.Contains(x.AspiranteId)).ToArray();
     }
 
@@ -281,11 +281,17 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
     }
 
     private async Task<Instantanea> LeerAsync(Guid periodoId, CancellationToken tokenCancelacion)
-        => new(
-            await _contexto.LeerAsync(periodoId, tokenCancelacion),
+    {
+        var entradas = await _contexto.LeerAsync(periodoId, tokenCancelacion);
+        var bajas = (await _propuestas.ListarIngresosAsync(periodoId, tokenCancelacion))
+            .Where(x => !x.Activo || x.BajaEnProceso).Select(x => x.AspiranteId).ToHashSet();
+        entradas = entradas with { Solicitudes = entradas.Solicitudes.Where(x => !bajas.Contains(x.AspiranteId)).ToArray() };
+        return new Instantanea(
+            entradas,
             (await _sorteos.ListarVigentesAsync(periodoId, tokenCancelacion)).OrderBy(x => x.Id).ToArray(),
             (await _casos.ListarAsync(periodoId, tokenCancelacion)).OrderBy(x => x.Id).ToArray(),
             (await _propuestas.ListarOcupacionesAsync(periodoId, tokenCancelacion)).OrderBy(x => x.Id).ToArray());
+    }
 
     private static string Huella(Instantanea datos)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(datos))));
