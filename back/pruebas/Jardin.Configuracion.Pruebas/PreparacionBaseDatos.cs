@@ -1,13 +1,5 @@
-using Jardin.Api;
-using Jardin.Configuracion.Infrastructure.Persistencia;
-using Jardin.Inscripciones.Infrastructure.Persistencia;
-using Jardin.Secciones.Infrastructure.Persistencia;
-using Jardin.Usuarios.Infrastructure.Persistencia;
-using Jardin.Vacantes.Infrastructure.Persistencia;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.Extensions.Configuration;
 using Npgsql;
 
 namespace Jardin.Configuracion.Pruebas;
@@ -17,9 +9,7 @@ public static class PreparacionBaseDatos
 {
     public static async Task EjecutarAsync(bool aplicar)
     {
-        var configuracion = new ConfigurationBuilder().AddUserSecrets<PuntoEntradaApi>(optional: false).Build();
-        var conexion = configuracion.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Falta DefaultConnection en los secretos de Jardin.Api.");
+        var conexion = ContextosMigraciones.LeerConexion();
         var destino = new NpgsqlConnectionStringBuilder(conexion);
         if (destino.Database != "jardin_inscripciones")
             throw new InvalidOperationException("Este instalador inicial solo admite la base jardin_inscripciones.");
@@ -28,31 +18,14 @@ public static class PreparacionBaseDatos
         if (carpeta is null) throw new InvalidOperationException("No se encontró la carpeta back.");
         var salida = Path.Combine(carpeta.FullName, "instalacion");
         Directory.CreateDirectory(salida);
-        var opcionesConfiguracion = new DbContextOptionsBuilder<ContextoConfiguracion>().UseNpgsql(
-            conexion,
-            postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "configuracion")).Options;
-        var opcionesInscripciones = new DbContextOptionsBuilder<ContextoInscripciones>().UseNpgsql(
-            conexion,
-            postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "inscripciones")).Options;
-        await using var usuarios = new ContextoUsuarios(new DbContextOptionsBuilder<ContextoUsuarios>().UseNpgsql(conexion).Options);
-        await using var configuracionDb = new ContextoConfiguracion(opcionesConfiguracion);
-        await using var inscripciones = new ContextoInscripciones(opcionesInscripciones);
-        await using var vacantes = new ContextoVacantes(new DbContextOptionsBuilder<ContextoVacantes>().UseNpgsql(conexion).Options);
-        await using var secciones = new ContextoSecciones(new DbContextOptionsBuilder<ContextoSecciones>().UseNpgsql(conexion).Options);
+        await using var contextos = new ContextosMigraciones(conexion);
         var scripts = new List<(string Nombre, string Sql)>();
-        foreach (var (nombre, contexto, tieneMigraciones) in new (string, DbContext, bool)[]
+        var numero = 0;
+        foreach (var modulo in contextos.Modulos)
         {
-            ("01_usuarios.sql", usuarios, false),
-            ("02_configuracion.sql", configuracionDb, true),
-            ("03_inscripciones.sql", inscripciones, true),
-            ("04_vacantes.sql", vacantes, false),
-            ("05_secciones.sql", secciones, false)
-        })
-        {
-            var sql = tieneMigraciones
-                ? contexto.GetService<IMigrator>().GenerateScript(
-                    options: MigrationsSqlGenerationOptions.Idempotent | MigrationsSqlGenerationOptions.NoTransactions)
-                : contexto.Database.GenerateCreateScript();
+            var nombre = $"{++numero:00}_{modulo.Esquema}.sql";
+            var sql = modulo.Contexto.GetService<IMigrator>().GenerateScript(
+                options: MigrationsSqlGenerationOptions.Idempotent | MigrationsSqlGenerationOptions.NoTransactions);
             await File.WriteAllTextAsync(Path.Combine(salida, nombre), sql);
             scripts.Add((nombre, sql));
             Console.WriteLine($"Preparado {nombre}, sin credenciales.");

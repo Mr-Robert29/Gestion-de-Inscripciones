@@ -10,6 +10,7 @@ public sealed class FabricaContextoConfiguracion : IDesignTimeDbContextFactory<C
     public ContextoConfiguracion CreateDbContext(string[] args)
     {
         var conexion = Environment.GetEnvironmentVariable("ConnectionStrings__Configuracion")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
             ?? "Host=localhost;Database=jardin_diseno;Username=postgres";
         var opciones = new DbContextOptionsBuilder<ContextoConfiguracion>()
             .UseNpgsql(conexion, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "configuracion")).Options;
