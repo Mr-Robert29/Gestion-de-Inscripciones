@@ -4,8 +4,8 @@ Primera versión funcional en HTML, CSS con BEM y módulos JavaScript. El fronte
 
 ## Iniciar
 
-1. Configurar el backend siguiendo `../back/README.md`. Copiar `../back/.env.example` como `../back/.env` y completar sus valores localmente. No compartir ni subir claves o contraseñas.
-2. Preparar los esquemas y migraciones del backend en la base elegida. No confundir el servidor de pruebas con la base real.
+1. Configurar el backend siguiendo `../back/README.md`: en Visual Studio, administrar los secretos de usuario de Jardin.Api y completar conexión, JWT y contraseña inicial de Root. No compartir ni subir claves o contraseñas.
+2. Crear una base vacía y aplicar las migraciones de los cinco módulos siguiendo [la guía de migraciones](../back/Migraciones.md). En una base ya configurada, aplicar únicamente las pendientes; no volver a instalarla ni borrar tablas.
 3. Desde la raíz del repositorio, iniciar la API con `dotnet run --project back/src/Jardin.Api --launch-profile http`.
 4. En otra terminal, desde `front`, ejecutar `npm start` o `python -m http.server 4173 --bind 127.0.0.1`.
 5. Abrir http://127.0.0.1:4173. La API predeterminada es http://localhost:5167; se puede cambiar desde «Configurar conexión al servidor» en el acceso.

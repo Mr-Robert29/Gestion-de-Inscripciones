@@ -9,6 +9,7 @@ public sealed class FabricaContextoInscripciones : IDesignTimeDbContextFactory<C
     public ContextoInscripciones CreateDbContext(string[] args)
     {
         var conexion = Environment.GetEnvironmentVariable("ConnectionStrings__Inscripciones")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
             ?? "Host=localhost;Database=jardin_diseno;Username=postgres";
         var opciones = new DbContextOptionsBuilder<ContextoInscripciones>()
             .UseNpgsql(conexion, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "inscripciones")).Options;

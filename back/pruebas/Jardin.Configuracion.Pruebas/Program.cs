@@ -21,6 +21,21 @@ public static class EjecutorPruebas
 
     public static async Task Main(string[] argumentos)
     {
+        if (argumentos.Contains("--adoptar-base-existente"))
+        {
+            await AdopcionMigraciones.AdoptarAsync(ContextosMigraciones.LeerConexion());
+            return;
+        }
+        if (argumentos.Contains("--actualizar-base") || argumentos.Contains("--estado-migraciones"))
+        {
+            await GestionMigraciones.EjecutarAsync(argumentos.Contains("--actualizar-base"));
+            return;
+        }
+        if (argumentos.Contains("--pruebas-migraciones"))
+        {
+            await PruebasMigracionesPostgres.EjecutarAsync(ContextosMigraciones.LeerConexion());
+            return;
+        }
         if (argumentos.Contains("--generar-instalacion") || argumentos.Contains("--preparar-base-vacia"))
         {
             await PreparacionBaseDatos.EjecutarAsync(argumentos.Contains("--preparar-base-vacia"));

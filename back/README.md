@@ -173,3 +173,10 @@ Para el entorno local real, copiar `.env.example` como `.env`, completar conexi�
 ### Desarrollo local con secretos de usuario (opción preferida)
 
 En Visual Studio, sobre Jardin.Api, abrir «Administrar secretos de usuario». El proyecto tiene UserSecretsId y WebApplication.CreateBuilder los carga en Development. Guardar allí ConnectionStrings:DefaultConnection, Jwt:ClaveSecreta y, para crear Root por primera vez, UsuarioRoot:Clave. Mantener appsettings.json con la configuración general. No duplicar estas claves en .env ni compartir secrets.json. La conexión real y los esquemas requieren comprobación separada.
+
+
+## Migraciones unificadas
+
+Los cinco módulos tienen migraciones EF Core. La instalación nueva y las actualizaciones usan el mismo mecanismo; los SQL de instalacion se generan desde esas migraciones. La base local existente fue adoptada conservando sus tablas y datos. Consultá [Migraciones.md](Migraciones.md) para clonar, actualizar y crear nuevas migraciones.
+
+Desde la raíz: `dotnet run --project back/pruebas/Jardin.Configuracion.Pruebas -- --estado-migraciones` consulta el estado y `--actualizar-base` aplica solo las pendientes. La adopción `--adoptar-base-existente` se reserva a bases de la instalación antigua sin historial y requiere comprobación previa. El arranque normal no ejecuta estas operaciones automáticamente.
