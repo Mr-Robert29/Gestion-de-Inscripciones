@@ -1,0 +1,491 @@
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'inscripciones') THEN
+        CREATE SCHEMA inscripciones;
+    END IF;
+END $EF$;
+CREATE TABLE IF NOT EXISTS inscripciones."__EFMigrationsHistory" (
+    "MigrationId" character varying(150) NOT NULL,
+    "ProductVersion" character varying(32) NOT NULL,
+    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+);
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+        IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'inscripciones') THEN
+            CREATE SCHEMA inscripciones;
+        END IF;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.aspirantes (
+        "Id" uuid NOT NULL,
+        "Nombre" text NOT NULL,
+        "Apellido" text NOT NULL,
+        "Dni" text,
+        "FechaNacimiento" date NOT NULL,
+        "TipoDocumento" text,
+        "Sexo" text,
+        CONSTRAINT "PK_aspirantes" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.historial_personas (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "UsuarioId" uuid NOT NULL,
+        "EntidadId" uuid NOT NULL,
+        "Fecha" timestamp with time zone NOT NULL,
+        "Accion" text NOT NULL,
+        "Datos" text NOT NULL,
+        CONSTRAINT "PK_historial_personas" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.responsables (
+        "Id" uuid NOT NULL,
+        "Nombre" text NOT NULL,
+        "Apellido" text NOT NULL,
+        "Documento" text,
+        "TipoDocumento" text,
+        "Telefono" text NOT NULL,
+        "CorreoElectronico" text,
+        CONSTRAINT "PK_responsables" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.aspirantes_instituciones (
+        "InstitucionId" uuid NOT NULL,
+        "AspiranteId" uuid NOT NULL,
+        CONSTRAINT "PK_aspirantes_instituciones" PRIMARY KEY ("InstitucionId", "AspiranteId"),
+        CONSTRAINT "FK_aspirantes_instituciones_aspirantes_AspiranteId" FOREIGN KEY ("AspiranteId") REFERENCES inscripciones.aspirantes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.responsables_instituciones (
+        "InstitucionId" uuid NOT NULL,
+        "ResponsableId" uuid NOT NULL,
+        CONSTRAINT "PK_responsables_instituciones" PRIMARY KEY ("InstitucionId", "ResponsableId"),
+        CONSTRAINT "FK_responsables_instituciones_responsables_ResponsableId" FOREIGN KEY ("ResponsableId") REFERENCES inscripciones.responsables ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE TABLE inscripciones.vinculos_responsables (
+        "AspiranteId" uuid NOT NULL,
+        "ResponsableId" uuid NOT NULL,
+        "TipoVinculo" text NOT NULL,
+        "ContactoPrincipal" boolean NOT NULL,
+        "EsTutor" boolean NOT NULL,
+        CONSTRAINT "PK_vinculos_responsables" PRIMARY KEY ("AspiranteId", "ResponsableId"),
+        CONSTRAINT "FK_vinculos_responsables_aspirantes_AspiranteId" FOREIGN KEY ("AspiranteId") REFERENCES inscripciones.aspirantes ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_vinculos_responsables_responsables_ResponsableId" FOREIGN KEY ("ResponsableId") REFERENCES inscripciones.responsables ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_aspirantes_Dni" ON inscripciones.aspirantes ("Dni");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_aspirantes_instituciones_AspiranteId" ON inscripciones.aspirantes_instituciones ("AspiranteId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_historial_personas_InstitucionId" ON inscripciones.historial_personas ("InstitucionId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_responsables_Documento" ON inscripciones.responsables ("Documento");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_responsables_instituciones_ResponsableId" ON inscripciones.responsables_instituciones ("ResponsableId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    CREATE INDEX "IX_vinculos_responsables_ResponsableId" ON inscripciones.vinculos_responsables ("ResponsableId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103135249_PersonasYResponsables') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103135249_PersonasYResponsables', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE TABLE inscripciones.solicitudes (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "PeriodoId" uuid NOT NULL,
+        "AspiranteId" uuid NOT NULL,
+        "DomicilioDeclarado_Calle" text NOT NULL,
+        "DomicilioDeclarado_Numero" text NOT NULL,
+        "DomicilioDeclarado_Localidad" text NOT NULL,
+        "DomicilioDeclarado_Provincia" text NOT NULL,
+        "DomicilioDeclarado_CodigoPostal" text,
+        "DomicilioDeclarado_Complemento" text,
+        "DomicilioDeclarado_Piso" text,
+        "DomicilioDeclarado_Departamento" text,
+        "DomicilioDeclarado_Barrio" text,
+        "CalculoEdad_FechaNacimientoUtilizada" date NOT NULL,
+        "CalculoEdad_FechaCorteUtilizada" date NOT NULL,
+        "CalculoEdad_EdadCalculada" integer NOT NULL,
+        "CalculoEdad_Sala" integer,
+        "TurnoPreferidoId" uuid NOT NULL,
+        "VersionReglasId" uuid NOT NULL,
+        "VersionOfertaId" uuid NOT NULL,
+        "RevisionPeriodoUtilizada" integer NOT NULL,
+        "EstadoRecepcion" text NOT NULL,
+        "UsuarioRegistroId" uuid NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "ReferenciaConsentimiento" text,
+        "RevisionDatos" integer NOT NULL,
+        CONSTRAINT "PK_solicitudes" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_solicitudes_aspirantes_instituciones_InstitucionId_Aspirant~" FOREIGN KEY ("InstitucionId", "AspiranteId") REFERENCES inscripciones.aspirantes_instituciones ("InstitucionId", "AspiranteId") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE TABLE inscripciones.turnos_alternativos_solicitud (
+        "TurnoId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        CONSTRAINT "PK_turnos_alternativos_solicitud" PRIMARY KEY ("SolicitudId", "TurnoId"),
+        CONSTRAINT "FK_turnos_alternativos_solicitud_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_AspiranteId_PeriodoId" ON inscripciones.solicitudes ("AspiranteId", "PeriodoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_InstitucionId_AspiranteId" ON inscripciones.solicitudes ("InstitucionId", "AspiranteId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    CREATE INDEX "IX_solicitudes_InstitucionId_PeriodoId" ON inscripciones.solicitudes ("InstitucionId", "PeriodoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103142502_SolicitudesInscripcion') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103142502_SolicitudesInscripcion', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103151958_DocumentacionYCondiciones') THEN
+    CREATE TABLE inscripciones.condiciones_prioridad (
+        "Id" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "Tipo" text NOT NULL,
+        "ValorDeclarado" text NOT NULL,
+        "EstadoVerificacion" text NOT NULL,
+        "EvidenciaReferencia" text,
+        "Observacion" text,
+        "UsuarioRegistroId" uuid NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "UsuarioRevisionId" uuid,
+        "FechaRevision" timestamp with time zone,
+        CONSTRAINT "PK_condiciones_prioridad" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_condiciones_prioridad_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103151958_DocumentacionYCondiciones') THEN
+    CREATE TABLE inscripciones.documentacion_solicitud (
+        "Id" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "Tipo" text NOT NULL,
+        "Estado" text NOT NULL,
+        "Referencia" text,
+        "Observacion" text,
+        "UsuarioRegistroId" uuid NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "UsuarioRevisionId" uuid,
+        "FechaRevision" timestamp with time zone,
+        CONSTRAINT "PK_documentacion_solicitud" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_documentacion_solicitud_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103151958_DocumentacionYCondiciones') THEN
+    CREATE INDEX "IX_condiciones_prioridad_SolicitudId" ON inscripciones.condiciones_prioridad ("SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103151958_DocumentacionYCondiciones') THEN
+    CREATE INDEX "IX_documentacion_solicitud_SolicitudId" ON inscripciones.documentacion_solicitud ("SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103151958_DocumentacionYCondiciones') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103151958_DocumentacionYCondiciones', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    ALTER TABLE inscripciones.solicitudes ADD "RevisionDomicilio" integer NOT NULL DEFAULT 1;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    CREATE TABLE inscripciones.usos_datos_solicitud (
+        "Id" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "ReferenciaId" uuid NOT NULL,
+        "Tipo" text NOT NULL,
+        "RevisionDatos" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        CONSTRAINT "PK_usos_datos_solicitud" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_usos_datos_solicitud_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    CREATE UNIQUE INDEX "UX_UsoSolicitud_Referencia_Revision" ON inscripciones.usos_datos_solicitud ("SolicitudId", "ReferenciaId", "Tipo", "RevisionDatos", "RevisionDomicilio");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103161223_CorreccionesEImpactoSolicitudes') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103161223_CorreccionesEImpactoSolicitudes', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE TABLE inscripciones.posibles_duplicados (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "PeriodoId" uuid NOT NULL,
+        "SolicitudAId" uuid NOT NULL,
+        "SolicitudBId" uuid NOT NULL,
+        "PerfilDeteccion" text NOT NULL,
+        "Criterios" text NOT NULL,
+        "HuellaDatos" text NOT NULL,
+        "DatosEvaluados" text NOT NULL,
+        "Estado" text NOT NULL,
+        "Revision" integer NOT NULL,
+        "UsuarioDeteccionId" uuid NOT NULL,
+        "FechaDeteccion" timestamp with time zone NOT NULL,
+        "UsuarioUltimaDeteccionId" uuid NOT NULL,
+        "FechaUltimaDeteccion" timestamp with time zone NOT NULL,
+        "UsuarioResolucionId" uuid,
+        "FechaResolucion" timestamp with time zone,
+        "MotivoResolucion" text,
+        CONSTRAINT "PK_posibles_duplicados" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_posibles_duplicados_solicitudes_SolicitudAId" FOREIGN KEY ("SolicitudAId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_posibles_duplicados_solicitudes_SolicitudBId" FOREIGN KEY ("SolicitudBId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE INDEX "IX_posibles_duplicados_InstitucionId_PeriodoId_Estado" ON inscripciones.posibles_duplicados ("InstitucionId", "PeriodoId", "Estado");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE INDEX "IX_posibles_duplicados_SolicitudBId" ON inscripciones.posibles_duplicados ("SolicitudBId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    CREATE UNIQUE INDEX "UX_Duplicado_ParSolicitudes" ON inscripciones.posibles_duplicados ("SolicitudAId", "SolicitudBId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103164516_DeteccionDuplicados') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103164516_DeteccionDuplicados', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE TABLE inscripciones.mediciones_distancia (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "NumeroRegistro" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        "RevisionUbicacionJardin" integer NOT NULL,
+        "DistanciaMetros" numeric NOT NULL,
+        "Origen" text NOT NULL,
+        "Referencia" text NOT NULL,
+        "Entradas" text NOT NULL,
+        "FechaRegistro" timestamp with time zone NOT NULL,
+        "UsuarioId" uuid NOT NULL,
+        CONSTRAINT "PK_mediciones_distancia" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_mediciones_distancia_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE INDEX "IX_mediciones_distancia_InstitucionId_SolicitudId" ON inscripciones.mediciones_distancia ("InstitucionId", "SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    CREATE UNIQUE INDEX "UX_Distancia_Solicitud_Numero" ON inscripciones.mediciones_distancia ("SolicitudId", "NumeroRegistro");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103191344_DistanciasManuales') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103191344_DistanciasManuales', '10.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE TABLE inscripciones.revisiones_domicilio (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "SolicitudId" uuid NOT NULL,
+        "NumeroRegistro" integer NOT NULL,
+        "RevisionDomicilio" integer NOT NULL,
+        "RevisionSolicitudUtilizada" integer NOT NULL,
+        "Estado" text NOT NULL,
+        "Domicilio_Calle" text NOT NULL,
+        "Domicilio_Numero" text NOT NULL,
+        "Domicilio_Localidad" text NOT NULL,
+        "Domicilio_Provincia" text NOT NULL,
+        "Domicilio_CodigoPostal" text,
+        "Domicilio_Complemento" text,
+        "Domicilio_Piso" text,
+        "Domicilio_Departamento" text,
+        "Domicilio_Barrio" text,
+        "UsuarioId" uuid NOT NULL,
+        "Fecha" timestamp with time zone NOT NULL,
+        "Motivo" text NOT NULL,
+        "Referencia" text,
+        CONSTRAINT "PK_revisiones_domicilio" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_revisiones_domicilio_solicitudes_SolicitudId" FOREIGN KEY ("SolicitudId") REFERENCES inscripciones.solicitudes ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE INDEX "IX_revisiones_domicilio_InstitucionId_SolicitudId" ON inscripciones.revisiones_domicilio ("InstitucionId", "SolicitudId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    CREATE UNIQUE INDEX "UX_RevisionDomicilio_Solicitud_Numero" ON inscripciones.revisiones_domicilio ("SolicitudId", "NumeroRegistro");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM inscripciones."__EFMigrationsHistory" WHERE "MigrationId" = '20261103195435_RevisionManualDomicilios') THEN
+    INSERT INTO inscripciones."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261103195435_RevisionManualDomicilios', '10.0.13');
+    END IF;
+END $EF$;

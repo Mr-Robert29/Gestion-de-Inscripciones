@@ -1,95 +1,99 @@
 # Frontend de Jardín
 
-Primera versión de la interfaz del sistema de inscripciones. Proyecto separado del backend, construido con **HTML, CSS con BEM y JavaScript sin frameworks**. No requiere instalar dependencias para ejecutarse.
+Primera versión funcional en HTML, CSS con BEM y módulos JavaScript. El frontend se comunica por HTTP con la API; nunca se conecta directamente a PostgreSQL.
 
-## Abrir la aplicación
+## Iniciar
 
-Desde una terminal ubicada en `front`, ejecutá:
+1. Configurar el backend siguiendo `../back/README.md`. Copiar `../back/.env.example` como `../back/.env` y completar sus valores localmente. No compartir ni subir claves o contraseñas.
+2. Preparar los esquemas y migraciones del backend en la base elegida. No confundir el servidor de pruebas con la base real.
+3. Desde la raíz del repositorio, iniciar la API con `dotnet run --project back/src/Jardin.Api --launch-profile http`.
+4. En otra terminal, desde `front`, ejecutar `npm start` o `python -m http.server 4173 --bind 127.0.0.1`.
+5. Abrir http://127.0.0.1:4173. La API predeterminada es http://localhost:5167; se puede cambiar desde «Configurar conexión al servidor» en el acceso.
 
-```powershell
-npm start
-```
+No abrir index.html con doble clic: los módulos necesitan HTTP.
 
-Ese comando usa Python para servir los archivos. También podés ejecutarlo directamente, sin npm:
+También podés hacer doble clic en `iniciar-proyecto.bat`, ubicado junto a `back` y `front`. Inicia ambos servidores, espera que respondan y abre el navegador. Usa rutas relativas a su propia ubicación, incluso si lo ejecutás desde otra carpeta. Requiere .NET 10, Python 3, PostgreSQL encendido y secretos de usuario configurados. Evita iniciar otra instancia si los puertos están ocupados. Para detener los servidores, presioná Ctrl+C en cada ventana. La opción `--comprobar` solo valida carpetas y herramientas, sin iniciar procesos.
 
-```powershell
-python -m http.server 4173 --bind 127.0.0.1
-```
+## Pantallas y navegación
 
-Abrí <http://127.0.0.1:4173>. No abras `index.html` con doble clic: JavaScript utiliza módulos que necesitan un servidor HTTP.
+Hay **16 pantallas principales, incluido el acceso**. Varias tienen vistas secundarias para revisar cada etapa; no son proyectos independientes.
 
-**Para ver el diseño sin backend**, elegí “Explorar la vista previa”. Los datos son ficticios, no se consulta la API y el guardado está deshabilitado.
+| Pantalla | Acceso / ícono | Funciones |
+| --- | --- | --- |
+| Acceso | Inicio de sesión | Login real, dirección de API y vista previa sin escrituras. |
+| Inicio | Casa | Resumen de solicitudes de la consulta actual y accesos rápidos. |
+| Solicitudes | Documento | Búsqueda y paginación; acceso a fichas. |
+| Nueva solicitud | Botón «Nueva solicitud» | Registrar o reutilizar aspirante, domicilio y preferencias. |
+| Ficha de solicitud | «Ver ficha» | Consultar solicitud, corregir datos y vincular responsables. |
+| Domicilios y distancias | Ubicación | Revisar domicilio y registrar metros manualmente con historial. |
+| Documentación | Lista | Registrar y revisar documentos y condiciones declaradas. |
+| Posibles duplicados | Personas | Detectar y resolver alertas con motivo. |
+| Mi institución | Jardín | Registrar, consultar y actualizar la institución. |
+| Períodos | Calendario | Crear períodos, publicar/asignar versiones y abrir/cerrar recepción. |
+| Aulas, turnos y oferta | Aulas | Registrar recursos y oferta, capacidades y ocupaciones iniciales. |
+| Vacantes y admisión | Personas | Prioridades, sorteo, casos manuales, propuestas, espera, ingresos y ofrecimientos. |
+| Secciones | Aulas | Definir secciones, cambiar pura a multiedad, consultar historial y gestionar distribuciones. |
+| Resultados e historial | Lista | Consultar resultados, ingresos, bajas, cambios y distribuciones. Exportar reporte y nómina CSV. |
+| Usuarios y permisos | Personas; solo Root | Crear cuentas, habilitar/deshabilitar, asignar y revocar accesos institucionales. |
+| Ayuda y estado | Ayuda | Explicación del uso y límites de esta versión. |
 
-## Iniciar sesión con el backend
+Las pestañas de **Vacantes** separan Propuestas, Prioridades y sorteo, Lista de espera, Ofrecimientos e Ingresos y bajas. Una propuesta tiene su propia vista de revisión. Los candidatos se consultan por aula/turno y se ofrece a una persona con motivo.
 
-1. Iniciá la API siguiendo las instrucciones del backend y verificá su conexión a PostgreSQL y sus migraciones.
-2. En el frontend, desplegá “Configurar conexión al servidor”. La dirección predeterminada es `http://localhost:5167`, sin agregar `/api/v1`.
-3. Ingresá con una cuenta existente y habilitada del backend. Este frontend no crea cuentas ni trae contraseñas predeterminadas.
-4. Seleccioná institución y período en el encabezado.
+Las pestañas de **Secciones** separan la composición de los grupos y las propuestas de distribución. Cada distribución tiene su propia vista de revisión y confirmación. Los cambios de composición conservan historial y no confirman ingresos automáticamente.
 
-El frontend utiliza `fetch` para enviar peticiones HTTP y JWT para autenticar las operaciones. El token permanece en memoria: **recargar la página cierra la sesión**. No se guarda en localStorage ni sessionStorage. Los permisos definitivos los verifica el backend.
+## Recorrido de una primera inscripción
 
-Si la API utiliza otra dirección, también podés cambiar el valor inicial en `js/configuracion.js`. Una dirección HTTP es para desarrollo local; la publicación requiere HTTPS y revisar CORS del backend.
+1. Registrar institución, aula y turno.
+2. Crear período y preparar la oferta con capacidades y ocupaciones iniciales.
+3. Publicar reglas y oferta y asignarlas al período. Abrir recepción.
+4. Registrar aspirantes, solicitudes y responsables; revisar documentos, condiciones, duplicados y distancias manuales.
+5. Cerrar recepción. Revisar prioridades y registrar el sorteo cuando corresponda. Resolver los casos manuales identificados; no asumir desempates automáticos.
+6. Generar propuesta, revisar resultados y registrar la aceptación familiar de turnos alternativos. Confirmar ingresos explícitamente.
+7. Definir secciones, generar distribución, revisar asignaciones y confirmar.
+8. Ante una baja, registrarla desde Ingresos y bajas. Si queda pendiente de coordinación, la plaza sigue ocupada hasta completar el reintento.
+9. Consultar candidatos compatibles, ofrecer una plaza, registrar aceptación/rechazo/cancelación y confirmar el ingreso aceptado. Rechazar un turno alternativo conserva la espera.
+10. Si corresponde, ampliar una sección pura a multiedad antes del ofrecimiento. Generar después una distribución para los ingresos que todavía no tienen sección; se conservan los ya asignados.
+11. Consultar Resultados e historial y descargar los CSV autorizados.
 
-## Qué incluye
+El servidor vuelve a validar permisos, disponibilidad, revisiones y compatibilidad al guardar. Un conflicto no autoriza a forzar la operación: cerrar el formulario, consultar de nuevo y revisar los cambios.
 
-| Pantalla | Operaciones preparadas para la API |
-| --- | --- |
-| Acceso | Iniciar sesión, consultar acceso y cerrar sesión. |
-| Inicio | Resumen de la consulta del período y accesos rápidos. Los contadores no representan totales globales. |
-| Mi institución | Registrar, consultar y modificar datos, domicilio y coordenadas opcionales. |
-| Períodos | Crear, consultar, abrir/cerrar recepción y publicar/asignar versiones de reglas y oferta. |
-| Oferta | Registrar aulas, turnos y oferta con capacidad y ocupaciones iniciales; consultar la oferta. |
-| Solicitudes | Buscar por nombre, apellido o DNI, paginar, registrar aspirante y solicitud, o reutilizar un aspirante por identificador. |
-| Ficha | Consultar datos, corregir domicilio y preferencia principal, y agregar/vincular responsables. |
-| Documentación | Registrar y revisar documentación y condiciones declaradas. |
-| Domicilio y distancia | Registrar revisión manual, cargar metros manualmente y consultar historial. |
-| Duplicados | Detectar alertas y registrar decisiones con motivo, según permisos. |
-| Vacantes y Secciones | Presentación visual; las operaciones todavía no están integradas. |
+## Sesión y permisos
 
-Los turnos al crear una solicitud se obtienen de la versión de oferta publicada y asignada al período, no de cambios sin publicar. La carga manual de distancia conserva su literal decimal al enviarlo; no implementa Geoapify ni Haversine.
+JWT solo en memoria: al recargar se cierra la sesión. No se almacena en localStorage ni sessionStorage. Root accede a todo; los demás accesos se comprueban por institución. Los botones de decisiones definitivas se limitan a Directivo/Root; el backend sigue siendo la autoridad sobre cada operación.
 
-## Estructura
+Las exportaciones se descargan mediante peticiones autenticadas; la URL no contiene el token. Las ofertas desde espera conservan un identificador de operación para reintentar sin duplicar reservas.
 
-```text
-front/
-  index.html
-  package.json
-  css/
-    variables.css          Colores, tamaños y valores compartidos
-    base.css               Estilos generales y accesibilidad
-    estructura.css         Menú, encabezado y distribución adaptable
-    componentes.css        Botones, formularios, tablas y ventanas
-    paginas.css            Acceso, inicio y pantallas particulares
-  js/
-    configuracion.js       Dirección inicial del backend
-    api.js                 HTTP, JWT y errores
-    aplicacion.js          Sesión, navegación y contexto
-    interfaz.js            Elementos visuales y escape de texto
-    compartidos.js         Listados y componentes compartidos
-    pagina-inicio.js
-    pagina-configuracion.js
-    pagina-solicitudes.js
-    pagina-ficha.js
-    paginas.js             Selección de pantalla y páginas restantes
-    acciones.js            Formularios y operaciones de escritura
-    datos-previa.js        Datos ficticios del recorrido visual
-  recursos/
-    marca.svg
-  pruebas/
-    api.test.js
-  docs/
-    README.md              Decisiones, comprobaciones y pendientes
-```
+## Organización del código
 
-## Comprobar
+- `api.js`: HTTP, JWT, errores y descarga CSV.
+- `aplicacion.js`: sesión, menú, institución/período y navegación.
+- `pagina-*.js`: presentación de cada grupo de pantallas.
+- `acciones.js`: formularios de Configuración e Inscripciones.
+- `acciones-organizacion.js`: distribución de operaciones a `acciones-admision.js`, `acciones-espera.js`, `acciones-secciones.js` y `acciones-administracion.js`.
+- `operaciones-formularios.js`: formularios, protección contra doble envío y contexto cambiado.
+- `organizacion-comun.js`: tablas y nombres de solicitudes, aulas y turnos.
+- `interfaz.js`, `compartidos.js`: componentes y escape de texto.
+- `css/`: variables, estilos base, estructura, componentes y pantallas.
 
-Con Node.js disponible, desde `front`:
+## Verificaciones
 
-```powershell
-npm test
-```
+Desde front: `npm test`. No requiere paquetes instalados de ejecución.
 
-Las cinco pruebas comprueban precisión del envío decimal, rechazo de literales inválidos, escape de texto, autenticación HTTP y descarte de respuestas de sesiones anteriores. No requieren paquetes adicionales.
+Para comprobar con la API real y SQLite descartable:
 
-Para el estado de la integración y sus límites, consultá [la documentación del frontend](docs/README.md).
+1. Desde la raíz: `dotnet run --project back/pruebas/Jardin.Configuracion.Pruebas -- --servidor-integracion`.
+2. En otra terminal: `node front/pruebas/integracion-real.mjs`.
+3. Finalizar el servidor de pruebas con Ctrl+C. Los datos se descartan; no usa la base del usuario.
+
+Ese recorrido utiliza las funciones del frontend, Identity/JWT y los servicios/persistencia reales del backend. Comprueba propuestas, distribuciones, bajas, multiedad, ofrecimientos, aceptación, confirmación, reportes, CSV y cuentas. El puerto aislado es 5189; no cambiar la dirección predeterminada de la aplicación por esa dirección de pruebas.
+
+También se verificaron en navegador login, menú móvil, consulta de sección multiedad, historial, listado de distribuciones y guardado de un formulario. En 389 px no hubo desbordamiento horizontal de la página ni errores de consola en ese recorrido.
+
+## Límites de la primera versión
+
+- Geoapify permanece pendiente: domicilio y distancia se revisan/cargan manualmente.
+- La prueba contra el PostgreSQL del usuario requiere completar la configuración local y verificar/aplicar los esquemas necesarios. SQLite no valida los scripts de PostgreSQL ni los bloqueos entre instancias.
+- Recuperación/cambio de contraseña, edición de la persona compartida, edición de oferta existente y algunos ajustes de configuración no tienen formulario en esta entrega. No se inventan operaciones sin contrato.
+- Fuera de término, retiro voluntario de espera y partición de capacidad de varias secciones por aula/turno mantienen los pendientes documentados del backend.
+- La vista previa sigue sin guardar ni consultar la API. No confundir sus datos con resultados reales.
+- Algunas consultas de organización cargan el período completo; la paginación adicional sigue pendiente para volúmenes grandes.

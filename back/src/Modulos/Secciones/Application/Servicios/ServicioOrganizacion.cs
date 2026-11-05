@@ -13,19 +13,22 @@ public sealed class ServicioOrganizacion : IModuloSecciones
     private readonly IProveedorOfertaSecciones _oferta;
     private readonly IModuloVacantes _vacantes;
     private readonly IModuloComposicionSecciones _composicion;
+    private readonly IAutorizacionComposicion _autorizacion;
 
     public ServicioOrganizacion(
         IRepositorioSecciones repositorio,
         IRepositorioDistribuciones repositorioDistribuciones,
         IProveedorOfertaSecciones oferta,
         IModuloVacantes vacantes,
-        IModuloComposicionSecciones composicion)
+        IModuloComposicionSecciones composicion,
+        IAutorizacionComposicion autorizacion)
     {
         _repositorio = repositorio;
         _repositorioDistribuciones = repositorioDistribuciones;
         _oferta = oferta;
         _vacantes = vacantes;
         _composicion = composicion;
+        _autorizacion = autorizacion;
     }
 
     public async Task<Guid> DefinirSeccionAsync(
@@ -34,6 +37,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
     {
         ArgumentNullException.ThrowIfNull(peticion);
 
+        await _autorizacion.AutorizarCambioAsync(peticion.PeriodoId, cancellationToken);
         var oferta = await _oferta.ObtenerAsync(
             peticion.PeriodoId,
             peticion.AulaId,
@@ -64,13 +68,16 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         CancellationToken cancellationToken = default)
     {
         var seccion = await _repositorio.ObtenerPorIdAsync(seccionId, cancellationToken);
-        return seccion is null ? null : Mapear(seccion);
+        if (seccion is null) return null;
+        await _autorizacion.AutorizarConsultaHistorialAsync(seccion.PeriodoId, cancellationToken);
+        return Mapear(seccion);
     }
 
     public async Task<IReadOnlyList<DatosSeccion>> ListarSeccionesPorPeriodoAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default)
     {
+        await _autorizacion.AutorizarConsultaHistorialAsync(periodoId, cancellationToken);
         var secciones = await _repositorio.ListarPorPeriodoAsync(periodoId, cancellationToken);
         return secciones.Select(Mapear).ToList();
     }
@@ -78,9 +85,10 @@ public sealed class ServicioOrganizacion : IModuloSecciones
     public async Task<IReadOnlyList<DatosPropuestaDistribucion>> ListarPropuestasDistribucionAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default)
-        => (await _repositorioDistribuciones.ListarPorPeriodoAsync(periodoId, cancellationToken))
-            .Select(Mapear)
-            .ToArray();
+    {
+        await _autorizacion.AutorizarConsultaHistorialAsync(periodoId, cancellationToken);
+        return (await _repositorioDistribuciones.ListarPorPeriodoAsync(periodoId, cancellationToken)).Select(Mapear).ToArray();
+    }
 
     // Implementa IModuloSecciones.CambiarComposicionSeccionAsync mediante la operación protegida de HU-26.
     public async Task<bool> CambiarComposicionSeccionAsync(
@@ -111,6 +119,10 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         if (usuarioId == Guid.Empty)
             throw new ArgumentException("El usuario no puede estar vacío.", nameof(usuarioId));
 
+        usuarioId = await _autorizacion.AutorizarDistribucionAsync(
+            periodoId,
+            false,
+            cancellationToken);
         var ingresos = await _vacantes.ObtenerIngresosActivosAsync(periodoId, cancellationToken);
         var secciones = (await _repositorio.ListarPorPeriodoAsync(periodoId, cancellationToken)).ToList();
         if (secciones.Count == 0)
@@ -125,9 +137,12 @@ public sealed class ServicioOrganizacion : IModuloSecciones
             usuarioId,
             DateTimeOffset.UtcNow);
 
-        var ocupacion = secciones.ToDictionary(x => x.Id, _ => 0);
+        var asignadas = await _repositorioDistribuciones.ContarAsignacionesActivasAsync(periodoId, cancellationToken);
+        var ocupacion = secciones.ToDictionary(x => x.Id, x => asignadas.GetValueOrDefault(x.Id));
         foreach (var ingreso in ingresos.Ingresos.Where(x => x.Activo))
         {
+            if (await _repositorioDistribuciones.ExisteAsignacionActivaAsync(ingreso.IngresoId, cancellationToken))
+                continue;
             var seccion = secciones.FirstOrDefault(x =>
                 ocupacion[x.Id] < x.Capacidad &&
                 x.EsCompatibleCon(ingreso.Edad, ingreso.TurnoId));
@@ -161,7 +176,9 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         CancellationToken cancellationToken = default)
     {
         var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken);
-        return propuesta is null ? null : Mapear(propuesta);
+        if (propuesta is null) return null;
+        await _autorizacion.AutorizarConsultaHistorialAsync(propuesta.PeriodoId, cancellationToken);
+        return Mapear(propuesta);
     }
 
     public async Task<DatosPropuestaDistribucion> ModificarAsignacionAsync(
@@ -178,6 +195,10 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken)
             ?? throw new KeyNotFoundException("No se encontró la propuesta de distribución.");
 
+        usuarioId = await _autorizacion.AutorizarDistribucionAsync(
+            propuesta.PeriodoId,
+            true,
+            cancellationToken);
         if (propuesta.Estado != EstadoPropuestaDistribucion.Borrador)
             throw new InvalidOperationException("Solo se puede modificar una propuesta vigente.");
 
@@ -228,6 +249,10 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken);
         if (propuesta is null)
             return null;
+        usuarioId = await _autorizacion.AutorizarDistribucionAsync(
+            propuesta.PeriodoId,
+            true,
+            cancellationToken);
         if (propuesta.Estado != EstadoPropuestaDistribucion.Borrador)
             throw new InvalidOperationException("Solo se puede confirmar una propuesta vigente.");
 

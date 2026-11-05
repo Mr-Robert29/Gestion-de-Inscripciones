@@ -1,3 +1,5 @@
+using Jardin.Api.Seguridad;
+using System.Security.Claims;
 using Jardin.Secciones.Contracts;
 using Jardin.Usuarios.Domain;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +9,8 @@ namespace Jardin.Api.Controllers;
 
 [ApiController]
 [Route("api/v1")]
-[Authorize(Roles = RolesPersonal.Directivo + "," + RolesPersonal.AdministradorDelSistema)]
+[Authorize]
+[TypeFilter(typeof(FiltroErroresSecciones))]
 public sealed class PropuestasDistribucionController : ControllerBase
 {
     private readonly IModuloSecciones _modulo;
@@ -34,6 +37,10 @@ public sealed class PropuestasDistribucionController : ControllerBase
             return Conflict(new { mensaje = ex.Message });
         }
     }
+
+    [HttpGet("periodos/{periodoId:guid}/propuestas-distribucion")]
+    public async Task<IActionResult> Listar(Guid periodoId, CancellationToken cancellationToken)
+        => Ok(await _modulo.ListarPropuestasDistribucionAsync(periodoId, cancellationToken));
 
     [HttpGet("propuestas-distribucion/{propuestaId:guid}")]
     public async Task<IActionResult> Obtener(Guid propuestaId, CancellationToken cancellationToken)
@@ -84,7 +91,7 @@ public sealed class PropuestasDistribucionController : ControllerBase
 
     private Guid ObtenerUsuarioId()
     {
-        var claim = User.FindFirst("sub")?.Value;
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return Guid.TryParse(claim, out var usuarioId)
             ? usuarioId
             : throw new UnauthorizedAccessException("No se pudo identificar al usuario autenticado.");

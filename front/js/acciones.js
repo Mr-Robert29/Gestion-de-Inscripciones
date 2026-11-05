@@ -1,3 +1,4 @@
+import { atenderAccionOrganizacion, atenderFormularioOrganizacion } from "./acciones-organizacion.js";
 import {
   escapar as e,
   campo,
@@ -26,6 +27,7 @@ function mostrar(ctx, datos) {
   });
 }
 export async function atenderAccion(elemento, ctx) {
+  if (await atenderAccionOrganizacion(elemento, ctx)) return;
   const accion = elemento.dataset.accion;
   const { estado } = ctx;
   if (accion === "pagina-anterior" || accion === "pagina-siguiente") {
@@ -337,6 +339,7 @@ const identificador = (valor) => {
 };
 
 export async function atenderFormulario(formulario, ctx) {
+  if (await atenderFormularioOrganizacion(formulario, ctx)) return;
   const nombre = formulario.dataset.formulario;
   const datosFormulario = new FormData(formulario);
   const datos = Object.fromEntries(datosFormulario);

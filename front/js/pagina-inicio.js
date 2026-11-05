@@ -65,7 +65,7 @@ export async function inicio(ctx) {
       ],
       [
         "Prepará el período para la siguiente etapa",
-        "Las propuestas de ingreso se integrarán posteriormente.",
+        "Revisá prioridades y propuestas desde Vacantes y admisión.",
       ],
     ]
       .map(

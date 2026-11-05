@@ -254,6 +254,8 @@ function estructura(ruta) {
       elementos: [
         ["vacantes", "personas", "Vacantes y admisión"],
         ["secciones", "aulas", "Secciones"],
+        ["reportes", "lista", "Resultados e historial"],
+        ...(esRoot() ? [["usuarios", "personas", "Usuarios y permisos"]] : []),
       ],
     },
   ];
@@ -317,6 +319,9 @@ async function cambiarContexto(tipo, id) {
     return;
   }
   versionVista++;
+  cerrarDialogo();
+  contexto.operacionOrganizacion = null;
+  contexto.candidatosOferta = null;
   estado.pagina = 1;
   estado.filtros = {};
   estado.borrador = null;

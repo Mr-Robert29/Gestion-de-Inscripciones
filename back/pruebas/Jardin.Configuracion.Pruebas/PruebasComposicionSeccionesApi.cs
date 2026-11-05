@@ -140,20 +140,11 @@ public static class PruebasComposicionSeccionesApi
                 "HU26: marca borradores para revisión y conserva intacta la distribución histórica.");
             comprobar(await contexto.AsignacionesSeccion.CountAsync(x => x.SeccionId == seccionId && x.Estado == EstadoAsignacionSeccion.Activa) == 1,
                 "HU26: conserva al alumno de cinco ya asignado sin crear nuevas asignaciones.");
-            var modulo = alcance.ServiceProvider.GetRequiredService<IModuloSecciones>();
-            try
-            {
-                await modulo.ConfirmarDistribucionAsync(borradorId, ingreso.UsuarioId);
-                comprobar(false, "HU26: no debe confirmar un borrador afectado por el cambio.");
-            }
-            catch (InvalidOperationException)
-            {
-                comprobar(true, "HU26: impide confirmar la propuesta marcada para revisión.");
-            }
             var vacantes = alcance.ServiceProvider.GetRequiredService<ContextoVacantes>();
             comprobar(await vacantes.IngresosConfirmados.CountAsync(x => x.PeriodoId == periodo && x.Activo) == 1,
                 "HU26: cambiar composición no admite automáticamente al aspirante de cuatro.");
         }
+        await Estado(await cliente.PostAsync($"/api/v1/propuestas-distribucion/{borradorId}/confirmaciones", null), HttpStatusCode.Conflict);
         var candidatos = (await cliente.GetFromJsonAsync<ConsultarCandidatosVacanteRespuesta>(rutaPeriodo + $"/ofertas/{oferta}/candidatos"))!;
         comprobar(candidatos.Candidatos.Any(x => x.SolicitudId == menor), "HU26: el aspirante de cuatro queda habilitado como candidato compatible.");
         var ofrecimiento = await Alta<ConsultarOfrecimientoRespuesta>(rutaPeriodo + "/ofrecimientos",
@@ -169,9 +160,12 @@ public static class PruebasComposicionSeccionesApi
         await aplicacion.AsignarAccesoAsync("propuestas@prueba.example", institucion, RolesPersonal.Administrativo);
         await iniciarSesion("propuestas@prueba.example");
         await Estado(await cliente.PostAsJsonAsync(ruta, new CambiarComposicionSeccionPeticion([4, 5], "Sin permiso", 2)), HttpStatusCode.Forbidden);
-        await Estado(await cliente.GetAsync(ruta + "/historial"), HttpStatusCode.Forbidden);
+        await Estado(await cliente.GetAsync(ruta + "/historial"), HttpStatusCode.OK);
         await iniciarSesion("directivo@prueba.example");
         await Estado(await cliente.PostAsJsonAsync(ruta, new CambiarComposicionSeccionPeticion([4, 5], "Otra institución", 2)), HttpStatusCode.Forbidden);
+        await Estado(await cliente.GetAsync(rutaPeriodo + "/secciones"), HttpStatusCode.Forbidden);
+        await Estado(await cliente.GetAsync(rutaPeriodo + "/propuestas-distribucion"), HttpStatusCode.Forbidden);
+        await Estado(await cliente.PostAsJsonAsync(rutaPeriodo + "/propuestas-distribucion", new { }), HttpStatusCode.Forbidden);
         await aplicacion.AsignarAccesoAsync("directivo@prueba.example", institucion, RolesPersonal.Directivo);
         await Estado(await cliente.GetAsync(ruta + "/historial"), HttpStatusCode.OK);
         cliente.DefaultRequestHeaders.Authorization = null;

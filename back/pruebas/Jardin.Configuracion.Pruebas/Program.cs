@@ -19,9 +19,16 @@ public static class EjecutorPruebas
 {
     private static int _comprobaciones;
 
-    public static async Task Main()
+    public static async Task Main(string[] argumentos)
     {
+        if (argumentos.Contains("--generar-instalacion") || argumentos.Contains("--preparar-base-vacia"))
+        {
+            await PreparacionBaseDatos.EjecutarAsync(argumentos.Contains("--preparar-base-vacia"));
+            return;
+        }
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Pruebas");
+        // El arranque valida la presencia de una conexión antes de sustituir los contextos por SQLite aislado.
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", "Host=localhost;Database=no_utilizar;Username=pruebas");
         Environment.SetEnvironmentVariable("Jwt__ClaveSecreta", "clave-ficticia-solo-pruebas-configuracion-2026");
         var carpeta = new DirectoryInfo(AppContext.BaseDirectory);
         while (carpeta is not null && !Directory.Exists(Path.Combine(carpeta.FullName, "src", "Jardin.Api")))
@@ -30,6 +37,11 @@ public static class EjecutorPruebas
         await using var aplicacion = new ApiPruebas(Path.Combine(carpeta.FullName, "src", "Jardin.Api"));
         await aplicacion.PrepararAsync();
         using var cliente = aplicacion.CreateClient();
+        if (argumentos.Contains("--servidor-integracion"))
+        {
+            await ServidorIntegracion.EjecutarAsync(cliente);
+            return;
+        }
         var peticion = new RegistrarInstitucionPeticion(
             " Jardin de prueba ",
             new DatosDomicilio(
