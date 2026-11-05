@@ -233,6 +233,47 @@
   font-size: 0.69rem;
   color: var(--color-texto-suave);
 }
+.campo-clave {
+  display: flex;
+  position: relative;
+  align-items: center;
+}
+.campo-clave .campo__control {
+  padding-right: 3.1rem;
+}
+.campo-clave__alternar {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.clave-requisitos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  color: var(--color-texto-suave);
+  font-size: 0.69rem;
+}
+.clave-requisito::before {
+  content: "○";
+  display: inline-block;
+  width: 1rem;
+  color: #a0a99e;
+}
+.clave-requisito--valido {
+  color: var(--color-principal);
+}
+.clave-requisito--valido::before {
+  content: "✓";
+  font-weight: 700;
+}
+.clave-coincidencia {
+  font-size: 0.69rem;
+  color: var(--color-error);
+}
+.clave-coincidencia--valida {
+  color: var(--color-principal);
+}
 .campo--completo {
   grid-column: 1 / -1;
 }

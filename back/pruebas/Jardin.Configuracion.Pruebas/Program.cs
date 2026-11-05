@@ -128,6 +128,8 @@ public static class EjecutorPruebas
         await EstadoAsync(await cliente.GetAsync($"/api/v1/instituciones/{identificador}"), HttpStatusCode.OK);
         await EstadoAsync(await cliente.PostAsJsonAsync("/api/v1/instituciones", peticion), HttpStatusCode.Forbidden);
         await EstadoAsync(await cliente.PutAsJsonAsync($"/api/v1/instituciones/{identificador}", actualizar with { RevisionDatos = actual.RevisionDatos }), HttpStatusCode.Forbidden);
+        await IniciarSesionAsync(cliente, "directivo@prueba.example");
+        await EstadoAsync(await cliente.PostAsJsonAsync("/api/v1/instituciones", peticion with { Nombre = "Otra institución" }), HttpStatusCode.Forbidden);
         await IniciarSesionAsync(cliente, "ajeno@prueba.example");
         await EstadoAsync(await cliente.GetAsync($"/api/v1/instituciones/{identificador}"), HttpStatusCode.Forbidden);
         var visibles = await cliente.GetFromJsonAsync<ConsultarInstitucionRespuesta[]>("/api/v1/instituciones");

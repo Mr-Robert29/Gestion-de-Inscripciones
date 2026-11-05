@@ -37,13 +37,21 @@ export function tablaSolicitudes({
   resultados,
   modo = "solicitud",
   resumen = false,
+  borrador = null,
+  borradores = [],
 }) {
-  if (!resultados.length)
+  const borradoresVisibles = modo === "solicitud"
+    ? (borradores.length ? borradores : borrador ? [borrador] : [])
+    : [];
+  const mostrarBorrador = borradoresVisibles.length > 0;
+  if (!resultados.length && !mostrarBorrador)
     return vacio({
       titulo: "Todavía no hay solicitudes",
       descripcion:
         "Las solicitudes de este período aparecerán acá. También podés ajustar los filtros de búsqueda.",
       dibujo: "solicitudes",
     });
-  return `<div class="tabla__contenedor"><table class="tabla ${resumen ? "tabla--resumen" : ""}"><caption class="solo-lector">Solicitudes del período seleccionado</caption><thead><tr><th>Aspirante</th><th>Documento</th><th>Grupo etario</th><th>Recepción</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>${resultados.map((s, i) => `<tr><td><div class="tabla__persona"><span class="avatar avatar--${["verde", "lila", "azul"][i % 3]}">${e(`${s.nombre[0] ?? ""}${s.apellido[0] ?? ""}`)}</span><div><div class="tabla__nombre">${e(s.nombre)} ${e(s.apellido)}</div><div class="tabla__detalle">Solicitud <span class="tabla__referencia">${e(s.id.slice(0, 8))}</span></div></div></div></td><td>${s.dni ? e(s.dni) : '<span class="tabla__detalle">Sin DNI declarado</span>'}</td><td>${s.sala ? `Sala de ${e(s.sala)} años` : etiqueta("PendienteRevision")}</td><td>${etiqueta(s.estadoRecepcion)}</td><td class="tabla__accion"><a class="boton boton--texto boton--pequeno" href="#solicitud/${encodeURIComponent(s.id)}/${modo}">${modo === "domicilio" ? "Revisar domicilio" : modo === "documentos" ? "Ver antecedentes" : "Ver ficha"} ${icono("flecha")}</a></td></tr>`).join("")}</tbody></table></div>`;
+  const filas = resultados.map((s, i) => `<tr><td><div class="tabla__persona"><span class="avatar avatar--${["verde", "lila", "azul"][i % 3]}">${e(`${s.nombre[0] ?? ""}${s.apellido[0] ?? ""}`)}</span><div><div class="tabla__nombre">${e(s.nombre)} ${e(s.apellido)}</div><div class="tabla__detalle">Solicitud <span class="tabla__referencia">${e(s.id.slice(0, 8))}</span></div></div></div></td><td>${s.dni ? e(s.dni) : '<span class="tabla__detalle">Sin DNI declarado</span>'}</td><td>${s.sala ? `Sala de ${e(s.sala)} años` : etiqueta("PendienteRevision")}</td><td>${etiqueta(s.estadoSolicitud ?? "Registrada")}</td><td>${etiqueta(s.estadoRecepcion)}</td><td class="tabla__accion"><a class="boton boton--texto boton--pequeno" href="#solicitud/${encodeURIComponent(s.id)}/${modo}">${modo === "domicilio" ? "Revisar domicilio" : modo === "documentos" ? "Ver antecedentes" : "Ver ficha"} ${icono("flecha")}</a></td></tr>`).join("");
+  const filaBorrador = borradoresVisibles.map((borrador) => `<tr class="tabla__fila--destacada"><td><div class="tabla__persona"><span class="avatar avatar--verde">${e(`${borrador.nombre?.[0] ?? ""}${borrador.apellido?.[0] ?? ""}`)}</span><div><div class="tabla__nombre">${e(borrador.nombre)} ${e(borrador.apellido)}</div><div class="tabla__detalle">Aspirante en curso</div></div></div></td><td><span class="tabla__detalle">Todavía no declarado</span></td><td>${etiqueta("PendienteRevision")}</td><td>${etiqueta("EnCurso")}</td><td><span class="tabla__detalle">Pendiente de registrar</span></td><td class="tabla__accion"><a class="boton boton--texto boton--pequeno" href="#nueva-solicitud/${encodeURIComponent(borrador.id)}">Continuar ${icono("flecha")}</a></td></tr>`).join("");
+  return `<div class="tabla__contenedor"><table class="tabla ${resumen ? "tabla--resumen" : ""}"><caption class="solo-lector">Solicitudes del período seleccionado</caption><thead><tr><th>Aspirante</th><th>Documento</th><th>Grupo etario</th><th>Estado de solicitud</th><th>Recepción</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>${filaBorrador}${filas}</tbody></table></div>`;
 }

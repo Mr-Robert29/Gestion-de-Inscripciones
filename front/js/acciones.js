@@ -104,7 +104,7 @@ export async function atenderAccion(elemento, ctx) {
     mostrar(ctx, {
       titulo: "Agregar oferta del período",
       formulario: "oferta",
-      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad declarada", tipo: "number", obligatorio: true, atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad", obligatorio: true })}</div><label class="casilla"><input type="checkbox" name="disponible" checked>Disponible en este período</label><fieldset class="formulario__seccion"><legend>Ocupaciones iniciales</legend><div class="formulario__rejilla formulario__rejilla--tres">${[3, 4, 5].map((sala) => campo({ nombre: `sala${sala}`, etiqueta: `${sala} años`, tipo: "number", valor: "0", obligatorio: true, atributos: 'min="0" step="1"' })).join("")}</div></fieldset>${campo({ nombre: "origenOcupaciones", etiqueta: "Origen del relevamiento", obligatorio: true })}<label class="casilla"><input type="checkbox" required>Confirmo las ocupaciones informadas, incluidos los valores cero.</label>${campo({ nombre: "motivo", etiqueta: "Motivo del registro", obligatorio: true })}`,
+      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad declarada", tipo: "number", obligatorio: true, ayuda: "Cantidad máxima de lugares para esta aula y turno.", atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad (opcional)", ayuda: "Podés indicar un acta, planilla o norma que respalde la capacidad informada." })}</div><label class="casilla"><input type="checkbox" name="disponible" checked>Disponible en este período</label>${campo({ nombre: "motivo", etiqueta: "Motivo del registro", obligatorio: true, ayuda: "Por ejemplo: Carga inicial de la oferta del período 2027." })}`,
     });
     return;
   }
@@ -383,6 +383,10 @@ export async function atenderFormulario(formulario, ctx) {
         nombre: datos.nombre,
         apellido: datos.apellido,
       };
+      ctx.estado.borradores = [
+        ...(ctx.estado.borradores ?? []).filter((item) => item.id !== aspirante.id),
+        ctx.estado.borrador,
+      ];
       await ctx.actualizar();
       ctx.notificar("Aspirante registrado. Completá ahora su solicitud.");
       return;
@@ -392,6 +396,10 @@ export async function atenderFormulario(formulario, ctx) {
         `${ruta}/aspirantes/${encodeURIComponent(identificador(datos.aspiranteId))}`,
       );
       ctx.estado.borrador = aspirante;
+      ctx.estado.borradores = [
+        ...(ctx.estado.borradores ?? []).filter((item) => item.id !== aspirante.id),
+        aspirante,
+      ];
       await ctx.actualizar();
       return;
     }
@@ -412,6 +420,9 @@ export async function atenderFormulario(formulario, ctx) {
           turnosAlternativosAceptados: alternativas,
           referenciaConsentimiento: datos.referenciaConsentimiento || null,
         },
+      );
+      ctx.estado.borradores = (ctx.estado.borradores ?? []).filter(
+        (item) => item.id !== ctx.estado.borrador.id,
       );
       ctx.estado.borrador = null;
       ctx.notificar(
@@ -479,9 +490,6 @@ export async function atenderFormulario(formulario, ctx) {
         nombre: datos.nombre,
       });
     } else if (nombre === "oferta") {
-      const ocupaciones = [3, 4, 5]
-        .map((sala) => ({ sala, cantidad: Number(datos[`sala${sala}`]) }))
-        .filter((o) => o.cantidad > 0);
       await crear(
         `/periodos/${encodeURIComponent(operacion.periodo.id)}/ofertas`,
         {
@@ -489,9 +497,9 @@ export async function atenderFormulario(formulario, ctx) {
           turnoId: datos.turnoId,
           capacidad: Number(datos.capacidad),
           disponible: datosFormulario.has("disponible"),
-          referenciaCapacidad: datos.referenciaCapacidad,
-          origenOcupaciones: datos.origenOcupaciones,
-          ocupaciones,
+          referenciaCapacidad: datos.referenciaCapacidad || "Sin referencia informada",
+          origenOcupaciones: "No informado",
+          ocupaciones: [],
           motivo: datos.motivo,
         },
       );
