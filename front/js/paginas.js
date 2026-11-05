@@ -83,7 +83,18 @@ export async function presentarPagina(ruta, ctx) {
   if (pagina === "secciones") return secciones(ruta, ctx);
   if (pagina === "reportes") return reportes(ctx);
   if (pagina === "solicitud") return ficha(ruta, ctx);
-  if (pagina === "nueva-solicitud") return nuevaSolicitud(ctx);
+  if (pagina === "nueva-solicitud") {
+    const aspiranteId = ruta.split("/")[1];
+    if (aspiranteId === "nuevo") {
+      ctx.estado.borrador = null;
+    } else if (aspiranteId) {
+      const borrador = (ctx.estado.borradores ?? []).find(
+        (item) => item.id === decodeURIComponent(aspiranteId),
+      );
+      if (borrador) ctx.estado.borrador = borrador;
+    }
+    return nuevaSolicitud(ctx);
+  }
   if (pagina === "solicitudes") return solicitudes(ctx);
   if (pagina === "domicilios") return solicitudes(ctx, "domicilio");
   if (pagina === "documentacion") return solicitudes(ctx, "documentos");

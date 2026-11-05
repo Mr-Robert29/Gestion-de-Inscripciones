@@ -5,6 +5,7 @@ import { secciones } from "../js/pagina-secciones.js";
 import { reportes } from "../js/pagina-reportes.js";
 import { usuarios } from "../js/pagina-usuarios.js";
 import { atenderAccionOrganizacion } from "../js/acciones-organizacion.js";
+import { estadoClave, validarClave } from "../js/validacion-clave.js";
 import {
   configurarDireccion,
   establecerToken,
@@ -27,6 +28,13 @@ const contexto = () => ({
   abrirDialogo(d) {
     this.dialogo = d;
   },
+});
+test("la contraseña del personal exige longitud y un número", () => {
+  assert.deepEqual(estadoClave("abc123"), { longitud: true, digito: true });
+  assert.throws(() => validarClave("abcdef", "abcdef"), /número/);
+  assert.throws(() => validarClave("abc12", "abc12"), /6 caracteres/);
+  assert.throws(() => validarClave("abc123", "abc124"), /no coinciden/);
+  assert.doesNotThrow(() => validarClave("abc123", "abc123"));
 });
 test("las pantallas de vista previa no consultan ni guardan en la API", async () => {
   const ctx = contexto();

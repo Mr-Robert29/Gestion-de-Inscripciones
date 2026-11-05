@@ -26,7 +26,7 @@ public sealed class ServicioConfiguracion : IModuloConfiguracion
     public async Task<RegistrarInstitucionRespuesta> RegistrarInstitucionAsync(RegistrarInstitucionPeticion peticion, CancellationToken tokenCancelacion = default)
     {
         var usuario = await ObtenerUsuarioAsync(tokenCancelacion);
-        if (!usuario.EsRoot && !usuario.PuedeRegistrar) throw new UnauthorizedAccessException("No tenés permiso para registrar instituciones.");
+        if (!usuario.EsRoot) throw new UnauthorizedAccessException("Solo el Administrador del Sistema puede registrar instituciones.");
         ArgumentNullException.ThrowIfNull(peticion);
         var institucion = new Institucion(
             peticion.Nombre,

@@ -19,6 +19,7 @@ import {
 } from "./datos-previa.js";
 import { presentarPagina, titulos } from "./paginas.js";
 import { atenderAccion, atenderFormulario } from "./acciones.js";
+import { actualizarIndicadoresClave } from "./validacion-clave.js";
 
 const raiz = document.getElementById("aplicacion");
 const estado = {
@@ -35,6 +36,7 @@ const estado = {
   pagina: 1,
   filtros: {},
   borrador: null,
+  borradores: [],
 };
 let versionVista = 0;
 let vencimiento;
@@ -47,6 +49,7 @@ const contexto = {
   abrirDialogo,
   cerrarDialogo,
   puedeEditar,
+  puedeCrearInstitucion: esRoot,
   puedeResolver,
 };
 
@@ -96,6 +99,7 @@ function salir(mensaje = "") {
     turnos: [],
     ofertas: [],
     borrador: null,
+    borradores: [],
     filtros: {},
     pagina: 1,
   });
@@ -325,6 +329,7 @@ async function cambiarContexto(tipo, id) {
   estado.pagina = 1;
   estado.filtros = {};
   estado.borrador = null;
+  estado.borradores = [];
   const anterior = {
     instituciones: estado.instituciones,
     institucion: estado.institucion,
@@ -359,6 +364,18 @@ document.addEventListener("click", async (evento) => {
   }
   if (accion === "mostrar-clave") {
     const clave = document.getElementById("clave-acceso");
+    const mostrar = clave.type === "password";
+    clave.type = mostrar ? "text" : "password";
+    elemento.setAttribute(
+      "aria-label",
+      mostrar ? "Ocultar contraseña" : "Mostrar contraseña",
+    );
+    elemento.setAttribute("aria-pressed", String(mostrar));
+    return;
+  }
+  if (accion === "alternar-clave") {
+    const clave = document.getElementById(elemento.dataset.target);
+    if (!clave) return;
     const mostrar = clave.type === "password";
     clave.type = mostrar ? "text" : "password";
     elemento.setAttribute(
@@ -412,6 +429,10 @@ document.addEventListener("submit", async (evento) => {
   if (!evento.target.matches("[data-formulario]")) return;
   evento.preventDefault();
   await atenderFormulario(evento.target, contexto);
+});
+document.addEventListener("input", (evento) => {
+  if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
+    actualizarIndicadoresClave(evento.target.form);
 });
 document.addEventListener("change", (evento) => {
   if (evento.target.id === "institucion-activa")

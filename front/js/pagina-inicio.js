@@ -48,7 +48,7 @@ export async function inicio(ctx) {
       titulo: `Buen día, ${estado.usuario.nombre.split(" ")[0]}.`,
       descripcion: "Un nuevo día para acompañar cada comienzo.",
       accion:
-        '<a class="boton" href="#nueva-solicitud">' +
+        '<a class="boton" href="#nueva-solicitud/nuevo">' +
         icono("mas") +
         "Nueva solicitud</a>",
     }) +

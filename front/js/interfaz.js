@@ -30,6 +30,8 @@ export const textos = {
   Ordinaria: "Ordinaria",
   FueraDeTerminoPendienteAutorizacion: "Fuera de término",
   PendienteRevision: "Pendiente de revisión",
+  EnCurso: "En curso",
+  Registrada: "Registrada",
   RevisadoManualmente: "Revisado manualmente",
   ManualProvisional: "Manual provisoria",
   Pendiente: "Pendiente",
@@ -107,6 +109,22 @@ export function campo({
 }) {
   const id = `campo-${nombre}`;
   return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
+}
+export function campoClave({
+  nombre,
+  etiqueta: rotulo,
+  obligatorio = false,
+  confirmacion = false,
+}) {
+  const id = `campo-${nombre}`;
+  const tipoCampo = confirmacion ? "confirmacion" : "inicial";
+  const requisitos = confirmacion
+    ? `<span id="${id}-coincidencia" class="clave-coincidencia" data-clave-coincidencia hidden aria-live="polite"></span>`
+    : `<div id="${id}-requisitos" class="clave-requisitos" aria-label="Requisitos de la contraseña"><span class="clave-requisito" data-clave-requisito="longitud">6 caracteres como mínimo</span><span class="clave-requisito" data-clave-requisito="digito">Un número del 0 al 9</span></div>`;
+  const descripcion = confirmacion
+    ? `${id}-coincidencia`
+    : `${id}-requisitos`;
+  return `<label class="campo campo--clave" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><span class="campo-clave"><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="password" ${obligatorio ? "required" : ""} autocomplete="new-password" minlength="6" aria-describedby="${descripcion}" data-clave-${tipoCampo}><button type="button" class="boton boton--texto boton--icono campo-clave__alternar" data-accion="alternar-clave" data-target="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></span>${requisitos}</label>`;
 }
 export function seleccion({
   nombre,
