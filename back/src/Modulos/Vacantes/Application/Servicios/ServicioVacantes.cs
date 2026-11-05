@@ -28,4 +28,15 @@ public sealed class ServicioVacantes : IModuloVacantes
                 x.TurnoId,
                 true)).ToArray());
     }
+
+    public async Task<IReadOnlyList<DatosIngresoHistorial>> ListarIngresosAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+        => (await _repositorio.ListarIngresosAsync(periodoId, cancellationToken))
+            .Select(x => new DatosIngresoHistorial(
+                x.Id, x.PeriodoId, x.SolicitudId, x.AspiranteId, x.Edad,
+                x.OfertaId, x.TurnoId, x.Sala, x.PropuestaId, x.UsuarioId,
+                x.Fecha, x.Revision, x.Activo, x.BajaEnProceso, x.UsuarioBajaId,
+                x.FechaSolicitudBaja, x.FechaBaja, x.MotivoBaja, x.OfrecimientoId))
+            .ToArray();
 }

@@ -44,6 +44,14 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
         return (await _repositorio.ListarAsync(periodoId, cancellationToken)).Select(Mapear).ToArray();
     }
 
+    public async Task<IReadOnlyList<DatosCasoRevision>> ListarParaReportesAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+    {
+        await _autorizacion.AutorizarConsultaReportesAsync(periodoId, cancellationToken);
+        return (await _repositorio.ListarAsync(periodoId, cancellationToken)).Select(Mapear).ToArray();
+    }
+
     public async Task<DatosCasoRevision?> ConsultarAsync(
         Guid casoId,
         CancellationToken cancellationToken = default)
@@ -63,6 +71,26 @@ public sealed class ServicioCasosRevision : IModuloCasosRevision
         await _autorizacion.AutorizarResolucionAsync(caso.PeriodoId, cancellationToken);
         var historial = await _repositorio.ListarHistorialAsync(casoId, cancellationToken);
         return historial.Select(x => new DatosHistorialCasoRevision(
+            x.Id,
+            x.CasoRevisionId,
+            x.Accion,
+            x.EstadoAnterior.ToString(),
+            x.EstadoNuevo.ToString(),
+            System.Text.Json.JsonSerializer.Deserialize<Guid[]>(x.OrdenAnterior) ?? [],
+            System.Text.Json.JsonSerializer.Deserialize<Guid[]>(x.OrdenNueva) ?? [],
+            x.Motivo,
+            x.UsuarioId,
+            x.Fecha)).ToArray();
+    }
+
+    public async Task<IReadOnlyList<DatosHistorialCasoRevision>> ConsultarHistorialParaReportesAsync(
+        Guid casoId,
+        CancellationToken cancellationToken = default)
+    {
+        var caso = await _repositorio.ObtenerAsync(casoId, cancellationToken)
+            ?? throw new KeyNotFoundException("No se encontró el caso de revisión.");
+        await _autorizacion.AutorizarConsultaReportesAsync(caso.PeriodoId, cancellationToken);
+        return (await _repositorio.ListarHistorialAsync(casoId, cancellationToken)).Select(x => new DatosHistorialCasoRevision(
             x.Id,
             x.CasoRevisionId,
             x.Accion,

@@ -75,6 +75,13 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         return secciones.Select(Mapear).ToList();
     }
 
+    public async Task<IReadOnlyList<DatosPropuestaDistribucion>> ListarPropuestasDistribucionAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+        => (await _repositorioDistribuciones.ListarPorPeriodoAsync(periodoId, cancellationToken))
+            .Select(Mapear)
+            .ToArray();
+
     // Implementa IModuloSecciones.CambiarComposicionSeccionAsync mediante la operación protegida de HU-26.
     public async Task<bool> CambiarComposicionSeccionAsync(
         Guid seccionId,

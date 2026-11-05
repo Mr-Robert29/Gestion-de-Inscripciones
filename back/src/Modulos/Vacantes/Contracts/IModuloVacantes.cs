@@ -5,6 +5,9 @@ public interface IModuloVacantes
     Task<RevisionIngresosActivos> ObtenerIngresosActivosAsync(
         Guid periodoId,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DatosIngresoHistorial>> ListarIngresosAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record RevisionIngresosActivos(
