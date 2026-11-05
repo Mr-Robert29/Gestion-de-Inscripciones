@@ -18,6 +18,17 @@ if /I "%~1"=="--comprobar" (
     exit /b 0
 )
 
+rem Evita compilar sobre archivos que la API en ejecucion mantiene abiertos.
+powershell -NoProfile -Command "if (Get-NetTCPConnection -State Listen -LocalPort 5167 -ErrorAction SilentlyContinue) { exit 1 }; exit 0"
+if errorlevel 1 (
+    echo ERROR: El puerto 5167 esta en uso. El backend puede estar ejecutandose.
+    echo Detenelo con Ctrl+C en la ventana Jardin Backend.
+    echo Si lo iniciaste desde Visual Studio, presiona Shift+F5.
+    echo Despues volve a ejecutar actualizar-base.bat.
+    echo No se ejecutaron migraciones.
+    goto :error
+)
+
 echo Se aplicaran las migraciones pendientes de los cinco modulos.
 echo PostgreSQL debe estar encendido y la base debe existir.
 echo La conexion se obtiene de los secretos de usuario de Jardin.Api.

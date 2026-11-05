@@ -31,7 +31,7 @@ Después iniciar normalmente el proyecto. El frontend requiere Python 3. --actua
 
 ## Qué hago después de bajar cambios
 
-También podés aplicar las pendientes con doble clic en `actualizar-base.bat`, ubicado en la raíz del repositorio. Usa rutas relativas, lee los secretos de Jardin.Api y mantiene la ventana abierta para mostrar el resultado. Detener el backend antes de ejecutarlo; PostgreSQL debe estar encendido y la base debe existir. No reemplaza una copia de seguridad antes de cambios importantes. `actualizar-base.bat --comprobar` verifica rutas y SDK sin ejecutar migraciones.
+También podés aplicar las pendientes con doble clic en `actualizar-base.bat`, ubicado en la raíz del repositorio. Usa rutas relativas, lee los secretos de Jardin.Api y mantiene la ventana abierta para mostrar el resultado. Detener el backend antes de ejecutarlo; PostgreSQL debe estar encendido y la base debe existir. El .bat detecta el puerto 5167 ocupado y pide detener la API en lugar de intentar compilar sobre archivos en uso. No reemplaza una copia de seguridad antes de cambios importantes. `actualizar-base.bat --comprobar` verifica rutas y SDK sin ejecutar migraciones.
 
 Para consultar el estado:
 
