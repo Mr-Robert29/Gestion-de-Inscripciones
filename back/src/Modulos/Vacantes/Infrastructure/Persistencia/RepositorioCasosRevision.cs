@@ -39,10 +39,9 @@ public sealed class RepositorioCasosRevision : IRepositorioCasosRevision
     public async Task<IReadOnlyList<HistorialCasoRevision>> ListarHistorialAsync(
         Guid casoId,
         CancellationToken cancellationToken = default)
-        => await _contexto.CambiosCasosRevision.AsNoTracking()
+        => (await _contexto.CambiosCasosRevision.AsNoTracking()
             .Where(x => x.CasoRevisionId == casoId)
-            .OrderBy(x => x.Fecha)
-            .ToArrayAsync(cancellationToken);
+            .ToArrayAsync(cancellationToken)).OrderBy(x => x.Fecha).ToArray();
 
     public async Task GuardarAsync(CasoRevision caso, CancellationToken cancellationToken = default)
     {

@@ -518,3 +518,11 @@
     min-width: 8rem;
   }
 }
+
+/* Etapas operativas: los componentes comparten la paleta y el espaciado del sistema. */
+.pestanas { display: flex; gap: .5rem; flex-wrap: wrap; margin: 0 0 1.5rem; }
+.pestanas__enlace { padding: .65rem .9rem; border-radius: .6rem; color: inherit; text-decoration: none; border: 1px solid currentColor; }
+.pestanas__enlace--activo { font-weight: 700; background: var(--color-fondo, #f1f5f1); }
+.detalle-json { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 60ch; font-size: .8rem; }
+.indicadores { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.tabla td .boton + .boton { margin: .35rem 0 0 .35rem; }

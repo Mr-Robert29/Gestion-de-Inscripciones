@@ -13,6 +13,15 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
         _contexto = contexto;
     }
 
+    // Implementa IRepositorioDistribuciones.ContarAsignacionesActivasAsync para descontar las plazas ya distribuidas.
+    public async Task<IReadOnlyDictionary<Guid, int>> ContarAsignacionesActivasAsync(Guid periodoId, CancellationToken cancellationToken = default)
+        => await _contexto.AsignacionesSeccion
+            .Where(x => x.Estado == Domain.EstadoAsignacionSeccion.Activa &&
+                _contexto.Secciones.Any(s => s.Id == x.SeccionId && s.PeriodoId == periodoId))
+            .GroupBy(x => x.SeccionId)
+            .Select(x => new { SeccionId = x.Key, Cantidad = x.Count() })
+            .ToDictionaryAsync(x => x.SeccionId, x => x.Cantidad, cancellationToken);
+
     public Task<int> ObtenerUltimaVersionAsync(Guid periodoId, CancellationToken cancellationToken = default) =>
         _contexto.PropuestasDistribucion
             .Where(x => x.PeriodoId == periodoId)

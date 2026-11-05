@@ -32,7 +32,7 @@ Cada módulo tiene Domain, Application, Infrastructure y Contracts.
 
 ## Estado actual
 
-Usuarios dispone de cuentas, Identity y JWT. Configuración incorpora instituciones, períodos, oferta y versiones. Inscripciones implementa personas, solicitudes, antecedentes, correcciones, duplicados y revisión/carga manual de domicilios y distancias. Vacantes incorpora prioridades, sorteo, casos de revisión y la primera versión de propuestas de HU-18; la confirmación de ingresos y los procesos posteriores siguen pendientes.
+Usuarios dispone de cuentas, Identity y JWT. Configuración incorpora instituciones, períodos, oferta y versiones. Inscripciones implementa personas, solicitudes, antecedentes, correcciones, duplicados y revisión/carga manual de domicilios y distancias. Vacantes incorpora prioridades, sorteo, casos de revisión, propuestas y confirmación de ingresos, espera, bajas, ofrecimientos y nómina distrital. Secciones permite definir grupos, revisar/confirmar distribuciones y ampliar una sección pura a multiedad. Reportes reúne resultados e historial. El frontend integra estos recorridos en su primera versión.
 
 La detección de referencias afectadas por cambios de ubicación está preparada, pero la integración con mediciones y confirmaciones reales no puede declararse terminada hasta construir sus procesos de origen.
 
@@ -161,3 +161,15 @@ El backend permite ampliar edades conservando la edad original, con permiso inst
 - POST `/api/v1/periodos/{periodoId}/secciones/{seccionId}/composicion`: `nuevasEdades`, `motivo` y `revision`.
 - GET `/api/v1/periodos/{periodoId}/secciones/{seccionId}/composicion/historial`.
 - Script adicional de Secciones: `src/Modulos/Secciones/Infrastructure/Persistencia/Migrations/003_cambios_composicion.sql`. Su aplicación es manual y requiere validar previamente la base y los scripts anteriores.
+
+
+## Comprobación de la integración frontend/backend
+
+`dotnet run --project pruebas/Jardin.Configuracion.Pruebas -- --servidor-integracion` inicia temporalmente la API en http://127.0.0.1:5189 con Identity/JWT y bases SQLite aisladas. Desde la raíz del repositorio, `node front/pruebas/integracion-real.mjs` recorre las operaciones conectadas. Finalizar con Ctrl+C; no usa ni prepara la base real. No ejecutar compilaciones simultáneas mientras ese ejecutable está abierto.
+
+Para el entorno local real, copiar `.env.example` como `.env`, completar conexión/JWT y preparar las migraciones y scripts de todos los módulos. La primera versión conserva el cálculo manual de distancia. No se considera que los scripts PostgreSQL estén validados por pasar las pruebas SQLite.
+
+
+### Desarrollo local con secretos de usuario (opción preferida)
+
+En Visual Studio, sobre Jardin.Api, abrir «Administrar secretos de usuario». El proyecto tiene UserSecretsId y WebApplication.CreateBuilder los carga en Development. Guardar allí ConnectionStrings:DefaultConnection, Jwt:ClaveSecreta y, para crear Root por primera vez, UsuarioRoot:Clave. Mantener appsettings.json con la configuración general. No duplicar estas claves en .env ni compartir secrets.json. La conexión real y los esquemas requieren comprobación separada.

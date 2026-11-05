@@ -19,16 +19,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Jardin.Configuracion.Pruebas;
 
-// Bases aisladas por módulo: nunca se usa la conexión local de la aplicación.
+// Bases aisladas por módulo. Cada contexto abre su conexión; el ancla mantiene viva la memoria compartida.
 public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
 {
     public bool FallarBajaSecciones { get; set; }
-    private readonly SqliteConnection _configuracion = new("Data Source=:memory:");
-    private readonly SqliteConnection _inscripciones = new("Data Source=:memory:");
-    private readonly SqliteConnection _usuarios = new("Data Source=:memory:");
-    private readonly SqliteConnection _vacantes = new("Data Source=:memory:");
-    private readonly SqliteConnection _secciones = new("Data Source=:memory:");
+    private readonly SqliteConnection _configuracion = CrearConexionAislada();
+    private readonly SqliteConnection _inscripciones = CrearConexionAislada();
+    private readonly SqliteConnection _usuarios = CrearConexionAislada();
+    private readonly SqliteConnection _vacantes = CrearConexionAislada();
+    private readonly SqliteConnection _secciones = CrearConexionAislada();
     private readonly string _contenidoApi;
+
+    private static SqliteConnection CrearConexionAislada()
+        => new($"Data Source=pruebas-{Guid.NewGuid():N};Mode=Memory;Cache=Shared;Pooling=False");
 
     public ApiPruebas(string contenidoApi)
     {
@@ -46,6 +49,7 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
         constructor.UseEnvironment("Pruebas");
         constructor.ConfigureAppConfiguration((_, configuracion) => configuracion.AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=no_utilizar;Username=pruebas",
             ["Jwt:ClaveSecreta"] = "clave-ficticia-solo-pruebas-configuracion-2026",
             ["Jwt:Emisor"] = "Jardin.Api",
             ["Jwt:Audiencia"] = "Jardin.Frontend"
@@ -70,20 +74,20 @@ public sealed class ApiPruebas : WebApplicationFactory<PuntoEntradaApi>
             servicios.AddDbContext<ContextoConfiguracion>(opciones =>
             {
                 if (string.IsNullOrWhiteSpace(conexionPostgres))
-                    opciones.UseSqlite(_configuracion);
+                    opciones.UseSqlite(_configuracion.ConnectionString);
                 else
                     opciones.UseNpgsql(conexionPostgres, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "configuracion"));
             });
             servicios.AddDbContext<ContextoInscripciones>(opciones =>
             {
                 if (string.IsNullOrWhiteSpace(conexionPostgres))
-                    opciones.UseSqlite(_inscripciones);
+                    opciones.UseSqlite(_inscripciones.ConnectionString);
                 else
                     opciones.UseNpgsql(conexionPostgres, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "inscripciones"));
             });
-            servicios.AddDbContext<ContextoUsuarios>(opciones => opciones.UseSqlite(_usuarios));
-            servicios.AddDbContext<ContextoVacantes>(opciones => opciones.UseSqlite(_vacantes));
-            servicios.AddDbContext<ContextoSecciones>(opciones => opciones.UseSqlite(_secciones));
+            servicios.AddDbContext<ContextoUsuarios>(opciones => opciones.UseSqlite(_usuarios.ConnectionString));
+            servicios.AddDbContext<ContextoVacantes>(opciones => opciones.UseSqlite(_vacantes.ConnectionString));
+            servicios.AddDbContext<ContextoSecciones>(opciones => opciones.UseSqlite(_secciones.ConnectionString));
             servicios.RemoveAll<Jardin.Secciones.Contracts.IModuloSeccionesEspera>();
             servicios.AddScoped<Jardin.Secciones.Contracts.IModuloSeccionesEspera>(proveedor => new SeccionesEsperaControladas(
                 new Jardin.Secciones.Application.Servicios.ServicioSeccionesEspera(proveedor.GetRequiredService<Jardin.Secciones.Application.Abstracciones.IRepositorioSeccionesEspera>()),

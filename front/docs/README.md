@@ -1,58 +1,35 @@
-# Estado del frontend
+# Integración de la primera versión — 5 de noviembre de 2026
 
-## Decisiones aplicadas
+Se mantiene HTML, CSS BEM y JavaScript por módulos, sin framework ni dependencias de ejecución. La nomenclatura y los componentes existentes se reutilizan.
 
-- HTML semántico, CSS con BEM y módulos de JavaScript. Sin dependencias de ejecución.
-- Interfaz en español, adaptable a escritorio y celular. Colores, espacios y tamaños compartidos mediante variables CSS.
-- Login real separado de una vista previa explícita, de solo lectura y con datos ficticios.
-- API centralizada en `js/api.js`; las pantallas no gestionan contraseñas ni almacenan tokens.
-- Estados de carga, ausencia de datos, error, sesión vencida y conflicto de edición con mensajes visibles.
-- Motivos, referencias y revisiones se envían cuando corresponde. El backend verifica las reglas y la autorización.
-- Documentación propia del frontend. El backend no se modificó para este trabajo.
+## Implementado
 
-## Cómo se comunican las partes
+Se conectaron Vacantes, Secciones, Reportes y Usuarios con sus contratos HTTP. Incluye prioridades, sorteo y orden, resolución/reapertura de casos, generación/revisión/confirmación de propuestas, aceptación de turnos alternativos, espera, bajas, ofrecimientos y reservas, respuestas familiares, ingreso desde espera, definición de secciones, cambio a multiedad e historial, generación/revisión/confirmación de distribuciones y exportaciones CSV.
 
-1. El usuario completa un formulario HTML.
-2. JavaScript toma los datos y construye el objeto de petición definido por el backend.
-3. `api.js` lo envía como JSON mediante `fetch`, con JWT cuando corresponde.
-4. La API valida permisos y reglas, coordina sus capas y consulta o guarda en PostgreSQL.
-5. El frontend presenta la respuesta o explica el error. Nunca se conecta directamente a PostgreSQL.
+Los formularios guardan mediante una confirmación explícita. Mantienen revisiones y referencias requeridas; los reintentos de ofrecimientos reutilizan su operación. Cambiar contexto invalida formularios anteriores. La baja pendiente se informa como tal: no se anuncia la plaza libre hasta que el servidor confirma la coordinación.
 
-La carpeta `front` no replica Domain, Application, Infrastructure y Contracts: esa separación pertenece al backend. Aquí se separan estilos, pantallas, acciones y comunicación HTTP.
+Los textos externos se escapan. JWT permanece en memoria y las descargas utilizan la misma petición autenticada; no se agrega el token a enlaces. Un 401 finaliza la sesión y un 403 no se presenta como una consulta vacía.
 
-## Convención CSS: BEM
+## Correcciones del backend encontradas al integrar
 
-Un bloque representa un componente; un elemento pertenece al bloque; un modificador cambia su variante.
+- La consulta de historial de HU-26 ahora usa el permiso de lectura incorporado por HU-25; se actualizó la expectativa antigua de la prueba, conservando el rechazo al cambio sin permiso.
+- Identificación del actor de distribución compatible con las claims de JWT de ASP.NET.
+- Acceso institucional en operaciones de Secciones y distribuciones; listado HTTP de sus propuestas. Los errores se traducen a 400/403/404/409.
+- Nueva distribución conserva las asignaciones activas y descuenta su ocupación; propone solo los ingresos sin sección.
+- Consulta de historial de casos compatible con el ordenamiento DateTimeOffset en SQLite.
+- La base de pruebas usa una conexión por contexto a memoria compartida aislada; evita compartir una conexión SQLite simultáneamente entre solicitudes.
 
-```css
-.tarjeta { }
-.tarjeta__titulo { }
-.boton { }
-.boton--secundario { }
-```
+## Evidencia y límites
 
-Usar nombres propios en español, minúsculas, sin tildes y con guiones. No nombrar por posición accidental o color, como `caja-izquierda-verde`. Reutilizar los componentes y las variables existentes antes de agregar estilos. Mantener los estilos en CSS y las acciones en JavaScript.
+Pruebas unitarias del frontend: 12 aprobadas. Recorrido `integracion-real.mjs`: 17 consultas de pantallas más escrituras y exportaciones, mediante API real e Identity/JWT, con SQLite descartable. No es un servidor simulado de respuestas.
 
-## Comprobaciones realizadas
+Navegador: login, menú, cambio de institución, sección multiedad persistida, historial, distribuciones y generación desde un formulario; verificación móvil de 389 px sin desbordamiento de página y sin errores de consola observados.
 
-- Cinco pruebas automatizadas de la capa HTTP, precisión decimal y escape de texto: aprobadas.
-- Navegador Edge: recorrido de 14 rutas de vista previa, búsqueda, menú móvil, ausencia de desbordamiento horizontal a 390 px y guardado deshabilitado en vista previa.
-- Capturas revisadas en escritorio de 1440 px y celular de 390 px.
-- Navegador con API simulada según los contratos actuales: login, JWT, ausencia de token persistido, texto externo escapado, conflicto HTTP 409, distancia decimal exacta, cierre ante HTTP 401 y vista previa sin peticiones a la API.
+El resultado final de las comprobaciones del backend y el estado de PostgreSQL se mantienen en el registro de continuidad local. La configuración inicialmente disponible no tenía JWT válido ni permitía conectar a PostgreSQL; el usuario indicó que completaría back/.env. No se ejecutaron migraciones sobre su base durante estas pruebas.
 
-**La integración con una cuenta real y PostgreSQL no se ejecutó en esta entrega.** Las simulaciones permiten comprobar el comportamiento del frontend, pero no sustituyen esa prueba conjunta. Tampoco se ejecutaron aquí migraciones ni se alteraron datos reales.
+Consultar el README principal del frontend para el mapa de 16 pantallas y el recorrido operativo. Los límites pendientes de Geoapify y reglas de negocio no se consideran completados por disponer de un formulario.
 
-## Pendientes y límites de esta versión
 
-- Probar con la API local encendida, cuenta real y permisos de Administrativo, Directivo y Root. Verificar rechazo de operaciones por el servidor.
-- Integrar Vacantes y Secciones; las páginas actuales indican expresamente que están pendientes.
-- Agregar administración de usuarios y recuperación/cambio de contraseña cuando se acuerden sus pantallas y operaciones. El acceso actual usa cuentas existentes.
-- Agregar edición de oferta existente, consulta de publicaciones anteriores e historial administrativo completo. La ficha muestra historial de revisiones de domicilio y distancias.
-- La corrección de solicitud conserva las alternativas ya aceptadas; aún no hay edición de esas alternativas ni corrección de datos personales compartidos del aspirante.
-- Reutilizar aspirantes y responsables por identificador. Incorporar buscadores específicos cuando sus operaciones estén disponibles; por ahora, conservar el identificador devuelto al registrar un aspirante si se interrumpe la carga.
-- Aspirante/solicitud, creación/vinculación de responsable y publicación/asignación de versiones son operaciones separadas. Si falla un paso posterior, el anterior puede haberse guardado. Los formularios conservan los identificadores durante el intento e informan el caso; no se presenta como una transacción única.
-- Duplicados muestra hasta 100 alertas y avisa si hay más. Falta paginar esa pantalla. No fusiona ni elimina solicitudes.
-- La distancia es manual y provisoria. Geoapify queda pendiente, al igual que las reglas todavía pendientes en el backend; este frontend no las considera implementadas.
-- Confirmar publicación, HTTPS y CORS. La sesión en memoria implica volver a ingresar al recargar o cerrar la página.
+## Arranque local con PostgreSQL comprobado
 
-Esta versión permite comenzar la prueba visual y funcional de Configuración e Inscripciones; no significa que todas las historias del sistema estén terminadas.
+El 5 de noviembre se vinculó la API con los secretos configurados, se instaló la estructura en la base vacía y se comprobó login Root (200), mi-acceso (200), instituciones (200, sin registros), usuarios (200, una cuenta), CORS (204) y frontend (200). No se cargaron solicitudes ficticias en la base real. La prueba de todo el recorrido de admisión permanece realizada en SQLite aislado; no implica una validación de concurrencia multiinstancia en PostgreSQL.

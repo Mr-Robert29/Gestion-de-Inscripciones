@@ -113,5 +113,12 @@ export async function solicitar(ruta, opciones = {}) {
     }
     throw new ErrorApi(mensaje, respuesta.status);
   }
+  if (opciones.descarga) {
+    const tipo =
+      respuesta.headers.get("Content-Type") ?? "text/csv; charset=utf-8";
+    if (!tipo.includes("text/csv"))
+      throw new ErrorApi("El servidor no devolvió el archivo CSV esperado.");
+    return { contenido: texto, tipo };
+  }
   return datos;
 }

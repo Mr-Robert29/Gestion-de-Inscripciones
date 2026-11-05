@@ -72,6 +72,17 @@ public sealed class AccesoVacantes :
             "No tenés permiso para consultar el historial de composición.",
             tokenCancelacion)).UsuarioId;
 
+    // Implementa IAutorizacionComposicion.AutorizarDistribucionAsync según la operación y la institución.
+    public async Task<Guid> AutorizarDistribucionAsync(
+        Guid periodoId,
+        bool confirmar,
+        CancellationToken tokenCancelacion = default)
+        => (await AutorizarConPermisoAsync(
+            periodoId,
+            confirmar ? PermisosPersonal.ModificarYConfirmarDistribucion : PermisosPersonal.GenerarDistribucion,
+            "No tenés permiso para esta operación de distribución en la institución.",
+            tokenCancelacion)).UsuarioId;
+
     private async Task<AutorizacionVacantes> AutorizarConPermisoAsync(
         Guid periodoId,
         string permiso,

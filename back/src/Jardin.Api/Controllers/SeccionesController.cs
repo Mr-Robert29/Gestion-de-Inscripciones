@@ -1,3 +1,4 @@
+using Jardin.Api.Seguridad;
 using Jardin.Secciones.Contracts;
 using Jardin.Usuarios.Domain;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,8 @@ namespace Jardin.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/periodos/{periodoId:guid}/secciones")]
-[Authorize(Roles = RolesPersonal.Directivo + "," + RolesPersonal.AdministradorDelSistema)]
+[Authorize]
+[TypeFilter(typeof(FiltroErroresSecciones))]
 public sealed class SeccionesController : ControllerBase
 {
     private readonly IModuloSecciones _modulo;

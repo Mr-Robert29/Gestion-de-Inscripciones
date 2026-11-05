@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/bin/**;**/obj/**</DefaultItemExcludes>
+    <UserSecretsId>eeb9ea5d-8cae-444d-9ded-27f6bae6b00e</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Modulos\Usuarios\Contracts\Jardin.Usuarios.Contracts.csproj" />
