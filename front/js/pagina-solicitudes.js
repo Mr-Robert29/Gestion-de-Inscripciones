@@ -37,7 +37,7 @@ export async function solicitudes(ctx, modo = "solicitud") {
       descripcion,
       accion:
         modo === "solicitud"
-          ? `<a class="boton" href="#nueva-solicitud">${icono("mas")}Nueva solicitud</a>`
+          ? `<a class="boton" href="#nueva-solicitud/nuevo">${icono("mas")}Nueva solicitud</a>`
           : "",
     }) +
     (modo === "domicilio"
@@ -46,7 +46,7 @@ export async function solicitudes(ctx, modo = "solicitud") {
           "aviso",
         )
       : "") +
-    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">${modo === "solicitud" ? "Listado de solicitudes" : "Seleccioná una solicitud"}</h2>${etiqueta(`Ciclo ${ctx.estado.periodo.ciclo}`, "neutra")}</div><form class="filtros" data-formulario="buscar">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: f.nombre ?? "", atributos: 'placeholder="Buscar por nombre"' })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: f.apellido ?? "", atributos: 'placeholder="Buscar por apellido"' })}${campo({ nombre: "dni", etiqueta: "DNI completo", valor: f.dni ?? "", atributos: 'placeholder="Sin puntos" inputmode="numeric"' })}<button class="boton boton--secundario" type="submit">${icono("buscar")}Buscar</button><button class="boton boton--texto" type="button" data-accion="limpiar-filtros">Limpiar</button></form>${tablaSolicitudes({ resultados: consulta.resultados, modo })}<div class="tarjeta__pie"><span>${consulta.resultados.length} registros en esta página</span><div><button class="boton boton--secundario boton--pequeno" data-accion="pagina-anterior" ${ctx.estado.pagina <= 1 ? "disabled" : ""}>Anterior</button> <span>Página ${ctx.estado.pagina}</span> <button class="boton boton--secundario boton--pequeno" data-accion="pagina-siguiente" ${consulta.hayMas ? "" : "disabled"}>Siguiente</button></div></div></section>`
+    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">${modo === "solicitud" ? "Listado de solicitudes" : "Seleccioná una solicitud"}</h2>${etiqueta(`Ciclo ${ctx.estado.periodo.ciclo}`, "neutra")}</div><form class="filtros" data-formulario="buscar">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: f.nombre ?? "", atributos: 'placeholder="Buscar por nombre"' })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: f.apellido ?? "", atributos: 'placeholder="Buscar por apellido"' })}${campo({ nombre: "dni", etiqueta: "DNI completo", valor: f.dni ?? "", atributos: 'placeholder="Sin puntos" inputmode="numeric"' })}<button class="boton boton--secundario" type="submit">${icono("buscar")}Buscar</button><button class="boton boton--texto" type="button" data-accion="limpiar-filtros">Limpiar</button></form>${tablaSolicitudes({ resultados: consulta.resultados, modo, borrador: ctx.estado.borrador, borradores: ctx.estado.borradores })}<div class="tarjeta__pie"><span>${consulta.resultados.length + (modo === "solicitud" ? ctx.estado.borradores.length : 0)} registros en esta página</span><div><button class="boton boton--secundario boton--pequeno" data-accion="pagina-anterior" ${ctx.estado.pagina <= 1 ? "disabled" : ""}>Anterior</button> <span>Página ${ctx.estado.pagina}</span> <button class="boton boton--secundario boton--pequeno" data-accion="pagina-siguiente" ${consulta.hayMas ? "" : "disabled"}>Siguiente</button></div></div></section>`
   );
 }
 export function camposDomicilio(d = {}) {

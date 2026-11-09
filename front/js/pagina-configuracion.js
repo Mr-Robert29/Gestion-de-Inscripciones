@@ -15,7 +15,7 @@ export function sinInstitucion(ctx) {
       descripcion:
         "Primero necesitamos una institución a la que puedas acceder.",
     }) +
-    `<section class="tarjeta">${vacio({ titulo: "Todavía no tenés instituciones disponibles", descripcion: ctx.puedeEditar() ? "Registrá tu jardín para comenzar a configurar las inscripciones." : "Solicitá al administrador que asigne una institución a tu cuenta.", accion: ctx.puedeEditar() ? botonNuevo({ texto: "Registrar institución", accion: "nueva-institucion" }) : "", dibujo: "jardin" })}</section>`
+    `<section class="tarjeta">${vacio({ titulo: "Todavía no tenés instituciones disponibles", descripcion: ctx.puedeCrearInstitucion() ? "Registrá tu jardín para comenzar a configurar las inscripciones." : "Solicitá al administrador que asigne una institución a tu cuenta.", accion: ctx.puedeCrearInstitucion() ? botonNuevo({ texto: "Registrar institución", accion: "nueva-institucion" }) : "", dibujo: "jardin" })}</section>`
   );
 }
 export function institucion(ctx) {
@@ -24,7 +24,7 @@ export function institucion(ctx) {
     encabezado({
       titulo: "Mi institución",
       descripcion: "Los datos que identifican a tu jardín.",
-      accion: ctx.puedeEditar()
+      accion: ctx.puedeCrearInstitucion()
         ? botonNuevo({
             texto: "Registrar otra institución",
             accion: "nueva-institucion",

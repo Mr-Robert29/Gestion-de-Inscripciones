@@ -1,4 +1,4 @@
-import { escapar as e, campo, fecha } from "./interfaz.js";
+import { escapar as e, campo, campoClave, fecha } from "./interfaz.js";
 import {
   rutaPeriodo,
   rutaInstitucional,
@@ -66,12 +66,16 @@ export async function atenderAdministracion(elemento, ctx) {
           tipo: "email",
           obligatorio: true,
         }) +
-        campo({
+        campoClave({
           nombre: "claveInicial",
           etiqueta: "Contraseña inicial",
-          tipo: "password",
           obligatorio: true,
-          atributos: 'autocomplete="new-password" minlength="8"',
+        }) +
+        campoClave({
+          nombre: "confirmarClave",
+          etiqueta: "Confirmar contraseña",
+          obligatorio: true,
+          confirmacion: true,
         }) +
         selector(
           "rolGlobal",
@@ -90,7 +94,7 @@ export async function atenderAdministracion(elemento, ctx) {
           "",
           false,
         ),
-      (d) =>
+      ({ confirmarClave: _confirmarClave, ...d }) =>
         enviar(ctx, "/usuarios", {
           ...d,
           institucionInicialId: d.institucionInicialId || null,

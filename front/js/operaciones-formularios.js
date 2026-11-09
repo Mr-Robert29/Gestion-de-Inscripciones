@@ -14,6 +14,7 @@ import {
   tabla,
   historial,
 } from "./organizacion-comun.js";
+import { validarClave } from "./validacion-clave.js";
 
 export const motivo = () =>
   campo({
@@ -86,6 +87,8 @@ export async function atenderFormularioOrganizacion(form, ctx) {
         "Cambió el contexto. Cerrá este formulario y volvé a consultarlo.",
       );
     const datos = Object.fromEntries(new FormData(form));
+    if (form.querySelector("[data-clave-inicial]"))
+      validarClave(datos.claveInicial, datos.confirmarClave);
     const resultado = await operacion.guardar(datos, new FormData(form));
     if (operacion.usuario !== ctx.estado.usuario) return true;
     ctx.cerrarDialogo();
