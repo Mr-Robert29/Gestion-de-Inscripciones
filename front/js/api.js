@@ -2,6 +2,13 @@ import { configuracion } from "./configuracion.js";
 
 let token = null;
 let direccion = configuracion.direccionApi;
+try {
+  direccion = localStorage.getItem("jardin:direccion-api") || direccion;
+} catch {
+  // El navegador puede bloquear el almacenamiento local.
+}
+
+export const obtenerDireccionApi = () => direccion;
 
 export class ErrorApi extends Error {
   constructor(mensaje, estado = 0) {
@@ -24,6 +31,11 @@ export function configurarDireccion(valor) {
     );
   }
   direccion = url.href.replace(/\/$/, "");
+  try {
+    localStorage.setItem("jardin:direccion-api", direccion);
+  } catch {
+    // La conexion funciona aunque no se pueda persistir la direccion.
+  }
 }
 
 // La credencial permanece en memoria; no se escribe en localStorage ni sessionStorage.

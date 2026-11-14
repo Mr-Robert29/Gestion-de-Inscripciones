@@ -8,6 +8,7 @@ import {
 } from "./interfaz.js";
 import { base } from "./compartidos.js";
 import { camposDomicilio } from "./pagina-solicitudes.js";
+import { actualizarBorrador, claveBorradores } from "./borradores-solicitud.js";
 const opciones = (nombres) => nombres.map(([id, nombre]) => ({ id, nombre }));
 const accionesFormulario = (previa) =>
   `${errorFormulario()}${previa ? '<p class="formulario__nota">Vista previa: los cambios no se guardan.</p>' : ""}<div class="formulario__acciones"><button class="boton boton--secundario" type="button" data-accion="cerrar-dialogo">Cancelar</button><button class="boton" type="submit" ${previa ? "disabled" : ""}>Guardar</button></div>`;
@@ -371,6 +372,7 @@ export async function atenderFormulario(formulario, ctx) {
       throw new Error("Seleccioná una institución antes de continuar.");
     const crear = (ruta, datos) => ctx.api(ruta, { metodo: "POST", datos });
     const actualizar = (ruta, datos) => ctx.api(ruta, { metodo: "PUT", datos });
+    const clave = claveBorradores(ctx.estado);
     if (nombre === "aspirante") {
       const aspirante = await crear(`${ruta}/aspirantes`, {
         nombre: datos.nombre,
@@ -378,6 +380,8 @@ export async function atenderFormulario(formulario, ctx) {
         fechaNacimiento: datos.fechaNacimiento,
         dni: datos.dni || null,
       });
+      const guardado = actualizarBorrador(clave, aspirante.id, true);
+      if (clave !== claveBorradores(ctx.estado)) return;
       ctx.estado.borrador = {
         id: aspirante.id,
         nombre: datos.nombre,
@@ -388,24 +392,31 @@ export async function atenderFormulario(formulario, ctx) {
         ctx.estado.borrador,
       ];
       await ctx.actualizar();
-      ctx.notificar("Aspirante registrado. Completá ahora su solicitud.");
+      if (guardado === false)
+        ctx.notificar("El navegador no pudo conservar el borrador. Guardá el identificador del aspirante para continuar más tarde.", true);
+      else ctx.notificar("Aspirante registrado. Completá ahora su solicitud.");
       return;
     }
     if (nombre === "usar-aspirante") {
       const aspirante = await ctx.api(
         `${ruta}/aspirantes/${encodeURIComponent(identificador(datos.aspiranteId))}`,
       );
+      const guardado = actualizarBorrador(clave, aspirante.id, true);
+      if (clave !== claveBorradores(ctx.estado)) return;
       ctx.estado.borrador = aspirante;
       ctx.estado.borradores = [
         ...(ctx.estado.borradores ?? []).filter((item) => item.id !== aspirante.id),
         aspirante,
       ];
       await ctx.actualizar();
+      if (guardado === false)
+        ctx.notificar("El navegador no pudo conservar el borrador. Guardá el identificador del aspirante para continuar más tarde.", true);
       return;
     }
     if (nombre === "solicitud") {
       if (!ctx.estado.borrador)
         throw new Error("Primero registrá o seleccioná un aspirante.");
+      const aspiranteId = ctx.estado.borrador.id;
       const alternativas = datosFormulario.getAll("alternativas");
       if (alternativas.includes(datos.turnoPreferidoId))
         throw new Error(
@@ -414,15 +425,17 @@ export async function atenderFormulario(formulario, ctx) {
       const solicitud = await crear(
         `${ruta}/periodos/${encodeURIComponent(ctx.estado.periodo.id)}/solicitudes`,
         {
-          aspiranteId: ctx.estado.borrador.id,
+          aspiranteId,
           domicilio: direccion(datos),
           turnoPreferidoId: datos.turnoPreferidoId,
           turnosAlternativosAceptados: alternativas,
           referenciaConsentimiento: datos.referenciaConsentimiento || null,
         },
       );
+      actualizarBorrador(clave, aspiranteId, false);
+      if (clave !== claveBorradores(ctx.estado)) return;
       ctx.estado.borradores = (ctx.estado.borradores ?? []).filter(
-        (item) => item.id !== ctx.estado.borrador.id,
+        (item) => item.id !== aspiranteId,
       );
       ctx.estado.borrador = null;
       ctx.notificar(
