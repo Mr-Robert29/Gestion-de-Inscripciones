@@ -14,8 +14,10 @@ import {
   oferta,
 } from "./pagina-configuracion.js";
 import { ficha } from "./pagina-ficha.js";
+import { tutorial } from "./pagina-tutorial.js";
 export const titulos = {
   inicio: "Inicio",
+  tutorial: "Tutorial de uso",
   solicitudes: "Solicitudes",
   "nueva-solicitud": "Nueva solicitud",
   solicitud: "Ficha de solicitud",
@@ -50,6 +52,7 @@ async function duplicados(ctx) {
 }
 export async function presentarPagina(ruta, ctx) {
   const pagina = ruta.split("/")[0];
+  if (pagina === "tutorial") return tutorial();
   if (pagina === "ayuda")
     return (
       encabezado({

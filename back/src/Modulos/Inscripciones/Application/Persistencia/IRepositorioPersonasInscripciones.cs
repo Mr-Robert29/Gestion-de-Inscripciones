@@ -8,6 +8,13 @@ public interface IRepositorioPersonasInscripciones
         Guid institucionId,
         Guid aspiranteId,
         CancellationToken tokenCancelacion = default);
+    Task<Aspirante?> ObtenerAspiranteParaActualizarAsync(
+        Guid institucionId,
+        Guid aspiranteId,
+        CancellationToken tokenCancelacion = default);
+    Task GuardarCorreccionAspiranteAsync(
+        CambioInscripciones cambio,
+        CancellationToken tokenCancelacion = default);
     Task<Responsable?> ObtenerResponsableAsync(
         Guid institucionId,
         Guid responsableId,

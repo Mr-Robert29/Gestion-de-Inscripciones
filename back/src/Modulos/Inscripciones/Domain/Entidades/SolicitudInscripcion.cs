@@ -113,6 +113,16 @@ public sealed class SolicitudInscripcion
         return cambioDomicilio;
     }
 
+    // Recalcula la edad de esta solicitud con su fecha de corte original tras corregir al aspirante.
+    public void RecalcularDatosEtarios(Aspirante aspirante)
+    {
+        ArgumentNullException.ThrowIfNull(aspirante);
+        if (aspirante.Id != AspiranteId)
+            throw new ArgumentException("El aspirante no corresponde a esta solicitud.", nameof(aspirante));
+        CalculoEdad.Recalcular(aspirante);
+        RevisionDatos++;
+    }
+
     // Invalida la revisión anterior cuando cambian antecedentes usados para evaluar la solicitud.
     public void RegistrarRevisionAntecedentes() => RevisionDatos++;
 }

@@ -94,6 +94,16 @@ export const icono = (nombre) =>
   `<svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${trazos[nombre] ?? trazos.solicitudes}</svg>`;
 export const marca = () =>
   '<span class="marca"><img class="marca__imagen" src="./recursos/marca.svg" alt=""><span><span class="marca__nombre">jardín.</span><span class="marca__leyenda">GESTIÓN DE INSCRIPCIONES</span></span></span>';
+const sugerenciasPorCampo = {
+  motivo: [
+    "Solicitud de la familia",
+    "Corrección de datos registrados",
+    "Verificación de la información disponible",
+    "Revisión administrativa",
+  ],
+  tipoVinculo: ["Madre", "Padre", "Tutor/a legal", "Responsable autorizado", "Otro vínculo"],
+  tipoDocumento: ["DNI", "Pasaporte", "Otro documento"],
+};
 export function jardinIlustrado() {
   return `<svg viewBox="0 0 360 210" fill="none" aria-hidden="true"><circle cx="284" cy="45" r="23" fill="#dec58f"/><path d="M5 170c80-45 135 30 210 0s104-17 143-12v52H5Z" fill="#8fac83" opacity=".45"/><path d="M9 193c92-40 122 12 208-8s111-5 141 6" stroke="#c7d3a4" stroke-width="1.5"/><path d="M174 181V73m0 65c-42 5-67-19-60-55 38-1 66 20 60 55Zm0-29c-3-40 18-61 54-58 3 36-16 61-54 58Z" fill="#a2bc8e" stroke="#c7d3a4" stroke-width="2"/><path d="M174 139 138 105m37 5 33-38" stroke="#567b55" stroke-width="2"/><path d="M151 164h48l-7 35h-33Z" fill="#dfb785"/><path d="M69 182v-43m0 22c-23 0-31-13-28-29 19 0 30 12 28 29Zm0-17c0-21 10-31 28-30 1 19-10 31-28 30Z" fill="#b7c99b"/><path d="M57 175h26l-4 23H61Z" fill="#d5dfb8"/><path d="M270 188v-56m0 24c-22 1-34-12-32-30 20-1 35 12 32 30Zm0-17c-1-26 12-38 34-36 2 23-12 38-34 36Z" fill="#b4c797"/><path d="M255 179h30l-5 22h-20Z" fill="#e0ca9c"/><path d="M33 76h25m-13-12v25m271-7h13m-6-6v13" stroke="#d2d9b7" opacity=".5" stroke-width="1.5"/></svg>`;
 }
@@ -106,9 +116,16 @@ export function campo({
   ayuda = "",
   atributos = "",
   completo = false,
+  sugerencias = [],
 }) {
   const id = `campo-${nombre}`;
-  return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
+  const opcionesSugeridas = sugerencias.length
+    ? sugerencias
+    : (sugerenciasPorCampo[nombre] ?? []);
+  const lista = opcionesSugeridas.length
+    ? `list="${id}-opciones" placeholder="${nombre === "motivo" ? "Elegí una sugerencia o escribí el motivo" : "Elegí una sugerencia o escribí una opción"}"`
+    : "";
+  return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${lista} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${opcionesSugeridas.length ? `<datalist id="${id}-opciones">${opcionesSugeridas.map((opcion) => `<option value="${escapar(opcion)}"></option>`).join("")}</datalist>` : ""}${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
 }
 export function campoClave({
   nombre,

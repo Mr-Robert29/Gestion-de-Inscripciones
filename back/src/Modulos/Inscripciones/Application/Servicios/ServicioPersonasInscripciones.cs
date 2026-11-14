@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Jardin.Inscripciones.Application.Configuracion;
 using Jardin.Inscripciones.Application.Persistencia;
 using Jardin.Inscripciones.Application.Seguridad;
 using Jardin.Inscripciones.Contracts;
@@ -10,12 +11,20 @@ namespace Jardin.Inscripciones.Application.Servicios;
 public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
 {
     private readonly IRepositorioPersonasInscripciones _personas;
+    private readonly IRepositorioCorreccionesSolicitudes _solicitudes;
     private readonly IAccesoInstitucionesInscripciones _acceso;
+    private readonly IEjecucionPeriodoSolicitud _periodo;
 
-    public ServicioPersonasInscripciones(IRepositorioPersonasInscripciones personas, IAccesoInstitucionesInscripciones acceso)
+    public ServicioPersonasInscripciones(
+        IRepositorioPersonasInscripciones personas,
+        IRepositorioCorreccionesSolicitudes solicitudes,
+        IAccesoInstitucionesInscripciones acceso,
+        IEjecucionPeriodoSolicitud periodo)
     {
         _personas = personas;
+        _solicitudes = solicitudes;
         _acceso = acceso;
+        _periodo = periodo;
     }
 
     // Implementa IModuloPersonasInscripciones.RegistrarAspiranteAsync.
@@ -64,6 +73,96 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
             aspiranteId,
             tokenCancelacion);
         return aspirante is null ? null : Mapear(aspirante);
+    }
+
+    // Implementa IModuloPersonasInscripciones.ActualizarAspiranteAsync y conserva anterior/nuevo en historial.
+    public async Task<ConsultarAspiranteRespuesta> ActualizarAspiranteAsync(
+        Guid institucionId,
+        Guid aspiranteId,
+        ActualizarAspirantePeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        await _acceso.AutorizarAsync(institucionId, false, tokenCancelacion);
+        var solicitudInicial = await _solicitudes.ObtenerEditableAsync(
+            institucionId,
+            peticion.SolicitudId,
+            tokenCancelacion) ?? throw new KeyNotFoundException("No se encontró la solicitud en esta institución.");
+        if (solicitudInicial.AspiranteId != aspiranteId)
+            throw new KeyNotFoundException("La solicitud no corresponde a este aspirante.");
+
+        return await _periodo.EjecutarCorreccionAsync(
+            institucionId,
+            solicitudInicial.PeriodoId,
+            solicitudInicial.VersionOfertaId,
+            async (periodo, token) =>
+            {
+                if (periodo.Estado != "RecepcionAbierta")
+                    throw new InvalidOperationException("Los datos solo se pueden corregir mientras la recepción del período está abierta.");
+                var autor = await _acceso.AutorizarOperacionAsync(
+                    institucionId,
+                    OperacionInscripciones.CorregirDuranteRecepcion,
+                    token);
+                var solicitudes = await _solicitudes.ObtenerDelAspiranteEnPeriodoAsync(
+                    institucionId,
+                    solicitudInicial.PeriodoId,
+                    aspiranteId,
+                    token);
+                var solicitud = solicitudes.SingleOrDefault(s => s.Id == peticion.SolicitudId)
+                    ?? throw new KeyNotFoundException("La solicitud ya no está disponible en este período.");
+                if (solicitud.RevisionDatos != peticion.RevisionSolicitud)
+                    throw new InvalidOperationException("La solicitud cambió. Consultá la ficha nuevamente antes de guardar.");
+                var aspirante = await _personas.ObtenerAspiranteParaActualizarAsync(
+                    institucionId,
+                    aspiranteId,
+                    token) ?? throw new KeyNotFoundException("No se encontró el aspirante en esta institución.");
+                var anterior = Mapear(aspirante);
+                var calculosAnteriores = solicitudes.Select(s => new
+                {
+                    SolicitudId = s.Id,
+                    s.RevisionDatos,
+                    s.CalculoEdad.FechaNacimientoUtilizada,
+                    s.CalculoEdad.FechaCorteUtilizada,
+                    s.CalculoEdad.EdadCalculada,
+                    s.CalculoEdad.Sala
+                }).ToArray();
+                aspirante.CorregirDatos(
+                    peticion.Nombre,
+                    peticion.Apellido,
+                    peticion.Dni,
+                    peticion.FechaNacimiento,
+                    peticion.TipoDocumento,
+                    peticion.Sexo);
+                foreach (var solicitudDelPeriodo in solicitudes)
+                    solicitudDelPeriodo.RecalcularDatosEtarios(aspirante);
+                var actual = Mapear(aspirante);
+                var calculosNuevos = solicitudes.Select(s => new
+                {
+                    SolicitudId = s.Id,
+                    s.RevisionDatos,
+                    s.CalculoEdad.FechaNacimientoUtilizada,
+                    s.CalculoEdad.FechaCorteUtilizada,
+                    s.CalculoEdad.EdadCalculada,
+                    s.CalculoEdad.Sala
+                }).ToArray();
+                await _personas.GuardarCorreccionAspiranteAsync(
+                    Cambio(
+                        institucionId,
+                        autor,
+                        aspirante.Id,
+                        "Aspirante.Correccion",
+                        new
+                        {
+                            Anterior = anterior,
+                            Nuevo = actual,
+                            SolicitudId = solicitud.Id,
+                            CalculosEdadAnteriores = calculosAnteriores,
+                            CalculosEdadNuevos = calculosNuevos
+                        }),
+                    token);
+                return actual;
+            },
+            tokenCancelacion);
     }
 
     // Implementa IModuloPersonasInscripciones.RegistrarResponsableAsync.

@@ -44,6 +44,18 @@ public sealed class PersonasInscripcionesController : ControllerBase
             return respuesta is null ? NotFound() : Ok(respuesta);
         });
 
+    [HttpPut("aspirantes/{aspiranteId:guid}")]
+    public Task<IActionResult> ActualizarAspirante(
+        Guid institucionId,
+        Guid aspiranteId,
+        ActualizarAspirantePeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _personas.ActualizarAspiranteAsync(
+            institucionId,
+            aspiranteId,
+            peticion,
+            tokenCancelacion)));
+
     [HttpPost("responsables")]
     public Task<IActionResult> RegistrarResponsable(
         Guid institucionId,
@@ -107,6 +119,7 @@ public sealed class PersonasInscripcionesController : ControllerBase
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (KeyNotFoundException error) { return Problem(statusCode: 404, detail: error.Message); }
         catch (ArgumentException error) { return Problem(statusCode: 400, detail: error.Message); }
+        catch (ConflictoRevisionSolicitudException error) { return Problem(statusCode: 409, detail: error.Message); }
         catch (ConflictoVinculoException error) { return Problem(statusCode: 409, detail: error.Message); }
         catch (InvalidOperationException error) { return Problem(statusCode: 409, detail: error.Message); }
     }

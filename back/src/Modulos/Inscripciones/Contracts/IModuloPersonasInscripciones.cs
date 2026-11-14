@@ -10,6 +10,11 @@ public interface IModuloPersonasInscripciones
         Guid institucionId,
         Guid aspiranteId,
         CancellationToken tokenCancelacion = default);
+    Task<ConsultarAspiranteRespuesta> ActualizarAspiranteAsync(
+        Guid institucionId,
+        Guid aspiranteId,
+        ActualizarAspirantePeticion peticion,
+        CancellationToken tokenCancelacion = default);
     Task<RegistrarResponsableRespuesta> RegistrarResponsableAsync(
         Guid institucionId,
         RegistrarResponsablePeticion peticion,

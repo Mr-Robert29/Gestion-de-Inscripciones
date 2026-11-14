@@ -21,4 +21,13 @@ public sealed record CalculoEdadSolicitud
         // Una edad excepcional requiere resolución; no se la convierte automáticamente en otra sala.
         Sala = EdadCalculada is >= 3 and <= 5 ? EdadCalculada : null;
     }
+
+    public void Recalcular(Aspirante aspirante)
+    {
+        ArgumentNullException.ThrowIfNull(aspirante);
+        var actualizado = new CalculoEdadSolicitud(aspirante, FechaCorteUtilizada);
+        FechaNacimientoUtilizada = actualizado.FechaNacimientoUtilizada;
+        EdadCalculada = actualizado.EdadCalculada;
+        Sala = actualizado.Sala;
+    }
 }

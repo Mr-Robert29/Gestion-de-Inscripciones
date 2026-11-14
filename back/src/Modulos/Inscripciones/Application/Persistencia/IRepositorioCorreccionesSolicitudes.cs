@@ -9,6 +9,11 @@ public interface IRepositorioCorreccionesSolicitudes
         Guid institucionId,
         Guid solicitudId,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<SolicitudInscripcion>> ObtenerDelAspiranteEnPeriodoAsync(
+        Guid institucionId,
+        Guid periodoId,
+        Guid aspiranteId,
+        CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<DatosSolicitudEncontrada>> BuscarAsync(
         Guid institucionId,
         BuscarSolicitudesPeticion filtro,

@@ -126,11 +126,6 @@ export async function atenderAccion(elemento, ctx) {
           tipo: "date",
           obligatorio: true,
         }) +
-        campo({
-          nombre: "referencia",
-          etiqueta: "Referencia administrativa",
-          obligatorio: true,
-        }) +
         campo({ nombre: "motivo", etiqueta: "Motivo", obligatorio: true }),
     });
     return;
@@ -239,6 +234,16 @@ export async function atenderAccion(elemento, ctx) {
         "La corrección conserva los datos anteriores en el historial.",
       formulario: "corregir",
       contenido: `<div class="formulario__rejilla">${camposDomicilio(s.domicilio)}${seleccion({ nombre: "turnoPreferidoId", etiqueta: "Turno preferido", opciones: estado.turnos, valor: s.turnoPreferidoId, obligatorio: true })}${campo({ nombre: "referenciaConsentimiento", etiqueta: "Referencia de consentimiento", valor: s.referenciaConsentimiento })}</div>${campo({ nombre: "motivo", etiqueta: "Motivo de la corrección", obligatorio: true })}<p class="formulario__nota">Se conservarán las alternativas de turno ya aceptadas. Los datos personales compartidos del aspirante se corrigen mediante un procedimiento posterior.</p>`,
+    });
+    return;
+  }
+  if (accion === "editar-aspirante") {
+    const aspirante = ctx.ficha.persona;
+    mostrar(ctx, {
+      titulo: "Editar datos del aspirante",
+      descripcion: "La corrección quedará registrada en el historial.",
+      formulario: "editar-aspirante",
+      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "" })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">Al guardar, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte del ciclo. Si la edad queda fuera del rango admitido, aparecerá pendiente de revisión.</p>`,
     });
     return;
   }
@@ -446,6 +451,31 @@ export async function atenderFormulario(formulario, ctx) {
       ctx.navegar(`solicitud/${solicitud.id}`);
       return;
     }
+    if (nombre === "editar-aspirante") {
+      const aspirante = operacion?.ficha?.persona;
+      if (!aspirante || operacion.institucion?.id !== ctx.estado.institucion?.id)
+        throw new Error("El contexto cambió. Cerrá el formulario y consultá nuevamente.");
+      await ctx.api(
+        `${ruta}/aspirantes/${encodeURIComponent(aspirante.id)}`,
+        {
+          metodo: "PUT",
+          datos: {
+            solicitudId: operacion.ficha.solicitud.id,
+            revisionSolicitud: operacion.ficha.solicitud.revisionDatos,
+            nombre: datos.nombre,
+            apellido: datos.apellido,
+            fechaNacimiento: datos.fechaNacimiento,
+            dni: datos.dni || null,
+            tipoDocumento: datos.tipoDocumento || null,
+            sexo: datos.sexo || null,
+          },
+        },
+      );
+      ctx.cerrarDialogo();
+      await ctx.actualizar();
+      ctx.notificar("Datos del aspirante actualizados.");
+      return;
+    }
     if (!operacion || operacion.institucion?.id !== ctx.estado.institucion?.id)
       throw new Error(
         "El contexto cambió. Cerrá el formulario y consultá nuevamente.",
@@ -518,19 +548,20 @@ export async function atenderFormulario(formulario, ctx) {
       );
     } else if (nombre === "versiones") {
       const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
+      const referencia = `Publicación de reglas y oferta del ciclo ${operacion.periodo.ciclo}`;
       operacion.versiones ??= {};
       if (!operacion.versiones.reglas)
         operacion.versiones.reglas = (
           await crear(`${r}/versiones-reglas`, {
             fechaCorte: datos.fechaCorte,
-            referencia: datos.referencia,
+            referencia,
             motivo: datos.motivo,
           })
         ).id;
       if (!operacion.versiones.oferta)
         operacion.versiones.oferta = (
           await crear(`${r}/versiones-oferta`, {
-            referencia: datos.referencia,
+            referencia,
             motivo: datos.motivo,
           })
         ).id;
