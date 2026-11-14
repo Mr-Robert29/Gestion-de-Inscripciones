@@ -6,6 +6,7 @@ import { escapar as e, icono, etiqueta, vacio } from "./interfaz.js";
 import { encabezado, tarjeta, base } from "./compartidos.js";
 import { inicio } from "./pagina-inicio.js";
 import { solicitudes, nuevaSolicitud } from "./pagina-solicitudes.js";
+import { claveBorradores, recuperarBorradores } from "./borradores-solicitud.js";
 import {
   sinInstitucion,
   institucion,
@@ -88,10 +89,12 @@ export async function presentarPagina(ruta, ctx) {
     if (aspiranteId === "nuevo") {
       ctx.estado.borrador = null;
     } else if (aspiranteId) {
-      const borrador = (ctx.estado.borradores ?? []).find(
+      const clave = claveBorradores(ctx.estado);
+      const borradores = await recuperarBorradores(ctx);
+      if (clave !== claveBorradores(ctx.estado)) return "";
+      ctx.estado.borrador = borradores.find(
         (item) => item.id === decodeURIComponent(aspiranteId),
-      );
-      if (borrador) ctx.estado.borrador = borrador;
+      ) ?? null;
     }
     return nuevaSolicitud(ctx);
   }

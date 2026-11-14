@@ -1,5 +1,9 @@
-import { solicitar, configurarDireccion, establecerToken } from "./api.js";
-import { configuracion } from "./configuracion.js";
+import {
+  solicitar,
+  configurarDireccion,
+  establecerToken,
+  obtenerDireccionApi,
+} from "./api.js";
 import {
   escapar,
   iniciales,
@@ -114,7 +118,7 @@ window.addEventListener("sesion-vencida", () =>
 
 function presentarAcceso() {
   document.title = "Ingresar · Jardín";
-  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p><div class="acceso__previa"><button class="boton boton--secundario boton--ancho" data-accion="vista-previa">Explorar la vista previa ${icono("ojo")}</button><p>Recorré las pantallas con datos ficticios. Sin iniciar sesión.</p></div><details class="acceso__detalle"><summary>Configurar conexión al servidor</summary>${campo({ nombre: "servidor", etiqueta: "Dirección de la API", tipo: "url", valor: configuracion.direccionApi, ayuda: "Para desarrollo local. La contraseña se envía únicamente al servidor indicado." })}</details></div></section></main>`;
+  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p><div class="acceso__previa"><button class="boton boton--secundario boton--ancho" data-accion="vista-previa">Explorar la vista previa ${icono("ojo")}</button><p>Recorré las pantallas con datos ficticios. Sin iniciar sesión.</p></div><details class="acceso__detalle"><summary>Configurar conexión al servidor</summary>${campo({ nombre: "servidor", etiqueta: "Dirección de la API", tipo: "url", valor: obtenerDireccionApi(), ayuda: "Para desarrollo local. La contraseña se envía únicamente al servidor indicado." })}</details></div></section></main>`;
 }
 
 async function entrar(formulario) {
@@ -170,13 +174,46 @@ async function entrar(formulario) {
   }
 }
 
+function claveContextoPersistido() {
+  const usuarioId = estado.usuario?.usuarioId;
+  if (estado.previa || !usuarioId) return null;
+  return `jardin:contexto:${JSON.stringify([obtenerDireccionApi(), usuarioId])}`;
+}
+
+function leerContextoPersistido() {
+  try {
+    const clave = claveContextoPersistido();
+    return clave ? JSON.parse(localStorage.getItem(clave) ?? "null") : null;
+  } catch {
+    return null;
+  }
+}
+
+function guardarContextoPersistido() {
+  try {
+    const clave = claveContextoPersistido();
+    if (clave) {
+      localStorage.setItem(
+        clave,
+        JSON.stringify({
+          institucionId: estado.institucion?.id,
+          periodoId: estado.periodo?.id,
+        }),
+      );
+    }
+  } catch {
+    // El contexto sigue disponible durante esta sesión.
+  }
+}
+
 async function cargarContexto({ institucionId, periodoId } = {}) {
+  const contextoGuardado = leerContextoPersistido();
   estado.instituciones = estado.previa
     ? [institucionEjemplo]
     : await solicitar("/instituciones");
   estado.institucion =
     estado.instituciones.find(
-      (i) => i.id === (institucionId ?? estado.institucion?.id),
+      (i) => i.id === (institucionId ?? estado.institucion?.id ?? contextoGuardado?.institucionId),
     ) ??
     estado.instituciones[0] ??
     null;
@@ -201,7 +238,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
   estado.aulas = aulas;
   estado.turnos = turnos;
   estado.periodo =
-    periodos.find((p) => p.id === (periodoId ?? estado.periodo?.id)) ??
+    periodos.find((p) => p.id === (periodoId ?? estado.periodo?.id ?? contextoGuardado?.periodoId)) ??
     periodos[0] ??
     null;
   estado.ofertas = !estado.periodo
@@ -229,6 +266,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       .map((o) => o.TurnoId ?? o.turnoId);
     estado.turnosSolicitud = turnos.filter((t) => disponibles.includes(t.id));
   } else estado.turnosSolicitud = [];
+  guardarContextoPersistido();
 }
 contexto.recargarContexto = cargarContexto;
 
