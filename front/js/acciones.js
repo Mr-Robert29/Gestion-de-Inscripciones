@@ -155,32 +155,66 @@ export async function atenderAccion(elemento, ctx) {
       titulo: `Modificar oferta del ciclo ${estado.periodo.ciclo}`,
       descripcion: `${aula} · ${turno}. Los cambios se aplicarán solo a este período.`,
       formulario: "editar-oferta-periodo",
-      contenido: camposOfertaDeCiclo(oferta) + (estado.periodo.versionOfertaId ? '<p class="formulario__nota">Después de guardar, volvé a publicar la configuración para aplicar el cambio en este ciclo.</p>' : ""),
+      contenido: camposOfertaDeCiclo(oferta) + (estado.periodo.versionOfertaId ? '<p class="formulario__nota">Después de guardar, elegí “Publicar cambios de oferta” en Períodos para aplicar el cambio en este ciclo.</p>' : ""),
     });
     ctx.operacion.ofertaPeriodo = oferta;
     return;
   }
-  if (accion === "preparar-versiones") {
+  if (accion === "preparar-ciclo") {
+    const faltaReglas = !estado.periodo?.versionReglasId;
+    if (!estado.periodo || !estado.ofertas.length)
+      throw new Error("Agregá primero al menos una oferta al período para preparar el ciclo.");
     mostrar(ctx, {
-      titulo: `Fecha de corte y oferta del ciclo ${estado.periodo?.ciclo ?? "seleccionado"}`,
-      descripcion:
-        "Ingresá la fecha de corte. Al confirmar, se guardará y se publicará una copia de la oferta que ya cargaste; ambas quedarán asociadas a este período.",
-      textoConfirmacion: "Confirmar publicación",
-      formulario: "versiones",
+      titulo: `Preparar ciclo ${estado.periodo.ciclo}`,
+      descripcion: "La preparación inicial vincula a este ciclo sus reglas y la oferta cargada.",
+      textoConfirmacion: "Preparar ciclo",
+      formulario: "preparar-ciclo",
       contenido:
         aviso(
-          "Al confirmar, se guardará la fecha de corte y se publicará una copia de la oferta existente. Esta acción no crea aulas ni modifica capacidades. Las versiones anteriores se conservan.",
+          "La fecha de corte queda asociada a este período. La oferta se publica como una instantánea independiente. Las versiones anteriores se conservan.",
           "aviso",
         ) +
-        campo({
+        (faltaReglas ? campo({
           nombre: "fechaCorte",
           etiqueta: "Fecha de corte para calcular edades",
           tipo: "date",
           obligatorio: true,
+          valor: estado.fechaCortePeriodo ?? "",
           ayuda:
             "Es la fecha que el sistema usa para calcular la edad y el grupo etario de cada aspirante en este ciclo.",
-        }) +
+        }) : `<p class="formulario__nota">Se conservará la fecha de corte ya configurada para este ciclo: ${e(estado.fechaCortePeriodo)}.</p>`) +
         motivo(motivos.publicacion, { etiqueta: "Motivo de la publicación" }),
+    });
+    return;
+  }
+  if (accion === "editar-fecha-corte") {
+    mostrar(ctx, {
+      titulo: `Cambiar fecha de corte del ciclo ${estado.periodo.ciclo}`,
+      descripcion: "Se actualizarán las reglas de este ciclo. La oferta publicada y sus capacidades no se modificarán.",
+      textoConfirmacion: "Guardar fecha de corte",
+      formulario: "editar-fecha-corte",
+      contenido: campo({
+        nombre: "fechaCorte",
+        etiqueta: "Fecha de corte para calcular edades",
+        tipo: "date",
+        obligatorio: true,
+        valor: estado.fechaCortePeriodo ?? "",
+        ayuda: "La usarán las nuevas solicitudes de este ciclo. Las solicitudes anteriores conservan la fecha con la que fueron registradas.",
+      }) + motivo(motivos.publicacion, { etiqueta: "Motivo del cambio" }),
+    });
+    return;
+  }
+  if (accion === "publicar-oferta-periodo") {
+    if (!estado.periodo?.versionReglasId)
+      throw new Error("Configurá primero las reglas y la fecha de corte del ciclo.");
+    if (!estado.ofertas.length)
+      throw new Error("Agregá al menos una oferta al período para poder publicarla.");
+    mostrar(ctx, {
+      titulo: `Publicar oferta del ciclo ${estado.periodo.ciclo}`,
+      descripcion: "Se publicará la oferta actual de este período sin cambiar sus reglas ni la fecha de corte.",
+      textoConfirmacion: "Publicar oferta",
+      formulario: "publicar-oferta-periodo",
+      contenido: aviso("La oferta publicada es la que aparece al registrar solicitudes. El cambio solo afecta a este ciclo y conserva la fecha de corte vigente.", "aviso") + motivo(motivos.oferta, { etiqueta: "Motivo de la publicación" }),
     });
     return;
   }
@@ -630,7 +664,7 @@ export async function atenderFormulario(formulario, ctx) {
         },
       );
       operacion.mensajeExito = periodo.versionOfertaId
-        ? "Oferta agregada al ciclo. Volvé a publicar la configuración para que la nueva oferta quede incluida."
+        ? "Oferta agregada al ciclo. Publicá los cambios de oferta desde Períodos para que aparezca en las solicitudes."
         : "Oferta agregada al ciclo. Podés modificar su capacidad y disponibilidad sin afectar otros períodos.";
     } else if (nombre === "editar-oferta-periodo") {
       const oferta = operacion.ofertaPeriodo;
@@ -646,11 +680,39 @@ export async function atenderFormulario(formulario, ctx) {
         motivo: datos.motivo,
       });
       operacion.mensajeExito = operacion.periodo.versionOfertaId
-        ? "Oferta actualizada. Volvé a publicar la configuración para que los cambios queden incluidos en el ciclo."
+        ? "Oferta actualizada. Publicá los cambios de oferta desde Períodos para aplicar el cambio en este ciclo."
         : "Oferta del ciclo actualizada.";
-    } else if (nombre === "versiones") {
+    } else if (nombre === "preparar-ciclo") {
       const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
-      const referencia = `Publicación de reglas y oferta del ciclo ${operacion.periodo.ciclo}`;
+      const referencia = `Configuración inicial del ciclo ${operacion.periodo.ciclo}`;
+      operacion.versiones ??= {};
+      if (!operacion.periodo.versionReglasId && !operacion.versiones.reglas)
+        operacion.versiones.reglas = (
+          await crear(`${r}/versiones-reglas`, {
+            fechaCorte: datos.fechaCorte,
+            referencia,
+            motivo: datos.motivo,
+          })
+        ).id;
+      if (!operacion.periodo.versionOfertaId && !operacion.versiones.oferta)
+        operacion.versiones.oferta = (
+          await crear(`${r}/versiones-oferta`, {
+            referencia,
+            motivo: datos.motivo,
+          })
+        ).id;
+      await actualizar(`${r}/configuracion`, {
+        versiones: {
+          versionReglasId: operacion.versiones.reglas ?? operacion.periodo.versionReglasId,
+          versionOfertaId: operacion.versiones.oferta ?? operacion.periodo.versionOfertaId,
+        },
+        revision: operacion.periodo.revision,
+        motivo: datos.motivo,
+      });
+      operacion.mensajeExito = "Ciclo preparado. La fecha de corte y la oferta quedaron asociadas a este período.";
+    } else if (nombre === "editar-fecha-corte") {
+      const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
+      const referencia = `Actualización de fecha de corte del ciclo ${operacion.periodo.ciclo}`;
       operacion.versiones ??= {};
       if (!operacion.versiones.reglas)
         operacion.versiones.reglas = (
@@ -660,6 +722,19 @@ export async function atenderFormulario(formulario, ctx) {
             motivo: datos.motivo,
           })
         ).id;
+      await actualizar(`${r}/configuracion`, {
+        versiones: {
+          versionReglasId: operacion.versiones.reglas,
+          versionOfertaId: operacion.periodo.versionOfertaId,
+        },
+        revision: operacion.periodo.revision,
+        motivo: datos.motivo,
+      });
+      operacion.mensajeExito = "Fecha de corte actualizada para el ciclo. La oferta publicada no se modificó.";
+    } else if (nombre === "publicar-oferta-periodo") {
+      const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
+      const referencia = `Publicación de oferta del ciclo ${operacion.periodo.ciclo}`;
+      operacion.versiones ??= {};
       if (!operacion.versiones.oferta)
         operacion.versiones.oferta = (
           await crear(`${r}/versiones-oferta`, {
@@ -669,12 +744,13 @@ export async function atenderFormulario(formulario, ctx) {
         ).id;
       await actualizar(`${r}/configuracion`, {
         versiones: {
-          versionReglasId: operacion.versiones.reglas,
+          versionReglasId: operacion.periodo.versionReglasId,
           versionOfertaId: operacion.versiones.oferta,
         },
         revision: operacion.periodo.revision,
         motivo: datos.motivo,
       });
+      operacion.mensajeExito = "Oferta publicada para el ciclo. La fecha de corte y las reglas se conservaron.";
     } else if (nombre === "distancia") {
       if (
         !Number.isFinite(Number(datos.distanciaMetros)) ||

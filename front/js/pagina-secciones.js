@@ -31,6 +31,7 @@ export async function secciones(ruta, ctx) {
     );
   if (ctx.estado.previa) return cabecera + vistaPreviaOrganizacion();
   const secciones = await ctx.api(`${rutaPeriodo(ctx)}/secciones`);
+  const ofertasHabilitadas = (ctx.estado.ofertasPublicadas ?? []).filter((oferta) => oferta.capacidad > 0);
   ctx.organizacion = { secciones };
   if (ruta.split("/")[1] === "distribuciones") {
     if (!distribucionId) {
@@ -111,7 +112,9 @@ export async function secciones(ruta, ctx) {
         ]),
       ),
       ctx.puedeResolver()
-        ? boton("org-definir-seccion", "Definir sección")
+        ? ofertasHabilitadas.length
+          ? boton("org-definir-seccion", "Definir sección")
+          : '<p class="tarjeta__descripcion">No hay ofertas habilitadas publicadas para este período. Configurá y publicá una oferta antes de definir secciones.</p>'
         : "",
     )
   );

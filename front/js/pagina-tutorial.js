@@ -134,10 +134,10 @@ export function tutorial(ctx) {
         ],
         [
           "En <strong>Períodos</strong>, elegí <strong>Crear período</strong> e indicá el ciclo lectivo y sus fechas previstas. El período se crea en estado de preparación; todavía no recibe solicitudes.",
-          "En <strong>Aulas, turnos y oferta</strong>, agregá las aulas y los turnos que usa el jardín. Después cargá cada combinación de aula y turno, indicá su capacidad declarada y marcá si estará disponible para este período.",
-          "Volvé a <strong>Períodos</strong> y elegí <strong>Publicar y asignar versiones</strong>. <strong>La fecha de corte es clave: indica el día exacto en que el sistema calcula la edad para determinar la sala; no usa la edad que tiene el aspirante el día que lo inscribís.</strong> Ingresá la fecha aprobada para ese ciclo y confirmá el motivo. La aplicación publicará las reglas y una copia de la oferta actual.",
+          "En <strong>Aulas, turnos y oferta</strong>, prepará las aulas y los turnos. Creá o reutilizá una combinación del catálogo y agregala al ciclo. En la oferta del ciclo ajustá la capacidad y dejala habilitada si se ofrecerá en esa inscripción.",
+          "Volvé a <strong>Períodos</strong> y elegí <strong>Preparar configuración inicial</strong>. Ingresá la fecha de corte aprobada para ese ciclo: la aplicación publicará las reglas y la oferta actual. <strong>La fecha de corte indica el día exacto en que se calcula la edad para determinar la sala; no usa la edad que tiene el aspirante al momento de inscribirlo.</strong>",
           "Ejemplo: si para el ciclo 2027 la fecha de corte es <strong>30/06/2027</strong>, quien nació el 30/06/2024 tiene 3 años en esa fecha; quien nació el 01/07/2024 todavía tiene 2. Para las salas de 3 a 5 años, el rango de nacimiento de este ejemplo va del 01/07/2021 al 30/06/2024, inclusive. Fuera de ese rango la sala queda pendiente de revisión. La fecha no se completa sola: verificá el criterio del jardín antes de publicar.",
-          "En la fila del ciclo preparado, elegí <strong>Abrir recepción</strong> cuando ya estés listo para recibir solicitudes. La apertura es manual; sin ella no comienza la inscripción ordinaria.",
+          "Después de preparar el ciclo, los cambios posteriores se publican por separado: <strong>Publicar cambios de oferta</strong> no vuelve a pedir la fecha de corte; <strong>Cambiar fecha de corte</strong> solo actualiza las reglas. En la fila del ciclo, elegí <strong>Abrir recepción</strong> cuando estés listo para recibir solicitudes. La apertura es manual.",
         ],
       )}${paso(
         3,
@@ -213,7 +213,7 @@ export function tutorial(ctx) {
           ["secciones/distribuciones", "Distribuciones", 5],
         ],
         [
-          "Hacé este paso después de confirmar los ingresos. En la pestaña <strong>Secciones</strong>, elegí <strong>Definir sección</strong>. Para cada sección, completá un nombre que puedas reconocer, el aula, el turno y las edades que puede recibir. La capacidad se toma de la oferta de esa aula y turno.",
+          "Hacé este paso después de confirmar los ingresos. En la pestaña <strong>Secciones</strong>, elegí <strong>Definir sección</strong>. Completá un nombre, seleccioná una <strong>oferta habilitada</strong> (aula y turno) y elegí la composición por edades. La capacidad se toma de la oferta publicada; si no aparece ninguna, primero hay que habilitar y publicar una oferta en <strong>Aulas, turnos y oferta</strong>.",
           "Una sección <strong>pura</strong> recibe una sola edad (3, 4 o 5). Una <strong>multiedad</strong> puede recibir una combinación habilitada, como 3 y 4 o 4 y 5. Usá multiedad solo si esa combinación corresponde a la organización aprobada para el jardín. Si necesitás convertir una sección pura, usá <strong>Ampliar a multiedad</strong>; el sistema comprobará compatibilidad y capacidad.",
           "Antes de generar la distribución, verificá que exista una sección para cada combinación de aula, turno y edad que necesiten los ingresos. Si falta una opción o no alcanza la capacidad, agregá o ajustá las secciones antes de continuar.",
           "Abrí <strong>Distribuciones</strong> y elegí <strong>Generar distribución</strong>. El sistema propone una sección compatible para cada ingreso activo que todavía no tenga asignación. Crear la propuesta no guarda asignaciones definitivas.",

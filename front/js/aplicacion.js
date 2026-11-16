@@ -35,10 +35,12 @@ const estado = {
   institucion: null,
   periodos: [],
   periodo: null,
+  fechaCortePeriodo: null,
   aulas: [],
   turnos: [],
   ofertasInstitucionales: [],
   ofertas: [],
+  ofertasPublicadas: [],
   turnosSolicitud: [],
   pagina: 1,
   filtros: {},
@@ -149,10 +151,12 @@ function salir(mensaje = "") {
     institucion: null,
     periodos: [],
     periodo: null,
+    fechaCortePeriodo: null,
     aulas: [],
     turnos: [],
     ofertasInstitucionales: [],
     ofertas: [],
+    ofertasPublicadas: [],
     borrador: null,
     borradores: [],
     filtros: {},
@@ -318,10 +322,12 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
   if (!estado.institucion) {
     estado.periodos = [];
     estado.periodo = null;
+    estado.fechaCortePeriodo = null;
     estado.aulas = [];
     estado.turnos = [];
     estado.ofertasInstitucionales = [];
     estado.ofertas = [];
+    estado.ofertasPublicadas = [];
     estado.turnosSolicitud = [];
     return;
   }
@@ -354,6 +360,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
     periodos.find((p) => p.id === (periodoId ?? estado.periodo?.id ?? contextoGuardado?.periodoId)) ??
     periodos[0] ??
     null;
+  estado.fechaCortePeriodo = estado.previa ? "2027-06-30" : null;
   estado.ofertas = !estado.periodo
     ? []
     : estado.previa
@@ -361,7 +368,10 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       : await solicitar(
           `/periodos/${encodeURIComponent(estado.periodo.id)}/ofertas`,
         );
-  if (estado.previa) estado.turnosSolicitud = turnos;
+  if (estado.previa) {
+    estado.turnosSolicitud = turnos;
+    estado.ofertasPublicadas = ofertasEjemplo.filter((oferta) => oferta.disponible);
+  }
   else if (estado.periodo?.versionOfertaId) {
     const version = await solicitar(
       `/versiones-configuracion/${encodeURIComponent(estado.periodo.versionOfertaId)}`,
@@ -374,11 +384,32 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       throw new Error(
         "La oferta publicada utiliza un formato que este frontend todavía no interpreta.",
       );
-    const disponibles = version.datos
-      .filter((o) => o.Disponible ?? o.disponible)
-      .map((o) => o.TurnoId ?? o.turnoId);
+    estado.ofertasPublicadas = version.datos
+      .filter((oferta) => oferta.Disponible ?? oferta.disponible)
+      .map((oferta) => ({
+        aulaId: oferta.AulaId ?? oferta.aulaId,
+        turnoId: oferta.TurnoId ?? oferta.turnoId,
+        capacidad: oferta.Capacidad ?? oferta.capacidad,
+      }))
+      .filter((oferta) => oferta.aulaId && oferta.turnoId && oferta.capacidad > 0);
+    const disponibles = estado.ofertasPublicadas.map((oferta) => oferta.turnoId);
     estado.turnosSolicitud = turnos.filter((t) => disponibles.includes(t.id));
-  } else estado.turnosSolicitud = [];
+  } else {
+    estado.turnosSolicitud = [];
+    estado.ofertasPublicadas = [];
+  }
+  if (!estado.previa && estado.periodo?.versionReglasId) {
+    const versionReglas = await solicitar(
+      `/versiones-configuracion/${encodeURIComponent(estado.periodo.versionReglasId)}`,
+    );
+    if (
+      versionReglas.formato !== 1 ||
+      versionReglas.tipo !== "Reglas" ||
+      !versionReglas.datos
+    )
+      throw new Error("Las reglas publicadas del período no tienen un formato compatible.");
+    estado.fechaCortePeriodo = versionReglas.datos.FechaCorte ?? versionReglas.datos.fechaCorte ?? null;
+  }
   guardarContextoPersistido();
 }
 contexto.recargarContexto = cargarContexto;
