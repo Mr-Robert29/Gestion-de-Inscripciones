@@ -14,6 +14,7 @@ public sealed class ContextoConfiguracion : DbContext
     public DbSet<Aula> Aulas => Set<Aula>();
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<OfertaAulaTurno> Ofertas => Set<OfertaAulaTurno>();
+    public DbSet<OfertaInstitucional> OfertasInstitucionales => Set<OfertaInstitucional>();
 
     public ContextoConfiguracion(DbContextOptions<ContextoConfiguracion> opciones) : base(opciones) { }
 

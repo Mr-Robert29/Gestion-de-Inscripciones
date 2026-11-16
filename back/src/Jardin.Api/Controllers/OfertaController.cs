@@ -63,6 +63,43 @@ public sealed class OfertaController : ControllerBase
         return EjecutarAsync(async () => Ok(await _oferta.ListarTurnosAsync(institucionId, tokenCancelacion)));
     }
 
+    [HttpGet("/api/v1/instituciones/{institucionId:guid}/ofertas-reutilizables")]
+    public Task<IActionResult> ListarOfertasInstitucionales(Guid institucionId, CancellationToken tokenCancelacion)
+    {
+        return EjecutarAsync(async () => Ok(await _oferta.ListarOfertasInstitucionalesAsync(institucionId, tokenCancelacion)));
+    }
+
+    [HttpPost("/api/v1/instituciones/{institucionId:guid}/ofertas-reutilizables")]
+    public Task<IActionResult> RegistrarOfertaInstitucional(
+        Guid institucionId,
+        RegistrarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion)
+    {
+        return EjecutarAsync(async () =>
+        {
+            var respuesta = await _oferta.RegistrarOfertaInstitucionalAsync(
+                institucionId,
+                peticion,
+                tokenCancelacion);
+            return CreatedAtAction(
+                nameof(ListarOfertasInstitucionales),
+                new { institucionId },
+                respuesta);
+        });
+    }
+
+    [HttpPut("/api/v1/ofertas-reutilizables/{ofertaId:guid}")]
+    public Task<IActionResult> ActualizarOfertaInstitucional(
+        Guid ofertaId,
+        ActualizarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion)
+    {
+        return EjecutarAsync(async () => Ok(await _oferta.ActualizarOfertaInstitucionalAsync(
+            ofertaId,
+            peticion,
+            tokenCancelacion)));
+    }
+
     [HttpPost("/api/v1/periodos/{periodoId:guid}/ofertas")]
     public Task<IActionResult> Registrar(
         Guid periodoId,

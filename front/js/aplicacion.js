@@ -37,6 +37,7 @@ const estado = {
   periodo: null,
   aulas: [],
   turnos: [],
+  ofertasInstitucionales: [],
   ofertas: [],
   turnosSolicitud: [],
   pagina: 1,
@@ -150,6 +151,7 @@ function salir(mensaje = "") {
     periodo: null,
     aulas: [],
     turnos: [],
+    ofertasInstitucionales: [],
     ofertas: [],
     borrador: null,
     borradores: [],
@@ -318,21 +320,36 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
     estado.periodo = null;
     estado.aulas = [];
     estado.turnos = [];
+    estado.ofertasInstitucionales = [];
     estado.ofertas = [];
     estado.turnosSolicitud = [];
     return;
   }
   const ruta = `/instituciones/${encodeURIComponent(estado.institucion.id)}`;
-  const [periodos, aulas, turnos] = estado.previa
-    ? [periodosEjemplo, aulasEjemplo, turnosEjemplo]
+  const [periodos, aulas, turnos, ofertasInstitucionales] = estado.previa
+    ? [
+        periodosEjemplo,
+        aulasEjemplo,
+        turnosEjemplo,
+        ofertasEjemplo.map((oferta) => ({
+          id: oferta.id,
+          institucionId: institucionEjemplo.id,
+          aulaId: oferta.aulaId,
+          turnoId: oferta.turnoId,
+          capacidad: oferta.capacidad,
+          referenciaCapacidad: oferta.referenciaCapacidad,
+        })),
+      ]
     : await Promise.all([
         solicitar(`${ruta}/periodos`),
         solicitar(`${ruta}/aulas`),
         solicitar(`${ruta}/turnos`),
+        solicitar(`${ruta}/ofertas-reutilizables`),
       ]);
   estado.periodos = periodos;
   estado.aulas = aulas;
   estado.turnos = turnos;
+  estado.ofertasInstitucionales = ofertasInstitucionales;
   estado.periodo =
     periodos.find((p) => p.id === (periodoId ?? estado.periodo?.id ?? contextoGuardado?.periodoId)) ??
     periodos[0] ??

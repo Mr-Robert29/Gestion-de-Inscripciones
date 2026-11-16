@@ -325,3 +325,66 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    CREATE TABLE configuracion.ofertas_institucionales (
+        "Id" uuid NOT NULL,
+        "InstitucionId" uuid NOT NULL,
+        "AulaId" uuid NOT NULL,
+        "TurnoId" uuid NOT NULL,
+        "Capacidad" integer NOT NULL,
+        "ReferenciaCapacidad" text NOT NULL,
+        CONSTRAINT "PK_ofertas_institucionales" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_ofertas_institucionales_aulas_AulaId" FOREIGN KEY ("AulaId") REFERENCES configuracion.aulas ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_ofertas_institucionales_instituciones_InstitucionId" FOREIGN KEY ("InstitucionId") REFERENCES configuracion.instituciones ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_ofertas_institucionales_turnos_TurnoId" FOREIGN KEY ("TurnoId") REFERENCES configuracion.turnos ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    CREATE INDEX "IX_ofertas_institucionales_AulaId" ON configuracion.ofertas_institucionales ("AulaId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    CREATE INDEX "IX_ofertas_institucionales_TurnoId" ON configuracion.ofertas_institucionales ("TurnoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    CREATE UNIQUE INDEX "UX_OfertaInstitucional_Institucion_Aula_Turno" ON configuracion.ofertas_institucionales ("InstitucionId", "AulaId", "TurnoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    INSERT INTO configuracion.ofertas_institucionales
+        ("Id", "InstitucionId", "AulaId", "TurnoId", "Capacidad", "ReferenciaCapacidad")
+    SELECT DISTINCT ON (p."InstitucionId", o."AulaId", o."TurnoId")
+        o."Id", p."InstitucionId", o."AulaId", o."TurnoId", o."Capacidad", o."ReferenciaCapacidad"
+    FROM configuracion.ofertas_aula_turno o
+    INNER JOIN configuracion.periodos p ON p."Id" = o."PeriodoId"
+    ORDER BY p."InstitucionId", o."AulaId", o."TurnoId", p."Ciclo" DESC, p."Fin" DESC, o."Id" DESC;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM configuracion."__EFMigrationsHistory" WHERE "MigrationId" = '20261116150642_OfertasReutilizablesPorInstitucion') THEN
+    INSERT INTO configuracion."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261116150642_OfertasReutilizablesPorInstitucion', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

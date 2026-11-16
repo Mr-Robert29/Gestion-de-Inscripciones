@@ -52,6 +52,12 @@ export const motivos = {
     "Corrección de la oferta registrada",
     "Actualización de vacantes disponibles",
   ],
+  ofertaInstitucional: [
+    "Configuración inicial de ofertas reutilizables",
+    "Incorporación de una combinación de aula y turno",
+    "Actualización de la capacidad de referencia",
+    "Corrección de la oferta institucional",
+  ],
   propuestaAdmision: [
     "Revisión de las solicitudes recibidas",
     "Disponibilidad de vacantes del período",

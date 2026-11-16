@@ -11,8 +11,8 @@ import { camposDomicilio } from "./pagina-solicitudes.js";
 import { actualizarBorrador, claveBorradores } from "./borradores-solicitud.js";
 import { motivo, motivos } from "./operaciones-formularios.js";
 const opciones = (nombres) => nombres.map(([id, nombre]) => ({ id, nombre }));
-const accionesFormulario = (previa) =>
-  `${errorFormulario()}${previa ? '<p class="formulario__nota">Vista previa: los cambios no se guardan.</p>' : ""}<div class="formulario__acciones"><button class="boton boton--secundario" type="button" data-accion="cerrar-dialogo">Cancelar</button><button class="boton" type="submit" ${previa ? "disabled" : ""}>Guardar</button></div>`;
+const accionesFormulario = (previa, textoConfirmacion = "Guardar") =>
+  `${errorFormulario()}${previa ? '<p class="formulario__nota">Vista previa: los cambios no se guardan.</p>' : ""}<div class="formulario__acciones"><button class="boton boton--secundario" type="button" data-accion="cerrar-dialogo">Cancelar</button><button class="boton" type="submit" ${previa ? "disabled" : ""}>${e(textoConfirmacion)}</button></div>`;
 function mostrar(ctx, datos) {
   ctx.operacion = {
     institucion: ctx.estado.institucion,
@@ -25,9 +25,13 @@ function mostrar(ctx, datos) {
   ctx.abrirDialogo({
     titulo: datos.titulo,
     descripcion: datos.descripcion ?? "",
-    contenido: `<form class="formulario" data-formulario="${datos.formulario}">${datos.contenido}${accionesFormulario(ctx.estado.previa)}</form>`,
+    contenido: `<form class="formulario" data-formulario="${datos.formulario}">${datos.contenido}${accionesFormulario(ctx.estado.previa, datos.textoConfirmacion)}</form>`,
   });
 }
+function camposOfertaDeCiclo(oferta = {}, capacidadReferencia = "") {
+  return `<div class="formulario__rejilla">${campo({ nombre: "capacidad", etiqueta: "Capacidad para este ciclo", tipo: "number", valor: oferta.capacidad ?? capacidadReferencia, obligatorio: true, ayuda: "Este valor solo afecta al ciclo seleccionado.", atributos: 'min="0" step="1"' })}</div><label class="casilla"><input type="checkbox" name="disponible" ${oferta.disponible === false ? "" : "checked"}>Habilitada para este ciclo</label>${motivo(motivos.oferta, { etiqueta: "Motivo del cambio" })}`;
+}
+
 export async function atenderAccion(elemento, ctx) {
   if (await atenderAccionOrganizacion(elemento, ctx)) return;
   const accion = elemento.dataset.accion;
@@ -101,25 +105,71 @@ export async function atenderAccion(elemento, ctx) {
     });
     return;
   }
-  if (accion === "nueva-oferta") {
+  if (accion === "nueva-oferta-institucional") {
     if (!estado.aulas.length || !estado.turnos.length)
       throw new Error("Primero registrá al menos un aula y un turno.");
     mostrar(ctx, {
-      titulo: "Agregar oferta del período",
-      formulario: "oferta",
-      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad declarada", tipo: "number", obligatorio: true, ayuda: "Cantidad máxima de lugares para esta aula y turno.", atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad (opcional)", ayuda: "Podés indicar un acta, planilla o norma que respalde la capacidad informada." })}</div><label class="casilla"><input type="checkbox" name="disponible" checked>Disponible en este período</label>${motivo(motivos.oferta, { etiqueta: "Motivo del registro" })}`,
+      titulo: "Crear oferta reutilizable",
+      descripcion: "Guardá una combinación base de aula, turno y capacidad para agregarla a los ciclos que la necesiten.",
+      formulario: "oferta-institucional",
+      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad de referencia", tipo: "number", obligatorio: true, ayuda: "Es el valor sugerido al copiar esta oferta a un ciclo.", atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad (opcional)", ayuda: "Podés indicar un acta, planilla o norma que respalde la capacidad informada." })}</div>${motivo(motivos.ofertaInstitucional, { etiqueta: "Motivo del registro" })}`,
     });
+    return;
+  }
+  if (accion === "editar-oferta-institucional") {
+    const oferta = estado.ofertasInstitucionales.find((item) => item.id === elemento.dataset.id);
+    if (!oferta) throw new Error("No se encontró la oferta reutilizable.");
+    mostrar(ctx, {
+      titulo: "Editar oferta reutilizable",
+      descripcion: "Los cambios se usarán como referencia al agregar esta combinación a otros ciclos. Las ofertas ya agregadas conservan sus propios datos.",
+      formulario: "editar-oferta-institucional",
+      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, valor: oferta.aulaId, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, valor: oferta.turnoId, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad de referencia", tipo: "number", valor: oferta.capacidad, obligatorio: true, atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia (opcional)", valor: oferta.referenciaCapacidad === "Sin referencia informada" ? "" : oferta.referenciaCapacidad })}</div>${motivo(motivos.ofertaInstitucional, { etiqueta: "Motivo del cambio" })}`,
+    });
+    ctx.operacion.ofertaInstitucional = oferta;
+    return;
+  }
+  if (accion === "agregar-oferta-periodo") {
+    const plantilla = estado.ofertasInstitucionales.find((item) => item.id === elemento.dataset.id);
+    if (!plantilla || !estado.periodo)
+      throw new Error("Seleccioná una oferta reutilizable y un período para continuar.");
+    const aula = estado.aulas.find((item) => item.id === plantilla.aulaId)?.nombre ?? "Aula";
+    const turno = estado.turnos.find((item) => item.id === plantilla.turnoId)?.nombre ?? "Turno";
+    if (estado.ofertas.some((item) => item.aulaId === plantilla.aulaId && item.turnoId === plantilla.turnoId))
+      throw new Error("Esta combinación ya está agregada al período seleccionado.");
+    mostrar(ctx, {
+      titulo: `Agregar oferta al ciclo ${estado.periodo.ciclo}`,
+      descripcion: `${aula} · ${turno}. Se copiará desde las ofertas reutilizables y podrás ajustar sus datos para este ciclo.`,
+      formulario: "agregar-oferta-periodo",
+      contenido: camposOfertaDeCiclo({}, plantilla.capacidad) + '<p class="formulario__nota">La oferta reutilizable no se modifica; esta copia tendrá disponibilidad y capacidad propias del ciclo.</p>',
+    });
+    ctx.operacion.ofertaPlantilla = plantilla;
+    return;
+  }
+  if (accion === "editar-oferta-periodo") {
+    const oferta = estado.ofertas.find((item) => item.id === elemento.dataset.id);
+    if (!oferta || !estado.periodo)
+      throw new Error("No se encontró la oferta del período seleccionado.");
+    const aula = estado.aulas.find((item) => item.id === oferta.aulaId)?.nombre ?? "Aula";
+    const turno = estado.turnos.find((item) => item.id === oferta.turnoId)?.nombre ?? "Turno";
+    mostrar(ctx, {
+      titulo: `Modificar oferta del ciclo ${estado.periodo.ciclo}`,
+      descripcion: `${aula} · ${turno}. Los cambios se aplicarán solo a este período.`,
+      formulario: "editar-oferta-periodo",
+      contenido: camposOfertaDeCiclo(oferta) + (estado.periodo.versionOfertaId ? '<p class="formulario__nota">Después de guardar, volvé a publicar la configuración para aplicar el cambio en este ciclo.</p>' : ""),
+    });
+    ctx.operacion.ofertaPeriodo = oferta;
     return;
   }
   if (accion === "preparar-versiones") {
     mostrar(ctx, {
-      titulo: "Publicar y asignar configuración",
+      titulo: `Fecha de corte y oferta del ciclo ${estado.periodo?.ciclo ?? "seleccionado"}`,
       descripcion:
-        "Publicará reglas y una copia de la oferta; luego las asociará al período seleccionado.",
+        "Ingresá la fecha de corte. Al confirmar, se guardará y se publicará una copia de la oferta que ya cargaste; ambas quedarán asociadas a este período.",
+      textoConfirmacion: "Confirmar publicación",
       formulario: "versiones",
       contenido:
         aviso(
-          "Las publicaciones anteriores se conservan. Verificá la oferta y la fecha de corte antes de continuar.",
+          "Al confirmar, se guardará la fecha de corte y se publicará una copia de la oferta existente. Esta acción no crea aulas ni modifica capacidades. Las versiones anteriores se conservan.",
           "aviso",
         ) +
         campo({
@@ -127,6 +177,8 @@ export async function atenderAccion(elemento, ctx) {
           etiqueta: "Fecha de corte para calcular edades",
           tipo: "date",
           obligatorio: true,
+          ayuda:
+            "Es la fecha que el sistema usa para calcular la edad y el grupo etario de cada aspirante en este ciclo.",
         }) +
         motivo(motivos.publicacion, { etiqueta: "Motivo de la publicación" }),
     });
@@ -539,20 +591,63 @@ export async function atenderFormulario(formulario, ctx) {
       await crear(`${ruta}/${nombre === "nueva-aula" ? "aulas" : "turnos"}`, {
         nombre: datos.nombre,
       });
-    } else if (nombre === "oferta") {
+    } else if (nombre === "oferta-institucional") {
+      await crear(`${ruta}/ofertas-reutilizables`, {
+        aulaId: datos.aulaId,
+        turnoId: datos.turnoId,
+        capacidad: Number(datos.capacidad),
+        referenciaCapacidad: datos.referenciaCapacidad || null,
+        motivo: datos.motivo,
+      });
+      operacion.mensajeExito = "Oferta guardada en el catálogo de la institución. Ya podés agregarla a los ciclos que la necesiten.";
+    } else if (nombre === "editar-oferta-institucional") {
+      const oferta = operacion.ofertaInstitucional;
+      if (!oferta) throw new Error("No se encontró la oferta reutilizable.");
+      await actualizar(`/ofertas-reutilizables/${encodeURIComponent(oferta.id)}`, {
+        aulaId: datos.aulaId,
+        turnoId: datos.turnoId,
+        capacidad: Number(datos.capacidad),
+        referenciaCapacidad: datos.referenciaCapacidad || null,
+        motivo: datos.motivo,
+      });
+      operacion.mensajeExito = "Oferta reutilizable actualizada. Los ciclos ya configurados mantienen sus valores.";
+    } else if (nombre === "agregar-oferta-periodo") {
+      const plantilla = operacion.ofertaPlantilla;
+      const periodo = operacion.periodo;
+      if (!plantilla || !periodo)
+        throw new Error("El contexto cambió. Cerrá el formulario y volvé a seleccionar la oferta y el período.");
       await crear(
-        `/periodos/${encodeURIComponent(operacion.periodo.id)}/ofertas`,
+        `/periodos/${encodeURIComponent(periodo.id)}/ofertas`,
         {
-          aulaId: datos.aulaId,
-          turnoId: datos.turnoId,
+          aulaId: plantilla.aulaId,
+          turnoId: plantilla.turnoId,
           capacidad: Number(datos.capacidad),
           disponible: datosFormulario.has("disponible"),
-          referenciaCapacidad: datos.referenciaCapacidad || "Sin referencia informada",
-          origenOcupaciones: "No informado",
+          referenciaCapacidad: plantilla.referenciaCapacidad || "Sin referencia informada",
+          origenOcupaciones: "Sin ocupaciones iniciales",
           ocupaciones: [],
           motivo: datos.motivo,
         },
       );
+      operacion.mensajeExito = periodo.versionOfertaId
+        ? "Oferta agregada al ciclo. Volvé a publicar la configuración para que la nueva oferta quede incluida."
+        : "Oferta agregada al ciclo. Podés modificar su capacidad y disponibilidad sin afectar otros períodos.";
+    } else if (nombre === "editar-oferta-periodo") {
+      const oferta = operacion.ofertaPeriodo;
+      if (!oferta || operacion.periodo?.id !== ctx.estado.periodo?.id)
+        throw new Error("El período cambió. Cerrá el formulario y consultá nuevamente.");
+      await actualizar(`/ofertas/${encodeURIComponent(oferta.id)}`, {
+        capacidad: Number(datos.capacidad),
+        disponible: datosFormulario.has("disponible"),
+        referenciaCapacidad: oferta.referenciaCapacidad,
+        origenOcupaciones: oferta.origenOcupaciones,
+        ocupaciones: oferta.ocupaciones,
+        revision: oferta.revision,
+        motivo: datos.motivo,
+      });
+      operacion.mensajeExito = operacion.periodo.versionOfertaId
+        ? "Oferta actualizada. Volvé a publicar la configuración para que los cambios queden incluidos en el ciclo."
+        : "Oferta del ciclo actualizada.";
     } else if (nombre === "versiones") {
       const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
       const referencia = `Publicación de reglas y oferta del ciclo ${operacion.periodo.ciclo}`;
@@ -682,7 +777,7 @@ export async function atenderFormulario(formulario, ctx) {
     ctx.cerrarDialogo();
     await ctx.recargarContexto();
     await ctx.actualizar();
-    ctx.notificar("Los datos se guardaron correctamente.");
+    ctx.notificar(operacion?.mensajeExito ?? "Los datos se guardaron correctamente.");
   } catch (problema) {
     let mensaje = problema.message;
     if (problema.estado === 409)

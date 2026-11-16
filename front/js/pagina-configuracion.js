@@ -64,23 +64,50 @@ export function periodos(ctx) {
         ? botonNuevo({ texto: "Crear período", accion: "nuevo-periodo" })
         : "",
     }) +
-    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Períodos vigentes</h2></div>${periodosVigentes.length ? tablaPeriodos(periodosVigentes) : vacio({ titulo: "No hay períodos vigentes", descripcion: "Los períodos cerrados se conservan en el historial. Creá un nuevo ciclo cuando quieras preparar otra inscripción.", dibujo: "calendario" })}</section>${periodosCerrados.length ? `<details class="tarjeta tarjeta--separada periodos__historial"><summary>Historial de períodos</summary><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Períodos cerrados que se conservan para consultar sus solicitudes y configuraciones anteriores.</p>${avisoDuplicados}${tablaPeriodos(periodosCerrados)}</div></details>` : ""}<div class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Reglas y oferta del período seleccionado</h2></div><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Las solicitudes necesitan una versión de reglas y una de oferta asignadas al período.</p><div class="formulario__acciones">${ctx.puedeEditar() && ctx.estado.periodo ? '<button class="boton boton--secundario" data-accion="preparar-versiones">Publicar y asignar versiones</button>' : ""}</div></div></div>`
+    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Períodos vigentes</h2></div>${periodosVigentes.length ? tablaPeriodos(periodosVigentes) : vacio({ titulo: "No hay períodos vigentes", descripcion: "Los períodos cerrados se conservan en el historial. Creá un nuevo ciclo cuando quieras preparar otra inscripción.", dibujo: "calendario" })}</section>${periodosCerrados.length ? `<details class="tarjeta tarjeta--separada periodos__historial"><summary>Historial de períodos</summary><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Períodos cerrados que se conservan para consultar sus solicitudes y configuraciones anteriores.</p>${avisoDuplicados}${tablaPeriodos(periodosCerrados)}</div></details>` : ""}<div class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Configurar fecha de corte y publicar oferta</h2></div><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Ingresá la fecha que se usará para calcular la edad de los aspirantes. Al confirmar, el sistema guardará esa fecha y publicará una copia de la oferta ya cargada en Aulas, turnos y oferta, asociándolas al ciclo ${e(ctx.estado.periodo?.ciclo ?? "seleccionado")}.</p><div class="formulario__acciones">${ctx.puedeEditar() && ctx.estado.periodo ? '<button class="boton boton--secundario" data-accion="preparar-versiones">Configurar fecha y publicar oferta</button>' : ""}</div></div></div>`
   );
 }
 export function oferta(ctx) {
   const { aulas, turnos, ofertas } = ctx.estado;
+  const catalogo = ctx.estado.ofertasInstitucionales ?? [];
+  const combinacionesEnPeriodo = new Set(ofertas.map((oferta) => `${oferta.aulaId}:${oferta.turnoId}`));
+  const ofertasCatalogo = catalogo.length
+    ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Aula</th><th>Turno</th><th>Capacidad de referencia</th><th>Referencia</th><th>Acción</th></tr></thead><tbody>${catalogo.map((plantilla) => {
+        const aula = aulas.find((item) => item.id === plantilla.aulaId)?.nombre ?? "Aula";
+        const turno = turnos.find((item) => item.id === plantilla.turnoId)?.nombre ?? "Turno";
+        const agregada = combinacionesEnPeriodo.has(`${plantilla.aulaId}:${plantilla.turnoId}`);
+        const agregar = ctx.estado.periodo
+          ? agregada
+            ? '<span class="tabla__detalle">Ya agregada</span>'
+            : `<button class="boton boton--secundario boton--icono" data-accion="agregar-oferta-periodo" data-id="${e(plantilla.id)}" title="Agregar al ciclo ${e(ctx.estado.periodo.ciclo)}" aria-label="Agregar ${e(aula)} · ${e(turno)} al ciclo ${e(ctx.estado.periodo.ciclo)}">+</button>`
+          : '<span class="tabla__detalle">Seleccioná un período</span>';
+        return `<tr><td>${e(aula)}</td><td>${e(turno)}</td><td>${numero(plantilla.capacidad)}</td><td>${e(plantilla.referenciaCapacidad || "Sin referencia informada")}</td><td><div style="display:flex;align-items:center;gap:.5rem">${ctx.puedeEditar() ? `<button class="boton boton--secundario boton--pequeno" data-accion="editar-oferta-institucional" data-id="${e(plantilla.id)}">Editar</button>${ctx.estado.periodo ? agregar : ""}` : '<span class="tabla__detalle">Solo lectura</span>'}</div></td></tr>`;
+      }).join("")}</tbody></table></div>`
+    : vacio({
+        titulo: "Todavía no hay ofertas reutilizables",
+        descripcion: "Creá una combinación de aula y turno una sola vez. Después podrás agregarla a los ciclos que la necesiten.",
+        dibujo: "aulas",
+        accion: ctx.puedeEditar() ? '<button class="boton boton--secundario" data-accion="nueva-oferta-institucional">Crear oferta reutilizable</button>' : "",
+      });
+  const tablaPeriodo = ofertas.length
+    ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Aula</th><th>Turno</th><th>Capacidad</th><th>Disponibilidad</th><th>Acción</th></tr></thead><tbody>${ofertas.map((o) => `<tr><td>${e(aulas.find((a) => a.id === o.aulaId)?.nombre ?? "Aula")}</td><td>${e(turnos.find((t) => t.id === o.turnoId)?.nombre ?? "Turno")}</td><td>${numero(o.capacidad)}</td><td>${etiqueta(o.disponible ? "Habilitada" : "Deshabilitada", o.disponible ? "" : "neutra")}</td><td>${ctx.puedeEditar() ? `<button class="boton boton--secundario boton--pequeno" data-accion="editar-oferta-periodo" data-id="${e(o.id)}">Ajustar</button>` : '<span class="tabla__detalle">Solo lectura</span>'}</td></tr>`).join("")}</tbody></table></div>`
+    : vacio({
+        titulo: "Todavía no hay ofertas para este ciclo",
+        descripcion: "Agregá al período las combinaciones reutilizables que quieras habilitar. Cada ciclo conserva su propia capacidad y ocupación.",
+        dibujo: "aulas",
+      });
   return (
     encabezado({
       titulo: "Aulas, turnos y oferta",
-      descripcion: "Prepará los recursos disponibles para cada período.",
+      descripcion: "Administrá combinaciones reutilizables y elegí cuáles habilitar en cada ciclo.",
       accion:
-        ctx.puedeEditar() && ctx.estado.periodo
-          ? botonNuevo({ texto: "Agregar oferta", accion: "nueva-oferta" })
+        ctx.puedeEditar()
+          ? botonNuevo({ texto: "Crear oferta reutilizable", accion: "nueva-oferta-institucional" })
           : "",
     }) +
     aviso(
       "La capacidad neta inicial descuenta las ocupaciones declaradas. No es el cálculo final de vacantes ni garantiza un ingreso.",
     ) +
-    `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Aulas", descripcion: "Espacios de tu institución.", accion: ctx.puedeEditar() ? '<button class="boton boton--texto boton--pequeno" data-accion="nueva-aula">+ Agregar</button>' : "", cuerpo: aulas.length ? aulas.map((a) => `<div class="acceso-rapido"><strong class="acceso-rapido__titulo">${e(a.nombre)}</strong></div>`).join("") : '<p class="formulario__nota">Todavía no hay aulas registradas.</p>' })}${tarjeta({ titulo: "Turnos", descripcion: "Horarios disponibles.", accion: ctx.puedeEditar() ? '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-turno">+ Agregar</button>' : "", cuerpo: turnos.length ? turnos.map((t) => `<div class="acceso-rapido"><strong class="acceso-rapido__titulo">${e(t.nombre)}</strong></div>`).join("") : '<p class="formulario__nota">Todavía no hay turnos registrados.</p>' })}</div><section class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Oferta del período seleccionado</h2></div>${ofertas.length ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Aula</th><th>Turno</th><th>Capacidad</th><th>Ocupación inicial</th><th>Neta inicial</th><th>Disponibilidad</th></tr></thead><tbody>${ofertas.map((o) => `<tr><td>${e(aulas.find((a) => a.id === o.aulaId)?.nombre ?? "Aula")}</td><td>${e(turnos.find((t) => t.id === o.turnoId)?.nombre ?? "Turno")}</td><td>${numero(o.capacidad)}</td><td>${numero(o.ocupaciones.reduce((s, c) => s + c.cantidad, 0))}</td><td><strong>${numero(o.capacidadNetaInicial)}</strong></td><td>${etiqueta(o.disponible ? "Disponible" : "No disponible", o.disponible ? "" : "neutra")}</td></tr>`).join("")}</tbody></table></div>` : vacio({ titulo: "La oferta todavía está por preparar", descripcion: "Agregá una combinación de aula y turno con capacidad y ocupaciones iniciales.", dibujo: "aulas" })}</section>`
+    `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Aulas", descripcion: "Espacios de tu institución.", accion: ctx.puedeEditar() ? '<button class="boton boton--texto boton--pequeno" data-accion="nueva-aula">+ Agregar</button>' : "", cuerpo: aulas.length ? aulas.map((a) => `<div class="acceso-rapido"><strong class="acceso-rapido__titulo">${e(a.nombre)}</strong></div>`).join("") : '<p class="formulario__nota">Todavía no hay aulas registradas.</p>' })}${tarjeta({ titulo: "Turnos", descripcion: "Horarios disponibles.", accion: ctx.puedeEditar() ? '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-turno">+ Agregar</button>' : "", cuerpo: turnos.length ? turnos.map((t) => `<div class="acceso-rapido"><strong class="acceso-rapido__titulo">${e(t.nombre)}</strong></div>`).join("") : '<p class="formulario__nota">Todavía no hay turnos registrados.</p>' })}</div><section class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><div><h2 class="tarjeta__titulo">Ofertas reutilizables de la institución</h2><p class="tarjeta__descripcion">Estas combinaciones no pertenecen a un ciclo hasta que las agregás.</p></div></div>${ofertasCatalogo}</section><section class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><div><h2 class="tarjeta__titulo">Oferta del ciclo ${e(ctx.estado.periodo?.ciclo ?? "seleccionado")}</h2><p class="tarjeta__descripcion">Cada ciclo tiene una copia independiente. Si modificás la oferta después de publicarla, volvé a publicar la configuración para incluir los cambios.</p></div></div>${tablaPeriodo}</section>`
   );
 }

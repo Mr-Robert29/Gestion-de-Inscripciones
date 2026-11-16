@@ -27,6 +27,12 @@ public sealed class RepositorioOferta : IRepositorioOferta
     public async Task<IReadOnlyList<Turno>> ListarTurnosAsync(Guid institucionId, CancellationToken tokenCancelacion = default)
         => await _contexto.Turnos.AsNoTracking().Where(t => t.InstitucionId == institucionId).OrderBy(t => t.Nombre).ToArrayAsync(tokenCancelacion);
 
+    public async Task<IReadOnlyList<OfertaInstitucional>> ListarOfertasInstitucionalesAsync(Guid institucionId, CancellationToken tokenCancelacion = default)
+        => await _contexto.OfertasInstitucionales.AsNoTracking().Where(o => o.InstitucionId == institucionId).OrderBy(o => o.Id).ToArrayAsync(tokenCancelacion);
+
+    public Task<OfertaInstitucional?> ObtenerOfertaInstitucionalAsync(Guid id, CancellationToken tokenCancelacion = default)
+        => _contexto.OfertasInstitucionales.SingleOrDefaultAsync(o => o.Id == id, tokenCancelacion);
+
     // Implementa IRepositorioOferta.ObtenerOfertaAsync.
     public Task<OfertaAulaTurno?> ObtenerOfertaAsync(Guid id, CancellationToken tokenCancelacion = default)
         => _contexto.Ofertas.Include(o => o.Ocupaciones).SingleOrDefaultAsync(o => o.Id == id, tokenCancelacion);
@@ -42,6 +48,9 @@ public sealed class RepositorioOferta : IRepositorioOferta
         Guid turnoId,
         CancellationToken tokenCancelacion = default)
         => _contexto.Ofertas.AnyAsync(o => o.PeriodoId == periodoId && o.AulaId == aulaId && o.TurnoId == turnoId, tokenCancelacion);
+
+    public Task<bool> ExisteOfertaInstitucionalAsync(Guid institucionId, Guid aulaId, Guid turnoId, CancellationToken tokenCancelacion = default)
+        => _contexto.OfertasInstitucionales.AnyAsync(o => o.InstitucionId == institucionId && o.AulaId == aulaId && o.TurnoId == turnoId, tokenCancelacion);
 
     // Implementa IRepositorioOferta.AgregarAulaAsync.
     public Task AgregarAulaAsync(
@@ -61,6 +70,42 @@ public sealed class RepositorioOferta : IRepositorioOferta
     {
         _contexto.Turnos.Add(turno);
         return GuardarAsync(cambio, tokenCancelacion);
+    }
+
+    // Implementa IRepositorioOferta.AgregarOfertaInstitucionalAsync.
+    public async Task AgregarOfertaInstitucionalAsync(
+        OfertaInstitucional oferta,
+        CambioInstitucion cambio,
+        CancellationToken tokenCancelacion = default)
+    {
+        _contexto.OfertasInstitucionales.Add(oferta);
+        try { await GuardarAsync(cambio, tokenCancelacion); }
+        catch (DbUpdateException error) when (error.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "UX_OfertaInstitucional_Institucion_Aula_Turno"
+        })
+        {
+            throw new InvalidOperationException("Esa combinación de aula y turno ya existe en las ofertas reutilizables.", error);
+        }
+    }
+
+    public async Task ActualizarOfertaInstitucionalAsync(
+        OfertaInstitucional oferta,
+        CambioInstitucion cambio,
+        CancellationToken tokenCancelacion = default)
+    {
+        if (_contexto.Entry(oferta).State == EntityState.Detached)
+            throw new InvalidOperationException("Consultá la oferta reutilizable antes de modificarla.");
+        try { await GuardarAsync(cambio, tokenCancelacion); }
+        catch (DbUpdateException error) when (error.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "UX_OfertaInstitucional_Institucion_Aula_Turno"
+        })
+        {
+            throw new InvalidOperationException("Esa combinación de aula y turno ya existe en las ofertas reutilizables.", error);
+        }
     }
 
     // Implementa IRepositorioOferta.AgregarOfertaAsync.
