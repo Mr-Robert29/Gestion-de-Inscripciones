@@ -26,6 +26,7 @@ import { presentarPagina, titulos } from "./paginas.js";
 import { atenderAccion, atenderFormulario } from "./acciones.js";
 import { actualizarIndicadoresClave } from "./validacion-clave.js";
 import { validarClave } from "./validacion-clave.js";
+import { edadesDeReglas } from "./reglas-edad.js";
 
 const raiz = document.getElementById("aplicacion");
 const estado = {
@@ -36,10 +37,12 @@ const estado = {
   periodos: [],
   periodo: null,
   fechaCortePeriodo: null,
+  edadesAdmitidasPeriodo: null,
   aulas: [],
   turnos: [],
   ofertasInstitucionales: [],
   ofertas: [],
+  ofertasVersionadas: [],
   ofertasPublicadas: [],
   turnosSolicitud: [],
   pagina: 1,
@@ -152,10 +155,12 @@ function salir(mensaje = "") {
     periodos: [],
     periodo: null,
     fechaCortePeriodo: null,
+    edadesAdmitidasPeriodo: null,
     aulas: [],
     turnos: [],
     ofertasInstitucionales: [],
     ofertas: [],
+    ofertasVersionadas: [],
     ofertasPublicadas: [],
     borrador: null,
     borradores: [],
@@ -323,10 +328,12 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
     estado.periodos = [];
     estado.periodo = null;
     estado.fechaCortePeriodo = null;
+    estado.edadesAdmitidasPeriodo = null;
     estado.aulas = [];
     estado.turnos = [];
     estado.ofertasInstitucionales = [];
     estado.ofertas = [];
+    estado.ofertasVersionadas = [];
     estado.ofertasPublicadas = [];
     estado.turnosSolicitud = [];
     return;
@@ -361,6 +368,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
     periodos[0] ??
     null;
   estado.fechaCortePeriodo = estado.previa ? "2027-06-30" : null;
+  estado.edadesAdmitidasPeriodo = estado.previa ? [3, 4, 5] : null;
   estado.ofertas = !estado.periodo
     ? []
     : estado.previa
@@ -370,6 +378,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
         );
   if (estado.previa) {
     estado.turnosSolicitud = turnos;
+    estado.ofertasVersionadas = ofertasEjemplo;
     estado.ofertasPublicadas = ofertasEjemplo.filter((oferta) => oferta.disponible);
   }
   else if (estado.periodo?.versionOfertaId) {
@@ -384,18 +393,22 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       throw new Error(
         "La oferta publicada utiliza un formato que este frontend todavía no interpreta.",
       );
-    estado.ofertasPublicadas = version.datos
-      .filter((oferta) => oferta.Disponible ?? oferta.disponible)
-      .map((oferta) => ({
+    estado.ofertasVersionadas = version.datos.map((oferta) => ({
+        id: oferta.Id ?? oferta.id,
+        revision: oferta.Revision ?? oferta.revision,
         aulaId: oferta.AulaId ?? oferta.aulaId,
         turnoId: oferta.TurnoId ?? oferta.turnoId,
         capacidad: oferta.Capacidad ?? oferta.capacidad,
-      }))
+        disponible: oferta.Disponible ?? oferta.disponible,
+      }));
+    estado.ofertasPublicadas = estado.ofertasVersionadas
+      .filter((oferta) => oferta.disponible)
       .filter((oferta) => oferta.aulaId && oferta.turnoId && oferta.capacidad > 0);
     const disponibles = estado.ofertasPublicadas.map((oferta) => oferta.turnoId);
     estado.turnosSolicitud = turnos.filter((t) => disponibles.includes(t.id));
   } else {
     estado.turnosSolicitud = [];
+    estado.ofertasVersionadas = [];
     estado.ofertasPublicadas = [];
   }
   if (!estado.previa && estado.periodo?.versionReglasId) {
@@ -409,6 +422,7 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
     )
       throw new Error("Las reglas publicadas del período no tienen un formato compatible.");
     estado.fechaCortePeriodo = versionReglas.datos.FechaCorte ?? versionReglas.datos.fechaCorte ?? null;
+    estado.edadesAdmitidasPeriodo = edadesDeReglas(versionReglas.datos);
   }
   guardarContextoPersistido();
 }

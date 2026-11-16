@@ -59,9 +59,17 @@ export function periodos(ctx) {
   const periodo = ctx.estado.periodo;
   const tieneReglas = Boolean(periodo?.versionReglasId);
   const tieneOferta = Boolean(periodo?.versionOfertaId);
+  const versionesOferta = new Map((ctx.estado.ofertasVersionadas ?? []).map((oferta) => [oferta.id, oferta]));
+  const cambiosOfertaPendientes = Boolean(periodo && tieneReglas && ctx.estado.ofertas.length && (
+    ctx.estado.ofertas.length !== versionesOferta.size ||
+    ctx.estado.ofertas.some((oferta) => versionesOferta.get(oferta.id)?.revision !== oferta.revision)
+  ));
+  const accionPublicarOferta = cambiosOfertaPendientes
+    ? '<button class="boton boton--secundario" data-accion="publicar-oferta-periodo">Aplicar cambios pendientes</button>'
+    : '<p class="tarjeta__descripcion">Las ofertas se publican automáticamente al guardarlas.</p>';
   const configuracionCiclo = !periodo
     ? '<p class="tarjeta__descripcion">Seleccioná un período para consultar o preparar su configuración.</p>'
-    : `<div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Reglas: ${etiqueta(tieneReglas ? "Configuradas" : "Pendientes")} &nbsp; Oferta: ${etiqueta(tieneOferta ? "Publicada" : "Pendiente")}</p>${tieneReglas ? `<p><strong>Fecha de corte del ciclo:</strong> ${fecha(ctx.estado.fechaCortePeriodo)}</p>` : '<p class="tarjeta__descripcion">La fecha de corte se configura para este ciclo y se usa para calcular las edades de sus solicitudes.</p>'}<div class="formulario__acciones">${ctx.puedeEditar() ? tieneReglas && tieneOferta ? `<button class="boton boton--secundario" data-accion="editar-fecha-corte">Cambiar fecha de corte</button><button class="boton" data-accion="publicar-oferta-periodo" ${ctx.estado.ofertas.length ? "" : "disabled"}>Publicar cambios de oferta</button>` : tieneReglas ? `<button class="boton" data-accion="publicar-oferta-periodo" ${ctx.estado.ofertas.length ? "" : "disabled"}>Publicar oferta del ciclo</button>` : `<button class="boton" data-accion="preparar-ciclo" ${ctx.estado.ofertas.length ? "" : "disabled"}>Preparar configuración inicial</button>` : ""}</div>${!ctx.estado.ofertas.length ? '<p class="formulario__nota">Agregá al menos una oferta al período antes de publicarla.</p>' : ""}</div>`;
+    : `<div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Reglas: ${etiqueta(tieneReglas ? "Configuradas" : "Pendientes")} &nbsp; Oferta: ${etiqueta(tieneOferta ? "Publicada" : "Pendiente")}</p>${tieneReglas ? `<p><strong>Fecha de corte del ciclo:</strong> ${fecha(ctx.estado.fechaCortePeriodo)}</p>` : '<p class="tarjeta__descripcion">La fecha de corte se configura para este ciclo y se usa para calcular las edades de sus solicitudes.</p>'}<div class="formulario__acciones">${ctx.puedeEditar() ? tieneReglas && tieneOferta ? `<button class="boton boton--secundario" data-accion="editar-fecha-corte">Cambiar fecha de corte</button>${accionPublicarOferta}` : tieneReglas ? cambiosOfertaPendientes ? accionPublicarOferta : '<p class="tarjeta__descripcion">Agregá y guardá una oferta para publicarla automáticamente en este ciclo.</p>' : `<button class="boton" data-accion="preparar-ciclo" ${ctx.estado.ofertas.length ? "" : "disabled"}>Preparar configuración inicial</button>` : ""}</div>${!ctx.estado.ofertas.length ? '<p class="formulario__nota">Agregá al menos una oferta al período antes de publicarla.</p>' : ""}</div>`;
   return (
     encabezado({
       titulo: "Períodos de inscripción",

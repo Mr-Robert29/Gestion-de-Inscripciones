@@ -75,6 +75,7 @@ public sealed class ServicioCorreccionesSolicitudes : IModuloCorreccionesSolicit
         return await _periodo.EjecutarCorreccionAsync(
             institucionId,
             solicitud.PeriodoId,
+            solicitud.VersionReglasId,
             solicitud.VersionOfertaId,
             async (periodo, token) =>
             {

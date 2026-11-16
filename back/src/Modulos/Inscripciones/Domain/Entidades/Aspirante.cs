@@ -48,11 +48,14 @@ public sealed class Aspirante
         Sexo = string.IsNullOrWhiteSpace(sexo) ? null : sexo.Trim();
     }
     public int CalcularEdad(DateOnly fechaCorte)
+        => CalcularEdad(FechaNacimiento, fechaCorte);
+
+    public static int CalcularEdad(DateOnly fechaNacimiento, DateOnly fechaCorte)
     {
-        if (fechaCorte < FechaNacimiento) throw new ArgumentException("La fecha de corte es anterior al nacimiento.");
-        var edad = fechaCorte.Year - FechaNacimiento.Year;
-        if (fechaCorte.Month < FechaNacimiento.Month ||
-            (fechaCorte.Month == FechaNacimiento.Month && fechaCorte.Day < FechaNacimiento.Day)) edad--;
+        if (fechaCorte < fechaNacimiento) throw new ArgumentException("La fecha de corte es anterior al nacimiento.");
+        var edad = fechaCorte.Year - fechaNacimiento.Year;
+        if (fechaCorte.Month < fechaNacimiento.Month ||
+            (fechaCorte.Month == fechaNacimiento.Month && fechaCorte.Day < fechaNacimiento.Day)) edad--;
         return edad;
     }
     public VinculoResponsable VincularResponsable(

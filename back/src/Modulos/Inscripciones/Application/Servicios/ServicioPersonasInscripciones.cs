@@ -38,6 +38,27 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
             true,
             tokenCancelacion);
         ArgumentNullException.ThrowIfNull(peticion);
+        if (peticion.PeriodoId is Guid periodoId)
+        {
+            return await _periodo.EjecutarConReglasAsync(
+                institucionId,
+                periodoId,
+                async (reglas, token) =>
+                {
+                    ValidarEdadAdmitida(peticion.FechaNacimiento, reglas.FechaCorte, reglas.EdadesAdmitidas);
+                    return await RegistrarAspiranteAsync(institucionId, autor, peticion, token);
+                },
+                tokenCancelacion);
+        }
+        return await RegistrarAspiranteAsync(institucionId, autor, peticion, tokenCancelacion);
+    }
+
+    private async Task<RegistrarAspiranteRespuesta> RegistrarAspiranteAsync(
+        Guid institucionId,
+        Guid autor,
+        RegistrarAspirantePeticion peticion,
+        CancellationToken tokenCancelacion)
+    {
         var aspirante = new Aspirante(
             peticion.Nombre,
             peticion.Apellido,
@@ -94,6 +115,7 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
         return await _periodo.EjecutarCorreccionAsync(
             institucionId,
             solicitudInicial.PeriodoId,
+            solicitudInicial.VersionReglasId,
             solicitudInicial.VersionOfertaId,
             async (periodo, token) =>
             {
@@ -116,6 +138,7 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
                     institucionId,
                     aspiranteId,
                     token) ?? throw new KeyNotFoundException("No se encontró el aspirante en esta institución.");
+                ValidarEdadAdmitida(peticion.FechaNacimiento, periodo.FechaCorte, periodo.EdadesAdmitidas);
                 var anterior = Mapear(aspirante);
                 var calculosAnteriores = solicitudes.Select(s => new
                 {
@@ -329,4 +352,12 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
             entidadId,
             accion,
             JsonSerializer.Serialize(datos));
+
+    private static void ValidarEdadAdmitida(DateOnly nacimiento, DateOnly fechaCorte, IReadOnlyList<int> edadesAdmitidas)
+    {
+        var edad = Aspirante.CalcularEdad(nacimiento, fechaCorte);
+        if (!edadesAdmitidas.Contains(edad))
+            throw new ArgumentException(
+                $"La fecha de nacimiento no corresponde a las edades admitidas para este ciclo. Se aceptan {string.Join(", ", edadesAdmitidas)} años cumplidos al {fechaCorte:dd/MM/yyyy}.");
+    }
 }

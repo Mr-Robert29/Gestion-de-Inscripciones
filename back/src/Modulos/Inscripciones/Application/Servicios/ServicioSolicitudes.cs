@@ -51,6 +51,10 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     institucionId,
                     peticion.AspiranteId,
                     token) ?? throw new KeyNotFoundException("No se encontró el aspirante en esta institución.");
+                var edadAlCorte = aspirante.CalcularEdad(periodo.FechaCorte);
+                if (!periodo.EdadesAdmitidas.Contains(edadAlCorte))
+                    throw new ArgumentException(
+                        $"La fecha de nacimiento no corresponde a las edades admitidas para este ciclo. Se aceptan {string.Join(", ", periodo.EdadesAdmitidas.Order())} años cumplidos al {periodo.FechaCorte:dd/MM/yyyy}.");
                 var alternativas = peticion.TurnosAlternativosAceptados ?? [];
                 if (!periodo.TurnosDisponibles.Contains(peticion.TurnoPreferidoId) ||
                     alternativas.Any(id => !periodo.TurnosDisponibles.Contains(id)))

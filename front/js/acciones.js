@@ -10,6 +10,7 @@ import { base } from "./compartidos.js";
 import { camposDomicilio } from "./pagina-solicitudes.js";
 import { actualizarBorrador, claveBorradores } from "./borradores-solicitud.js";
 import { motivo, motivos } from "./operaciones-formularios.js";
+import { edadesDeReglas, fechaNacimientoAdmitida, rangoFechasNacimiento } from "./reglas-edad.js";
 const opciones = (nombres) => nombres.map(([id, nombre]) => ({ id, nombre }));
 const accionesFormulario = (previa, textoConfirmacion = "Guardar") =>
   `${errorFormulario()}${previa ? '<p class="formulario__nota">Vista previa: los cambios no se guardan.</p>' : ""}<div class="formulario__acciones"><button class="boton boton--secundario" type="button" data-accion="cerrar-dialogo">Cancelar</button><button class="boton" type="submit" ${previa ? "disabled" : ""}>${e(textoConfirmacion)}</button></div>`;
@@ -30,6 +31,40 @@ function mostrar(ctx, datos) {
 }
 function camposOfertaDeCiclo(oferta = {}, capacidadReferencia = "") {
   return `<div class="formulario__rejilla">${campo({ nombre: "capacidad", etiqueta: "Capacidad para este ciclo", tipo: "number", valor: oferta.capacidad ?? capacidadReferencia, obligatorio: true, ayuda: "Este valor solo afecta al ciclo seleccionado.", atributos: 'min="0" step="1"' })}</div><label class="casilla"><input type="checkbox" name="disponible" ${oferta.disponible === false ? "" : "checked"}>Habilitada para este ciclo</label>${motivo(motivos.oferta, { etiqueta: "Motivo del cambio" })}`;
+}
+
+const confirmacionOfertaPublicada = (periodo) =>
+  periodo?.estado === "RecepcionAbierta" && periodo.versionReglasId
+    ? '<label class="casilla"><input type="checkbox" name="confirmarPublicacion" required>La recepción está abierta. Confirmo que este cambio se publique para las nuevas solicitudes.</label>'
+    : "";
+
+async function publicarOfertaDelCiclo(ctx, operacion, motivoCambio) {
+  const periodo = operacion.periodo;
+  if (!periodo?.versionReglasId) return false;
+  const ruta = `/periodos/${encodeURIComponent(periodo.id)}`;
+  operacion.versiones ??= {};
+  if (!operacion.versiones.oferta)
+    operacion.versiones.oferta = (
+      await ctx.api(`${ruta}/versiones-oferta`, {
+        metodo: "POST",
+        datos: {
+          referencia: `Actualización automática de oferta del ciclo ${periodo.ciclo}`,
+          motivo: motivoCambio,
+        },
+      })
+    ).id;
+  await ctx.api(`${ruta}/configuracion`, {
+    metodo: "PUT",
+    datos: {
+      versiones: {
+        versionReglasId: periodo.versionReglasId,
+        versionOfertaId: operacion.versiones.oferta,
+      },
+      revision: periodo.revision,
+      motivo: motivoCambio,
+    },
+  });
+  return true;
 }
 
 export async function atenderAccion(elemento, ctx) {
@@ -139,8 +174,9 @@ export async function atenderAccion(elemento, ctx) {
     mostrar(ctx, {
       titulo: `Agregar oferta al ciclo ${estado.periodo.ciclo}`,
       descripcion: `${aula} · ${turno}. Se copiará desde las ofertas reutilizables y podrás ajustar sus datos para este ciclo.`,
+      textoConfirmacion: estado.periodo.versionReglasId ? "Guardar y aplicar" : "Guardar oferta",
       formulario: "agregar-oferta-periodo",
-      contenido: camposOfertaDeCiclo({}, plantilla.capacidad) + '<p class="formulario__nota">La oferta reutilizable no se modifica; esta copia tendrá disponibilidad y capacidad propias del ciclo.</p>',
+      contenido: camposOfertaDeCiclo({}, plantilla.capacidad) + '<p class="formulario__nota">La oferta reutilizable no se modifica; esta copia tendrá disponibilidad y capacidad propias del ciclo.</p>' + confirmacionOfertaPublicada(estado.periodo),
     });
     ctx.operacion.ofertaPlantilla = plantilla;
     return;
@@ -154,8 +190,9 @@ export async function atenderAccion(elemento, ctx) {
     mostrar(ctx, {
       titulo: `Modificar oferta del ciclo ${estado.periodo.ciclo}`,
       descripcion: `${aula} · ${turno}. Los cambios se aplicarán solo a este período.`,
+      textoConfirmacion: estado.periodo.versionReglasId ? "Guardar y aplicar" : "Guardar cambios",
       formulario: "editar-oferta-periodo",
-      contenido: camposOfertaDeCiclo(oferta) + (estado.periodo.versionOfertaId ? '<p class="formulario__nota">Después de guardar, elegí “Publicar cambios de oferta” en Períodos para aplicar el cambio en este ciclo.</p>' : ""),
+      contenido: camposOfertaDeCiclo(oferta) + (estado.periodo.versionReglasId ? '<p class="formulario__nota">Al guardar, la nueva versión de la oferta se aplicará automáticamente a este ciclo.</p>' : '<p class="formulario__nota">El ciclo todavía no tiene reglas publicadas; el cambio quedará en preparación hasta configurar el ciclo.</p>') + confirmacionOfertaPublicada(estado.periodo),
     });
     ctx.operacion.ofertaPeriodo = oferta;
     return;
@@ -210,11 +247,11 @@ export async function atenderAccion(elemento, ctx) {
     if (!estado.ofertas.length)
       throw new Error("Agregá al menos una oferta al período para poder publicarla.");
     mostrar(ctx, {
-      titulo: `Publicar oferta del ciclo ${estado.periodo.ciclo}`,
-      descripcion: "Se publicará la oferta actual de este período sin cambiar sus reglas ni la fecha de corte.",
-      textoConfirmacion: "Publicar oferta",
+      titulo: `Aplicar oferta del ciclo ${estado.periodo.ciclo}`,
+      descripcion: "Se actualizará la oferta disponible para nuevas solicitudes. Las reglas y la fecha de corte se conservan.",
+      textoConfirmacion: "Aplicar cambios",
       formulario: "publicar-oferta-periodo",
-      contenido: aviso("La oferta publicada es la que aparece al registrar solicitudes. El cambio solo afecta a este ciclo y conserva la fecha de corte vigente.", "aviso") + motivo(motivos.oferta, { etiqueta: "Motivo de la publicación" }),
+      contenido: aviso("Este paso sirve para recuperar cambios que no llegaron a aplicarse automáticamente. Solo afecta a este ciclo y conserva la fecha de corte vigente.", "aviso") + motivo(motivos.oferta, { etiqueta: "Motivo de la aplicación" }) + confirmacionOfertaPublicada(estado.periodo),
     });
     return;
   }
@@ -323,12 +360,23 @@ export async function atenderAccion(elemento, ctx) {
   }
   if (accion === "editar-aspirante") {
     const aspirante = ctx.ficha.persona;
+    let fechaCorteSolicitud = ctx.ficha.solicitud.fechaCorteUtilizada ?? estado.fechaCortePeriodo;
+    let edadesSolicitud = estado.edadesAdmitidasPeriodo;
+    if (!estado.previa && ctx.ficha.solicitud.versionReglasId) {
+      const reglasHistoricas = await ctx.api(`/versiones-configuracion/${encodeURIComponent(ctx.ficha.solicitud.versionReglasId)}`);
+      fechaCorteSolicitud = reglasHistoricas.datos?.FechaCorte ?? reglasHistoricas.datos?.fechaCorte ?? fechaCorteSolicitud;
+      edadesSolicitud = edadesDeReglas(reglasHistoricas.datos);
+    }
+    const rangoNacimiento = rangoFechasNacimiento(fechaCorteSolicitud, edadesSolicitud);
+    const atributosNacimiento = rangoNacimiento ? `min="${rangoNacimiento.minimo}" max="${rangoNacimiento.maximo}"` : "";
     mostrar(ctx, {
       titulo: "Editar datos del aspirante",
       descripcion: "La corrección quedará registrada en el historial.",
       formulario: "editar-aspirante",
-      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "", sugerencias: ["DNI", "Pasaporte", "Otro documento"] })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">Al guardar, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte del ciclo. Si la edad queda fuera del rango admitido, aparecerá pendiente de revisión.</p>`,
+      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true, atributos: atributosNacimiento })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "", sugerencias: ["DNI", "Pasaporte", "Otro documento"] })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">La fecha debe corresponder a las edades admitidas al ${e(fechaCorteSolicitud ?? "la fecha de corte del ciclo")}. Al guardar se recalculan la edad y la sala y se registra el cambio en el historial.</p>`,
     });
+    ctx.operacion.edadesAdmitidas = edadesSolicitud;
+    ctx.operacion.fechaCorte = fechaCorteSolicitud;
     return;
   }
   if (
@@ -432,6 +480,7 @@ const identificador = (valor) => {
 
 export async function atenderFormulario(formulario, ctx) {
   if (await atenderFormularioOrganizacion(formulario, ctx)) return;
+  const estado = ctx.estado;
   const nombre = formulario.dataset.formulario;
   const datosFormulario = new FormData(formulario);
   const datos = Object.fromEntries(datosFormulario);
@@ -465,7 +514,10 @@ export async function atenderFormulario(formulario, ctx) {
     const actualizar = (ruta, datos) => ctx.api(ruta, { metodo: "PUT", datos });
     const clave = claveBorradores(ctx.estado);
     if (nombre === "aspirante") {
+      if (estado.edadesAdmitidasPeriodo && estado.fechaCortePeriodo && !fechaNacimientoAdmitida(datos.fechaNacimiento, estado.fechaCortePeriodo, estado.edadesAdmitidasPeriodo))
+        throw new Error(`La fecha de nacimiento no corresponde a las edades admitidas para este ciclo. Revisá el rango indicado; se calcula al ${estado.fechaCortePeriodo.split("-").reverse().join("/")}.`);
       const aspirante = await crear(`${ruta}/aspirantes`, {
+        periodoId: estado.periodo.id,
         nombre: datos.nombre,
         apellido: datos.apellido,
         fechaNacimiento: datos.fechaNacimiento,
@@ -479,6 +531,7 @@ export async function atenderFormulario(formulario, ctx) {
         id: aspirante.id,
         nombre: datos.nombre,
         apellido: datos.apellido,
+        fechaNacimiento: datos.fechaNacimiento,
       };
       ctx.estado.borradores = [
         ...(ctx.estado.borradores ?? []).filter((item) => item.id !== aspirante.id),
@@ -509,6 +562,10 @@ export async function atenderFormulario(formulario, ctx) {
     if (nombre === "solicitud") {
       if (!ctx.estado.borrador)
         throw new Error("Primero registrá o seleccioná un aspirante.");
+      if (!estado.fechaCortePeriodo || !estado.edadesAdmitidasPeriodo?.length)
+        throw new Error("Todavía no se puede validar la edad: este período necesita una fecha de corte y reglas de inscripción configuradas.");
+      if (!fechaNacimientoAdmitida(ctx.estado.borrador.fechaNacimiento, estado.fechaCortePeriodo, estado.edadesAdmitidasPeriodo))
+        throw new Error(`La fecha de nacimiento no corresponde a las edades admitidas para este ciclo. Se aceptan ${estado.edadesAdmitidasPeriodo.join(", ")} años cumplidos al ${estado.fechaCortePeriodo.split("-").reverse().join("/")}.`);
       const aspiranteId = ctx.estado.borrador.id;
       const alternativas = datosFormulario.getAll("alternativas");
       if (alternativas.includes(datos.turnoPreferidoId))
@@ -543,6 +600,10 @@ export async function atenderFormulario(formulario, ctx) {
       const aspirante = operacion?.ficha?.persona;
       if (!aspirante || operacion.institucion?.id !== ctx.estado.institucion?.id)
         throw new Error("El contexto cambió. Cerrá el formulario y consultá nuevamente.");
+      if (!operacion.edadesAdmitidas?.length || !operacion.fechaCorte)
+        throw new Error("No se pudieron consultar las reglas históricas de edad de esta solicitud.");
+      if (!fechaNacimientoAdmitida(datos.fechaNacimiento, operacion.fechaCorte, operacion.edadesAdmitidas))
+        throw new Error(`La fecha de nacimiento no corresponde a las edades admitidas para este ciclo. Se aceptan ${operacion.edadesAdmitidas.join(", ")} años cumplidos al ${operacion.fechaCorte.split("-").reverse().join("/")}.`);
       await ctx.api(
         `${ruta}/aspirantes/${encodeURIComponent(aspirante.id)}`,
         {
@@ -650,6 +711,8 @@ export async function atenderFormulario(formulario, ctx) {
       const periodo = operacion.periodo;
       if (!plantilla || !periodo)
         throw new Error("El contexto cambió. Cerrá el formulario y volvé a seleccionar la oferta y el período.");
+      if (periodo.estado === "RecepcionAbierta" && periodo.versionReglasId && !datosFormulario.has("confirmarPublicacion"))
+        throw new Error("Confirmá que querés aplicar este cambio a las nuevas solicitudes.");
       await crear(
         `/periodos/${encodeURIComponent(periodo.id)}/ofertas`,
         {
@@ -663,13 +726,17 @@ export async function atenderFormulario(formulario, ctx) {
           motivo: datos.motivo,
         },
       );
-      operacion.mensajeExito = periodo.versionOfertaId
-        ? "Oferta agregada al ciclo. Publicá los cambios de oferta desde Períodos para que aparezca en las solicitudes."
-        : "Oferta agregada al ciclo. Podés modificar su capacidad y disponibilidad sin afectar otros períodos.";
+      operacion.ofertaGuardada = true;
+      const publicada = await publicarOfertaDelCiclo(ctx, operacion, datos.motivo);
+      operacion.mensajeExito = publicada
+        ? "Oferta agregada y aplicada automáticamente al ciclo. Ya está disponible para las nuevas solicitudes."
+        : "Oferta agregada al ciclo. Se publicará al completar la configuración inicial con fecha de corte y reglas.";
     } else if (nombre === "editar-oferta-periodo") {
       const oferta = operacion.ofertaPeriodo;
       if (!oferta || operacion.periodo?.id !== ctx.estado.periodo?.id)
         throw new Error("El período cambió. Cerrá el formulario y consultá nuevamente.");
+      if (operacion.periodo.estado === "RecepcionAbierta" && operacion.periodo.versionReglasId && !datosFormulario.has("confirmarPublicacion"))
+        throw new Error("Confirmá que querés aplicar este cambio a las nuevas solicitudes.");
       await actualizar(`/ofertas/${encodeURIComponent(oferta.id)}`, {
         capacidad: Number(datos.capacidad),
         disponible: datosFormulario.has("disponible"),
@@ -679,9 +746,11 @@ export async function atenderFormulario(formulario, ctx) {
         revision: oferta.revision,
         motivo: datos.motivo,
       });
-      operacion.mensajeExito = operacion.periodo.versionOfertaId
-        ? "Oferta actualizada. Publicá los cambios de oferta desde Períodos para aplicar el cambio en este ciclo."
-        : "Oferta del ciclo actualizada.";
+      operacion.ofertaGuardada = true;
+      const publicada = await publicarOfertaDelCiclo(ctx, operacion, datos.motivo);
+      operacion.mensajeExito = publicada
+        ? "Oferta actualizada y aplicada automáticamente al ciclo."
+        : "Oferta del ciclo actualizada. Se publicará al completar la configuración inicial.";
     } else if (nombre === "preparar-ciclo") {
       const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
       const referencia = `Configuración inicial del ciclo ${operacion.periodo.ciclo}`;
@@ -732,8 +801,10 @@ export async function atenderFormulario(formulario, ctx) {
       });
       operacion.mensajeExito = "Fecha de corte actualizada para el ciclo. La oferta publicada no se modificó.";
     } else if (nombre === "publicar-oferta-periodo") {
+      if (operacion.periodo.estado === "RecepcionAbierta" && !datosFormulario.has("confirmarPublicacion"))
+        throw new Error("Confirmá que querés aplicar este cambio a las nuevas solicitudes.");
       const r = `/periodos/${encodeURIComponent(operacion.periodo.id)}`;
-      const referencia = `Publicación de oferta del ciclo ${operacion.periodo.ciclo}`;
+      const referencia = `Aplicación de oferta del ciclo ${operacion.periodo.ciclo}`;
       operacion.versiones ??= {};
       if (!operacion.versiones.oferta)
         operacion.versiones.oferta = (
@@ -855,6 +926,17 @@ export async function atenderFormulario(formulario, ctx) {
     await ctx.actualizar();
     ctx.notificar(operacion?.mensajeExito ?? "Los datos se guardaron correctamente.");
   } catch (problema) {
+    if (operacion?.ofertaGuardada) {
+      ctx.cerrarDialogo();
+      ctx.notificar(`La oferta quedó guardada, pero no se pudo publicar automáticamente. ${problema.message} Los cambios pendientes quedan disponibles para aplicar desde Períodos.`, true);
+      try {
+        await ctx.recargarContexto();
+        await ctx.actualizar();
+      } catch (errorRecarga) {
+        console.error("No se pudo actualizar la vista después de guardar la oferta.", errorRecarga);
+      }
+      return;
+    }
     let mensaje = problema.message;
     if (problema.estado === 409)
       mensaje +=
