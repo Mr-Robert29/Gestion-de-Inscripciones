@@ -75,7 +75,9 @@ public class InicializadorUsuarios
             {
                 await _userManager.AddToRoleAsync(identityUser, RolesPersonal.AdministradorDelSistema);
 
-                var personalRoot = new UsuarioPersonal(rootId, nombreRoot, correoRoot);
+                var identidadRoot = new IdentidadPersonal(rootId, null);
+                var personalRoot = new UsuarioPersonal(rootId, nombreRoot, correoRoot, identidadRoot.Id);
+                await _contexto.IdentidadesPersonal.AddAsync(identidadRoot, cancellationToken);
                 await _contexto.UsuariosPersonal.AddAsync(personalRoot, cancellationToken);
                 await _contexto.SaveChangesAsync(cancellationToken);
 

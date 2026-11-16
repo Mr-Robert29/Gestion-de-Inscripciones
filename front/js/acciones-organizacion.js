@@ -38,18 +38,22 @@ for (const nombre of [
   operaciones.set(nombre, atenderSecciones);
 for (const nombre of [
   "org-acceso-usuario",
+  "org-administrar-usuario",
   "org-crear-usuario",
   "org-estado-usuario",
   "org-exportar-nomina",
   "org-exportar-reportes",
   "org-nomina",
   "org-revocar-usuario",
+  "org-vincular-dni",
+  "personal-crear",
+  "personal-revocar",
 ])
   operaciones.set(nombre, atenderAdministracion);
 
 export async function atenderAccionOrganizacion(elemento, ctx) {
   const accion = elemento.dataset.accion;
-  if (!accion?.startsWith("org-")) return false;
+  if (!accion?.startsWith("org-") && !accion?.startsWith("personal-")) return false;
   if (ctx.estado.previa) {
     ctx.notificar("Iniciá sesión para operar con datos reales.");
     return true;

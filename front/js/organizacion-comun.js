@@ -15,10 +15,18 @@ export const enlaceSolicitud = (ctx, id) =>
   `<a href="#solicitud/${encodeURIComponent(id)}">${e(nombreSolicitud(ctx, id))}</a>`;
 export const boton = (accion, texto, id = "", deshabilitado = false) =>
   `<button class="boton boton--secundario boton--pequeno" data-accion="${e(accion)}" data-id="${e(id)}" ${deshabilitado ? "disabled" : ""}>${e(texto)}</button>`;
-export function tabla(columnas, filas) {
+export function tabla(columnas, filas, opciones = {}) {
   return filas.length
-    ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr>${columnas.map((x) => `<th scope="col">${e(x)}</th>`).join("")}</tr></thead><tbody>${filas.map((f) => `<tr>${f.map((c) => `<td>${c ?? "—"}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+    ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr>${columnas.map((x) => `<th scope="col">${e(x)}</th>`).join("")}</tr></thead><tbody>${filas.map((f, indice) => {
+        const estado = opciones.estadoFila?.(f, indice);
+        const atributoEstado = estado ? ` data-estado-cuenta="${e(estado)}"` : "";
+        const ocultar = opciones.estadoInicial && estado !== opciones.estadoInicial;
+        return `<tr${atributoEstado}${ocultar ? " hidden" : ""}>${f.map((c) => `<td>${c ?? "—"}</td>`).join("")}</tr>`;
+      }).join("")}</tbody></table></div>`
     : '<p class="tarjeta__cuerpo">No hay registros para esta consulta.</p>';
+}
+export function filtroCuentas(activas, inactivas, placeholder = "Nombre, correo o rol") {
+  return `<div class="filtro-cuentas"><label class="filtro-cuentas__buscar" for="buscar-cuentas">Buscar<input id="buscar-cuentas" class="campo__control" type="search" data-buscar-cuentas placeholder="${e(placeholder)}" autocomplete="off"></label><label class="filtro-cuentas__estado" for="filtro-cuentas-estado">Mostrar cuentas<select id="filtro-cuentas-estado" class="campo__control" data-filtro-cuentas><option value="activo" selected>Activas</option><option value="inactivo">Inactivas</option><option value="todas">Todas</option></select></label></div><p class="filtro-cuentas__vacio" data-cuentas-vacio ${activas ? "hidden" : ""}>No hay cuentas activas para mostrar con este filtro.</p>`;
 }
 export function pestanas(tipo, activa, opciones) {
   return `<nav class="pestanas" aria-label="Etapas de ${tipo}">${opciones.map(([ruta, texto]) => `<a class="pestanas__enlace ${activa === ruta ? "pestanas__enlace--activo" : ""}" href="#${ruta}" ${activa === ruta ? 'aria-current="page"' : ""}>${e(texto)}</a>`).join("")}</nav>`;

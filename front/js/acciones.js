@@ -373,7 +373,7 @@ export async function atenderFormulario(formulario, ctx) {
   try {
     if (!ctx.estado.usuario) throw new Error("Iniciá sesión para continuar.");
     const ruta = ctx.estado.institucion ? base(ctx.estado) : null;
-    if (!ruta && nombre !== "institucion")
+    if (!ruta && nombre !== "institucion" && !ctx.operacionOrganizacion?.permiteSinContexto)
       throw new Error("Seleccioná una institución antes de continuar.");
     const crear = (ruta, datos) => ctx.api(ruta, { metodo: "POST", datos });
     const actualizar = (ruta, datos) => ctx.api(ruta, { metodo: "PUT", datos });

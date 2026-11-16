@@ -1,6 +1,5 @@
 import {
   solicitar,
-  configurarDireccion,
   establecerToken,
   obtenerDireccionApi,
 } from "./api.js";
@@ -11,8 +10,10 @@ import {
   marca,
   jardinIlustrado,
   campo,
+  campoClave,
   notificar,
   vacio,
+  etiqueta,
 } from "./interfaz.js";
 import {
   institucionEjemplo,
@@ -24,6 +25,7 @@ import {
 import { presentarPagina, titulos } from "./paginas.js";
 import { atenderAccion, atenderFormulario } from "./acciones.js";
 import { actualizarIndicadoresClave } from "./validacion-clave.js";
+import { validarClave } from "./validacion-clave.js";
 
 const raiz = document.getElementById("aplicacion");
 const estado = {
@@ -88,6 +90,53 @@ function abrirDialogo({ titulo, descripcion = "", contenido }) {
   dialogo.showModal();
 }
 
+async function mostrarDatosUsuario(usuarioId) {
+  const usuario = contexto.organizacion?.usuarios?.find((x) => x.id === usuarioId);
+  if (!usuario) {
+    notificar("No se encontró la cuenta. Actualizá la pantalla e intentá de nuevo.", true);
+    return;
+  }
+  const identidad = await contexto.api(`/usuarios/${encodeURIComponent(usuarioId)}/dni`);
+  const rolesGlobales = usuario.rolesGlobales?.length
+    ? usuario.rolesGlobales.map((rol) => etiqueta(rol)).join(" ")
+    : '<span class="tabla__detalle">Sin rol global asignado</span>';
+  const accesos = usuario.accesos?.length
+    ? `<ul class="usuarios__datos-accesos">${usuario.accesos.map((acceso) => {
+        const institucion = estado.instituciones.find((x) => x.id === acceso.institucionId);
+        return `<li><div><span class="usuarios__dato-etiqueta">Institución</span><strong>${escapar(institucion?.nombre ?? "Institución no disponible")}</strong></div><div><span class="usuarios__dato-etiqueta">Rol en esta institución</span>${etiqueta(acceso.rol)}</div></li>`;
+      }).join("")}</ul>`
+    : '<p class="tabla__detalle">Sin instituciones asignadas</p>';
+  abrirDialogo({
+    titulo: "Datos de la cuenta",
+    descripcion: `${usuario.nombre} · ${usuario.correoElectronico}`,
+    contenido: `<div class="usuarios__datos"><section class="usuarios__dato"><h3>DNI completo</h3><p>${escapar(identidad.dni ?? "Sin DNI vinculado")}</p></section><section class="usuarios__dato"><h3>Rol global</h3><div>${rolesGlobales}</div></section><section class="usuarios__dato usuarios__dato--ancho"><h3>Accesos institucionales</h3>${accesos}</section></div><div class="formulario__acciones"><button class="boton" data-accion="cerrar-dialogo">Cerrar</button></div>`,
+  });
+}
+
+function actualizarFiltroCuentas() {
+  const filtro = document.querySelector("[data-filtro-cuentas]")?.value ?? "activo";
+  const busqueda = (document.querySelector("[data-buscar-cuentas]")?.value ?? "")
+    .trim().toLocaleLowerCase("es");
+  const filas = [...document.querySelectorAll("tr[data-estado-cuenta]")];
+  for (const fila of filas) {
+    const coincideEstado = filtro === "todas" || fila.dataset.estadoCuenta === filtro;
+    const coincideBusqueda = !busqueda || fila.textContent.toLocaleLowerCase("es").includes(busqueda);
+    fila.hidden = !(coincideEstado && coincideBusqueda);
+  }
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  const vacio = document.querySelector("[data-cuentas-vacio]");
+  if (vacio) {
+    vacio.hidden = visibles > 0;
+    vacio.textContent = busqueda
+      ? "No se encontraron cuentas con esos datos para el filtro seleccionado."
+      : filtro === "activo"
+        ? "No hay cuentas activas para mostrar con este filtro."
+        : filtro === "inactivo"
+          ? "No hay cuentas inactivas para mostrar con este filtro."
+          : "No hay cuentas para mostrar.";
+  }
+}
+
 function salir(mensaje = "") {
   versionVista++;
   clearTimeout(vencimiento);
@@ -118,7 +167,7 @@ window.addEventListener("sesion-vencida", () =>
 
 function presentarAcceso() {
   document.title = "Ingresar · Jardín";
-  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p><div class="acceso__previa"><button class="boton boton--secundario boton--ancho" data-accion="vista-previa">Explorar la vista previa ${icono("ojo")}</button><p>Recorré las pantallas con datos ficticios. Sin iniciar sesión.</p></div><details class="acceso__detalle"><summary>Configurar conexión al servidor</summary>${campo({ nombre: "servidor", etiqueta: "Dirección de la API", tipo: "url", valor: obtenerDireccionApi(), ayuda: "Para desarrollo local. La contraseña se envía únicamente al servidor indicado." })}</details></div></section></main>`;
+  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p></div></section></main>`;
 }
 
 async function entrar(formulario) {
@@ -130,7 +179,6 @@ async function entrar(formulario) {
   boton.textContent = "Ingresando…";
   error.hidden = true;
   try {
-    configurarDireccion(document.getElementById("campo-servidor").value);
     const acceso = await solicitar("/Autenticacion/iniciar-sesion", {
       metodo: "POST",
       datos: {
@@ -146,6 +194,15 @@ async function entrar(formulario) {
     )
       throw new Error("El servidor no devolvió una sesión válida.");
     establecerToken(acceso.token);
+    if (acceso.debeCambiarClave) {
+      formulario.reset();
+      presentarCambioClave();
+      vencimiento = setTimeout(
+        () => salir("Tu sesión venció. Volvé a ingresar."),
+        Math.min(Date.parse(acceso.expiracion) - Date.now(), 2147483647),
+      );
+      return;
+    }
     const usuario = await solicitar("/Autenticacion/mi-acceso");
     if (intento !== versionVista) return;
     if (!usuario?.activo) throw new Error("La cuenta no está habilitada.");
@@ -171,6 +228,45 @@ async function entrar(formulario) {
       boton.disabled = false;
       boton.innerHTML = `Ingresar al sistema ${icono("flecha")}`;
     }
+  }
+}
+
+function presentarCambioClave() {
+  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__formulario" aria-label="Cambio obligatorio de contraseña"><div class="acceso__panel"><p class="acceso__saludo">Primer ingreso</p><h1>Elegí una contraseña propia</h1><p class="acceso__instruccion">La contraseña temporal que te asignaron ya no se usará después de este cambio.</p><form class="formulario" id="formulario-cambio-clave">${campo({ nombre: "claveActual", etiqueta: "Contraseña temporal", tipo: "password", obligatorio: true, atributos: 'autocomplete="current-password"' })}${campoClave({ nombre: "claveNueva", etiqueta: "Nueva contraseña", obligatorio: true })}${campoClave({ nombre: "confirmarClave", etiqueta: "Confirmar nueva contraseña", obligatorio: true, confirmacion: true })}<p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Guardar contraseña nueva ${icono("flecha")}</button></form><p class="acceso__seguridad">Por seguridad, este paso es obligatorio para continuar.</p></div></section></main>`;
+}
+
+async function cambiarClaveInicial(formulario) {
+  const boton = formulario.querySelector('button[type="submit"]');
+  const error = formulario.querySelector("[data-error]");
+  const datos = Object.fromEntries(new FormData(formulario));
+  boton.disabled = true;
+  error.hidden = true;
+  try {
+    validarClave(datos.claveNueva, datos.confirmarClave);
+    const acceso = await solicitar("/Autenticacion/cambiar-clave", {
+      metodo: "POST",
+      datos: { claveActual: datos.claveActual, claveNueva: datos.claveNueva },
+    });
+    if (!acceso?.token || acceso.debeCambiarClave)
+      throw new Error("No se pudo completar el cambio obligatorio de contraseña.");
+    establecerToken(acceso.token);
+    const usuario = await solicitar("/Autenticacion/mi-acceso");
+    if (!usuario?.activo) throw new Error("La cuenta no está habilitada.");
+    estado.usuario = usuario;
+    vencimiento = setTimeout(
+      () => salir("Tu sesión venció. Volvé a ingresar."),
+      Math.min(Date.parse(acceso.expiracion) - Date.now(), 2147483647),
+    );
+    await cargarContexto();
+    navegar("inicio");
+    notificar("La contraseña se actualizó. Ya podés usar el sistema.");
+  } catch (problema) {
+    if (formulario.isConnected) {
+      error.textContent = problema.message;
+      error.hidden = false;
+    }
+  } finally {
+    if (boton.isConnected) boton.disabled = false;
   }
 }
 
@@ -279,7 +375,6 @@ function estructura(ruta) {
       elementos: [
         ["solicitudes", "solicitudes", "Solicitudes"],
         ["domicilios", "ubicacion", "Domicilios y distancias"],
-        ["documentacion", "lista", "Documentación"],
         ["duplicados", "personas", "Posibles duplicados"],
       ],
     },
@@ -297,6 +392,7 @@ function estructura(ruta) {
         ["vacantes", "personas", "Vacantes y admisión"],
         ["secciones", "aulas", "Secciones"],
         ["reportes", "lista", "Resultados e historial"],
+        ...(esRoot() || rolActual() === "Directivo" ? [["personal", "personas", "Personal del jardín"]] : []),
         ...(esRoot() ? [["usuarios", "personas", "Usuarios y permisos"]] : []),
       ],
     },
@@ -441,6 +537,14 @@ document.addEventListener("click", async (evento) => {
     cerrarDialogo();
     return;
   }
+  if (accion === "ver-datos-usuario") {
+    try {
+      await mostrarDatosUsuario(elemento.dataset.id);
+    } catch (error) {
+      notificar(error.message, true);
+    }
+    return;
+  }
   if (accion === "menu") {
     const abierto = document
       .getElementById("menu-principal")
@@ -452,6 +556,19 @@ document.addEventListener("click", async (evento) => {
     await cargarVista();
     return;
   }
+  if (accion === "usuarios-tab") {
+    const seleccionada = elemento.dataset.panel;
+    document.querySelectorAll("[data-usuarios-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.usuariosPanel !== seleccionada;
+    });
+    document.querySelectorAll('[data-accion="usuarios-tab"]').forEach((pestana) => {
+      const activa = pestana.dataset.panel === seleccionada;
+      pestana.classList.toggle("pestanas__enlace--activo", activa);
+      pestana.setAttribute("aria-selected", String(activa));
+    });
+    return;
+  }
+  if (elemento.closest("#dialogo") && accion.startsWith("org-")) cerrarDialogo();
   try {
     await atenderAccion(elemento, contexto);
   } catch (error) {
@@ -464,6 +581,11 @@ document.addEventListener("submit", async (evento) => {
     await entrar(evento.target);
     return;
   }
+  if (evento.target.id === "formulario-cambio-clave") {
+    evento.preventDefault();
+    await cambiarClaveInicial(evento.target);
+    return;
+  }
   if (!evento.target.matches("[data-formulario]")) return;
   evento.preventDefault();
   await atenderFormulario(evento.target, contexto);
@@ -471,12 +593,43 @@ document.addEventListener("submit", async (evento) => {
 document.addEventListener("input", (evento) => {
   if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
     actualizarIndicadoresClave(evento.target.form);
+  if (evento.target.matches("[data-buscar-cuentas]")) actualizarFiltroCuentas();
 });
 document.addEventListener("change", (evento) => {
+  if (evento.target.matches("[data-tipo-cuenta]")) {
+    const institucional = evento.target.value === "institucional";
+    const camposInstitucion = evento.target.form?.querySelector("[data-cuenta-institucional]");
+    const notaRoot = evento.target.form?.querySelector("[data-cuenta-root]");
+    if (camposInstitucion) {
+      camposInstitucion.hidden = !institucional;
+      camposInstitucion.disabled = !institucional;
+    }
+    if (notaRoot) notaRoot.hidden = institucional;
+    return;
+  }
+  if (evento.target.matches("[data-filtro-cuentas]")) {
+    actualizarFiltroCuentas();
+    return;
+  }
   if (evento.target.id === "institucion-activa")
     cambiarContexto("institucion", evento.target.value);
   if (evento.target.id === "periodo-activo")
     cambiarContexto("periodo", evento.target.value);
+  if (evento.target.id === "filtro-seguimiento-domicilio") {
+    const filtro = evento.target.value;
+    const filas = [...document.querySelectorAll("tr[data-distancia-estado]")];
+    for (const fila of filas) {
+      const coincide = filtro === "todos"
+        || (filtro === "domicilio-pendiente" && fila.dataset.domicilioEstado === "pendiente")
+        || (filtro === "distancia-pendiente" && fila.dataset.distanciaEstado === "pendiente")
+        || (filtro === "distancia-manual" && fila.dataset.distanciaEstado === "manual")
+        || (filtro === "distancia-desactualizada" && fila.dataset.distanciaEstado === "desactualizada");
+      fila.hidden = !coincide;
+    }
+    const visibles = filas.filter((fila) => !fila.hidden).length;
+    const resumen = document.querySelector("[data-resultados-domicilio]");
+    if (resumen) resumen.textContent = `${visibles} solicitudes visibles en esta página`;
+  }
 });
 window.addEventListener("hashchange", cargarVista);
 presentarAcceso();

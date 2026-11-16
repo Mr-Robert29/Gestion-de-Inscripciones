@@ -132,6 +132,7 @@ export function campoClave({
   etiqueta: rotulo,
   obligatorio = false,
   confirmacion = false,
+  placeholder = "",
 }) {
   const id = `campo-${nombre}`;
   const tipoCampo = confirmacion ? "confirmacion" : "inicial";
@@ -141,7 +142,7 @@ export function campoClave({
   const descripcion = confirmacion
     ? `${id}-coincidencia`
     : `${id}-requisitos`;
-  return `<label class="campo campo--clave" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><span class="campo-clave"><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="password" ${obligatorio ? "required" : ""} autocomplete="new-password" minlength="6" aria-describedby="${descripcion}" data-clave-${tipoCampo}><button type="button" class="boton boton--texto boton--icono campo-clave__alternar" data-accion="alternar-clave" data-target="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></span>${requisitos}</label>`;
+  return `<label class="campo campo--clave" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><span class="campo-clave"><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="password" ${obligatorio ? "required" : ""} placeholder="${escapar(placeholder)}" autocomplete="new-password" minlength="6" aria-describedby="${descripcion}" data-clave-${tipoCampo}><button type="button" class="boton boton--texto boton--icono campo-clave__alternar" data-accion="alternar-clave" data-target="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></span>${requisitos}</label>`;
 }
 export function seleccion({
   nombre,

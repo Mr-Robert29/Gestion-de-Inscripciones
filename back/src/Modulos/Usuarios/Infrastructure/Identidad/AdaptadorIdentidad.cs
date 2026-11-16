@@ -27,7 +27,7 @@ public class AdaptadorIdentidad : IServicioIdentidad
         Guid usuarioId,
         string correoElectronico,
         string clave,
-        string rolGlobal,
+        string? rolGlobal,
         CancellationToken cancellationToken = default)
     {
         var user = new IdentityUser<Guid>
@@ -45,13 +45,32 @@ public class AdaptadorIdentidad : IServicioIdentidad
             return (false, primerError);
         }
 
-        if (!await _roleManager.RoleExistsAsync(rolGlobal))
+        if (!string.IsNullOrWhiteSpace(rolGlobal) && !await _roleManager.RoleExistsAsync(rolGlobal))
         {
             await _roleManager.CreateAsync(new IdentityRole<Guid>(rolGlobal));
         }
 
-        await _userManager.AddToRoleAsync(user, rolGlobal);
+        if (!string.IsNullOrWhiteSpace(rolGlobal))
+        {
+            var rolResult = await _userManager.AddToRoleAsync(user, rolGlobal);
+            if (!rolResult.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+                return (false, rolResult.Errors.FirstOrDefault()?.Description ?? "No se pudo asignar el rol global.");
+            }
+        }
         return (true, null);
+    }
+
+    public async Task<(bool Exito, string? Error)> CambiarClaveAsync(Guid usuarioId, string claveActual, string claveNueva, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = await _userManager.FindByIdAsync(usuarioId.ToString());
+        if (user is null) return (false, "No se encontró la cuenta.");
+        var resultado = await _userManager.ChangePasswordAsync(user, claveActual, claveNueva);
+        return resultado.Succeeded
+            ? (true, null)
+            : (false, resultado.Errors.FirstOrDefault()?.Description ?? "No se pudo cambiar la contraseña.");
     }
 
     public async Task<(bool Valido, Guid UsuarioId, IReadOnlyList<string> Roles)> ValidarCredencialesAsync(

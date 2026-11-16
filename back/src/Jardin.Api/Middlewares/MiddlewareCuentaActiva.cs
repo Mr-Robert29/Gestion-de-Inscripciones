@@ -32,6 +32,19 @@ public class MiddlewareCuentaActiva
                     });
                     return;
                 }
+                var esCambioInicialClave = HttpMethods.IsPost(context.Request.Method)
+                    && context.Request.Path.Equals("/api/v1/Autenticacion/cambiar-clave", StringComparison.OrdinalIgnoreCase);
+                if (usuario.DebeCambiarClave && !esCambioInicialClave)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        codigo = "CAMBIO_CLAVE_REQUERIDO",
+                        mensaje = "Debés cambiar la contraseña inicial antes de continuar."
+                    });
+                    return;
+                }
             }
         }
 

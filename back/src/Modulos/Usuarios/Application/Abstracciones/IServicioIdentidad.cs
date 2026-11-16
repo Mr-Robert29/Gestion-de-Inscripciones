@@ -7,8 +7,9 @@ public interface IServicioIdentidad
         Guid usuarioId,
         string correoElectronico,
         string clave,
-        string rolGlobal,
+        string? rolGlobal,
         CancellationToken cancellationToken = default);
+    Task<(bool Exito, string? Error)> CambiarClaveAsync(Guid usuarioId, string claveActual, string claveNueva, CancellationToken cancellationToken = default);
 
     Task<(bool Valido, Guid UsuarioId, IReadOnlyList<string> Roles)> ValidarCredencialesAsync(
         string correoElectronico,

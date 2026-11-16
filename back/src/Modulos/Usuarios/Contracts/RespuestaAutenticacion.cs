@@ -7,4 +7,5 @@ public sealed record RespuestaAutenticacion(
     string Nombre,
     string CorreoElectronico,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<Guid> InstitucionesPermitidas);
+    IReadOnlyList<Guid> InstitucionesPermitidas,
+    bool DebeCambiarClave = false);

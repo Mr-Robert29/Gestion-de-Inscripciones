@@ -37,21 +37,27 @@ export async function solicitudes(ctx, modo = "solicitud") {
     modo === "solicitud" ? recuperarBorradores(ctx) : [],
   ]);
   let distancias = {};
+  let revisionesDomicilio = {};
   if (modo === "domicilio" && !ctx.estado.previa) {
-    const mediciones = await Promise.all(
+    const revisiones = await Promise.all(
       consulta.resultados.map(async (solicitud) => {
-        const historial = await ctx.api(
-          `${base(ctx.estado)}/solicitudes/${encodeURIComponent(solicitud.id)}/distancias`,
-        );
+        const ruta = `${base(ctx.estado)}/solicitudes/${encodeURIComponent(solicitud.id)}`;
+        const [historial, revision] = await Promise.all([
+          ctx.api(`${ruta}/distancias`),
+          ctx.api(`${ruta}/revision-domicilio`),
+        ]);
         return [
           solicitud.id,
-          historial.find((medicion) => medicion.esUltimoRegistro) ??
-            historial[0] ??
-            null,
+          {
+            distancia: historial.find((medicion) => medicion.esUltimoRegistro) ?? historial[0] ?? null,
+            domicilio: revision,
+          },
         ];
       }),
     );
-    distancias = Object.fromEntries(mediciones);
+    const seguimiento = Object.fromEntries(revisiones);
+    distancias = Object.fromEntries(Object.entries(seguimiento).map(([id, datos]) => [id, datos.distancia]));
+    revisionesDomicilio = Object.fromEntries(Object.entries(seguimiento).map(([id, datos]) => [id, datos.domicilio]));
   }
   const f = ctx.estado.filtros;
   return (
@@ -65,12 +71,31 @@ export async function solicitudes(ctx, modo = "solicitud") {
     }) +
     (modo === "domicilio"
       ? aviso(
-          "La distancia registrada es manual y provisoria. Si todavía no se cargó, figura como pendiente.",
+          "La distancia no se calcula automáticamente. “Manual provisoria” indica que fue ingresada por el equipo; “Desactualizada” indica que cambió el domicilio o la ubicación del jardín y hay que volver a medirla.",
           "aviso",
         )
       : "") +
-    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">${modo === "solicitud" ? "Listado de solicitudes" : "Seleccioná una solicitud"}</h2>${etiqueta(`Ciclo ${ctx.estado.periodo.ciclo}`, "neutra")}</div><form class="filtros" data-formulario="buscar">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: f.nombre ?? "", atributos: 'placeholder="Buscar por nombre"' })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: f.apellido ?? "", atributos: 'placeholder="Buscar por apellido"' })}${campo({ nombre: "dni", etiqueta: "DNI completo", valor: f.dni ?? "", atributos: 'placeholder="Sin puntos" inputmode="numeric"' })}<button class="boton boton--secundario" type="submit">${icono("buscar")}Buscar</button><button class="boton boton--texto" type="button" data-accion="limpiar-filtros">Limpiar</button></form>${tablaSolicitudes({ resultados: consulta.resultados, modo, borradores, distancias })}<div class="tarjeta__pie"><span>${consulta.resultados.length + (modo === "solicitud" ? borradores.length : 0)} registros en esta página</span><div><button class="boton boton--secundario boton--pequeno" data-accion="pagina-anterior" ${ctx.estado.pagina <= 1 ? "disabled" : ""}>Anterior</button> <span>Página ${ctx.estado.pagina}</span> <button class="boton boton--secundario boton--pequeno" data-accion="pagina-siguiente" ${consulta.hayMas ? "" : "disabled"}>Siguiente</button></div></div></section>`
+    `<section class="tarjeta"><div class="tarjeta__cabecera"><div><h2 class="tarjeta__titulo">${modo === "solicitud" ? "Listado de solicitudes" : modo === "domicilio" ? "Revisión de domicilios y distancias" : "Seleccioná una solicitud"}</h2>${modo === "domicilio" ? `<p class="tarjeta__descripcion">Resumen de las ${consulta.resultados.length} solicitudes de esta página</p>` : ""}</div>${etiqueta(`Ciclo ${ctx.estado.periodo.ciclo}`, "neutra")}</div>${modo === "domicilio" ? resumenDomicilios(consulta.resultados, distancias, revisionesDomicilio) : ""}<form class="filtros" data-formulario="buscar">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: f.nombre ?? "", atributos: 'placeholder="Buscar por nombre"' })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: f.apellido ?? "", atributos: 'placeholder="Buscar por apellido"' })}${campo({ nombre: "dni", etiqueta: "DNI completo", valor: f.dni ?? "", atributos: 'placeholder="Sin puntos" inputmode="numeric"' })}<button class="boton boton--secundario" type="submit">${icono("buscar")}Buscar</button><button class="boton boton--texto" type="button" data-accion="limpiar-filtros">Limpiar</button></form>${modo === "domicilio" ? `<div class="domicilios__filtro"><label class="campo" for="filtro-seguimiento-domicilio"><span class="campo__etiqueta">Filtrar por estado</span><select id="filtro-seguimiento-domicilio" class="campo__control"><option value="todos">Todas las solicitudes</option><option value="domicilio-pendiente">Domicilio pendiente de revisión</option><option value="distancia-pendiente">Distancia pendiente de cargar</option><option value="distancia-manual">Distancia manual provisoria</option><option value="distancia-desactualizada">Distancia desactualizada</option></select></label></div>` : ""}${tablaSolicitudes({ resultados: consulta.resultados, modo, borradores, distancias, revisionesDomicilio })}<div class="tarjeta__pie"><span data-resultados-domicilio>${consulta.resultados.length + (modo === "solicitud" ? borradores.length : 0)} ${modo === "domicilio" ? "solicitudes visibles" : "registros"} en esta página</span><div><button class="boton boton--secundario boton--pequeno" data-accion="pagina-anterior" ${ctx.estado.pagina <= 1 ? "disabled" : ""}>Anterior</button> <span>Página ${ctx.estado.pagina}</span> <button class="boton boton--secundario boton--pequeno" data-accion="pagina-siguiente" ${consulta.hayMas ? "" : "disabled"}>Siguiente</button></div></div></section>`
   );
+}
+
+function resumenDomicilios(solicitudes, distancias, revisiones) {
+  const cantidades = solicitudes.reduce((total, solicitud) => {
+    const distancia = distancias[solicitud.id];
+    const domicilio = revisiones[solicitud.id];
+    if (!domicilio?.revisionActual || domicilio.estado === "PendienteRevision") total.domiciliosPendientes++;
+    if (!distancia) total.distanciasPendientes++;
+    else if (!distancia.esVigente) total.desactualizadas++;
+    else total.manuales++;
+    return total;
+  }, { domiciliosPendientes: 0, distanciasPendientes: 0, manuales: 0, desactualizadas: 0 });
+  const items = [
+    ["Domicilios pendientes", cantidades.domiciliosPendientes, "de revisar"],
+    ["Distancias pendientes", cantidades.distanciasPendientes, "de cargar"],
+    ["Mediciones manuales", cantidades.manuales, "provisorias"],
+    ["Desactualizadas", cantidades.desactualizadas, "para volver a medir"],
+  ];
+  return `<div class="domicilios__resumen">${items.map(([titulo, total, detalle]) => `<div class="domicilios__indicador"><span>${titulo}</span><strong>${total}</strong><small>${detalle}</small></div>`).join("")}</div>`;
 }
 export function camposDomicilio(d = {}) {
   return `${campo({ nombre: "calle", etiqueta: "Calle", valor: d.calle, obligatorio: true })}${campo({ nombre: "numero", etiqueta: "Número", valor: d.numero, obligatorio: true })}${campo({ nombre: "localidad", etiqueta: "Localidad", valor: d.localidad, obligatorio: true })}${campo({ nombre: "provincia", etiqueta: "Provincia", valor: d.provincia, obligatorio: true })}${campo({ nombre: "codigoPostal", etiqueta: "Código postal (opcional)", valor: d.codigoPostal })}${campo({ nombre: "complemento", etiqueta: "Complemento (opcional)", valor: d.complemento })}`;

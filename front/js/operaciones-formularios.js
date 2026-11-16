@@ -41,16 +41,17 @@ export const opcionesEdades = [3, 4, 5].map((x) => ({
 }));
 export const enviar = (ctx, ruta, datos, metodo = "POST") =>
   ctx.api(ruta, { metodo, datos });
-export function formulario(ctx, titulo, contenido, guardar) {
+export function formulario(ctx, titulo, contenido, guardar, opciones = {}) {
   ctx.operacionOrganizacion = {
     guardar,
     institucionId: ctx.estado.institucion?.id,
     periodoId: ctx.estado.periodo?.id,
     usuario: ctx.estado.usuario,
+    permiteSinContexto: opciones.permiteSinContexto ?? false,
   };
   ctx.abrirDialogo({
     titulo,
-    contenido: `<form class="formulario" data-formulario="organizacion">${contenido}${errorFormulario()}<div class="formulario__acciones"><button type="button" class="boton boton--secundario" data-accion="cerrar-dialogo">Cancelar</button><button type="submit" class="boton" ${ctx.estado.previa ? "disabled" : ""}>Confirmar operación</button></div></form>`,
+    contenido: `<form class="formulario" data-formulario="organizacion">${contenido}${errorFormulario()}<div class="formulario__acciones"><button type="button" class="boton boton--secundario" data-accion="cerrar-dialogo">Cancelar</button><button type="submit" class="boton" ${ctx.estado.previa ? "disabled" : ""}>${opciones.textoConfirmar ?? "Confirmar operación"}</button></div></form>`,
   });
 }
 export function ver(ctx, titulo, contenido) {

@@ -7,4 +7,6 @@ public static class RolesPersonal
     public const string AdministradorDelSistema = "AdministradorDelSistema";
     public static IReadOnlyList<string> Todos { get; } =
         Array.AsReadOnly(new[] { Administrativo, Directivo, AdministradorDelSistema });
+    public static IReadOnlyList<string> Institucionales { get; } =
+        Array.AsReadOnly(new[] { Administrativo, Directivo });
 }

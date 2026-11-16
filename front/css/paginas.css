@@ -297,11 +297,13 @@
 .tutorial__subpasos li + li {
   margin-top: 0.4rem;
 }
+.tutorial__subpasos .formulario__acciones {
+  justify-content: flex-start;
+  margin: 0.35rem 0 0.2rem;
+  padding-top: 0;
+}
 .tutorial__subpasos strong {
   color: var(--color-texto);
-}
-.tutorial__paso .formulario__acciones {
-  margin-top: 0.8rem;
 }
 .pendiente {
   padding: 2.4rem;

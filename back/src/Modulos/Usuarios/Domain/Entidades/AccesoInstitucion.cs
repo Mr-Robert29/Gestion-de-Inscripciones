@@ -17,7 +17,7 @@ public sealed class AccesoInstitucion
         ArgumentException.ThrowIfNullOrWhiteSpace(rol);
 
         var rolLimpio = rol.Trim();
-        if (!RolesPersonal.Todos.Contains(rolLimpio))
+        if (!RolesPersonal.Institucionales.Contains(rolLimpio))
             throw new ArgumentException($"El rol '{rol}' no es válido para el personal.", nameof(rol));
 
         Id = id;
@@ -30,7 +30,7 @@ public sealed class AccesoInstitucion
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nuevoRol);
         var rolLimpio = nuevoRol.Trim();
-        if (!RolesPersonal.Todos.Contains(rolLimpio))
+        if (!RolesPersonal.Institucionales.Contains(rolLimpio))
             throw new ArgumentException($"El rol '{nuevoRol}' no es válido para el personal.", nameof(nuevoRol));
 
         Rol = rolLimpio;
