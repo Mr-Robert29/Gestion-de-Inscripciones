@@ -35,6 +35,27 @@ export function institucion(ctx) {
   );
 }
 export function periodos(ctx) {
+  const periodosVigentes = ctx.estado.periodos.filter(
+    (periodo) => periodo.estado !== "RecepcionCerrada",
+  );
+  const periodosCerrados = ctx.estado.periodos.filter(
+    (periodo) => periodo.estado === "RecepcionCerrada",
+  );
+  const tablaPeriodos = (lista) =>
+    `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Ciclo</th><th>Inicio previsto</th><th>Fin previsto</th><th>Estado</th><th>Configuración</th><th>Acción</th></tr></thead><tbody>${lista.map((p) => `<tr><td><strong>${e(p.ciclo)}</strong></td><td>${fecha(p.inicio)}</td><td>${fecha(p.fin)}</td><td>${etiqueta(p.estado)}</td><td>${p.versionReglasId && p.versionOfertaId ? etiqueta("Asignada") : etiqueta("Pendiente")}</td><td>${ctx.puedeEditar() && p.estado !== "RecepcionCerrada" ? `<button class="boton boton--secundario boton--pequeno" data-accion="recepcion" data-id="${e(p.id)}">${p.estado === "Preparado" ? "Abrir recepción" : "Cerrar recepción"}</button>` : '<span class="tabla__detalle">Sin acciones de recepción</span>'}</td></tr>`).join("")}</tbody></table></div>`;
+  const cantidadPorCiclo = new Map();
+  for (const periodo of ctx.estado.periodos)
+    cantidadPorCiclo.set(periodo.ciclo, (cantidadPorCiclo.get(periodo.ciclo) ?? 0) + 1);
+  const ciclosDuplicados = [...cantidadPorCiclo]
+    .filter(([, cantidad]) => cantidad > 1)
+    .map(([ciclo]) => ciclo)
+    .sort((a, b) => a - b);
+  const avisoDuplicados = ciclosDuplicados.length
+    ? aviso(
+        `Hay más de un período para los ciclos <strong>${ciclosDuplicados.map(e).join(", ")}</strong>. Se conservan los registros existentes para no afectar sus solicitudes; a partir de ahora no se podrán crear más períodos para esos ciclos.`,
+        "aviso",
+      )
+    : "";
   return (
     encabezado({
       titulo: "Períodos de inscripción",
@@ -43,7 +64,7 @@ export function periodos(ctx) {
         ? botonNuevo({ texto: "Crear período", accion: "nuevo-periodo" })
         : "",
     }) +
-    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Períodos de tu institución</h2></div>${ctx.estado.periodos.length ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Ciclo</th><th>Inicio previsto</th><th>Fin previsto</th><th>Estado</th><th>Configuración</th><th>Acción</th></tr></thead><tbody>${ctx.estado.periodos.map((p) => `<tr><td><strong>${e(p.ciclo)}</strong></td><td>${fecha(p.inicio)}</td><td>${fecha(p.fin)}</td><td>${etiqueta(p.estado)}</td><td>${p.versionReglasId && p.versionOfertaId ? etiqueta("Asignada") : etiqueta("Pendiente")}</td><td>${ctx.puedeEditar() && p.estado !== "RecepcionCerrada" ? `<button class="boton boton--secundario boton--pequeno" data-accion="recepcion" data-id="${e(p.id)}">${p.estado === "Preparado" ? "Abrir recepción" : "Cerrar recepción"}</button>` : '<span class="tabla__detalle">Sin acciones de recepción</span>'}</td></tr>`).join("")}</tbody></table></div>` : vacio({ titulo: "Prepará el primer período", descripcion: "Creá un ciclo para organizar las solicitudes de tu institución.", dibujo: "calendario" })}</section><div class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Reglas y oferta del período seleccionado</h2></div><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Las solicitudes necesitan una versión de reglas y una de oferta asignadas al período.</p><div class="formulario__acciones">${ctx.puedeEditar() && ctx.estado.periodo ? '<button class="boton boton--secundario" data-accion="preparar-versiones">Publicar y asignar versiones</button>' : ""}</div></div></div>`
+    `<section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Períodos vigentes</h2></div>${periodosVigentes.length ? tablaPeriodos(periodosVigentes) : vacio({ titulo: "No hay períodos vigentes", descripcion: "Los períodos cerrados se conservan en el historial. Creá un nuevo ciclo cuando quieras preparar otra inscripción.", dibujo: "calendario" })}</section>${periodosCerrados.length ? `<details class="tarjeta tarjeta--separada periodos__historial"><summary>Historial de períodos</summary><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Períodos cerrados que se conservan para consultar sus solicitudes y configuraciones anteriores.</p>${avisoDuplicados}${tablaPeriodos(periodosCerrados)}</div></details>` : ""}<div class="tarjeta tarjeta--separada"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Reglas y oferta del período seleccionado</h2></div><div class="tarjeta__cuerpo"><p class="tarjeta__descripcion">Las solicitudes necesitan una versión de reglas y una de oferta asignadas al período.</p><div class="formulario__acciones">${ctx.puedeEditar() && ctx.estado.periodo ? '<button class="boton boton--secundario" data-accion="preparar-versiones">Publicar y asignar versiones</button>' : ""}</div></div></div>`
   );
 }
 export function oferta(ctx) {

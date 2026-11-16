@@ -594,8 +594,29 @@ document.addEventListener("input", (evento) => {
   if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
     actualizarIndicadoresClave(evento.target.form);
   if (evento.target.matches("[data-buscar-cuentas]")) actualizarFiltroCuentas();
+  if (evento.target.matches("[data-motivo-otro]")) {
+    const valorFinal = evento.target.form?.querySelector("[data-motivo-final]");
+    if (valorFinal) valorFinal.value = evento.target.value.trim();
+  }
 });
 document.addEventListener("change", (evento) => {
+  if (evento.target.matches("[data-motivo-seleccion]")) {
+    const form = evento.target.form;
+    const esOtro = evento.target.value === "__otro__";
+    const contenedorOtro = form?.querySelector("[data-motivo-otro-contenedor]");
+    const textoOtro = form?.querySelector("[data-motivo-otro]");
+    const valorFinal = form?.querySelector("[data-motivo-final]");
+    if (contenedorOtro) contenedorOtro.hidden = !esOtro;
+    evento.target.setAttribute("aria-expanded", String(esOtro));
+    if (textoOtro) {
+      textoOtro.disabled = !esOtro;
+      textoOtro.required = esOtro;
+      if (esOtro) textoOtro.focus();
+    }
+    if (valorFinal)
+      valorFinal.value = esOtro ? (textoOtro?.value.trim() ?? "") : evento.target.value;
+    return;
+  }
   if (evento.target.matches("[data-tipo-cuenta]")) {
     const institucional = evento.target.value === "institucional";
     const camposInstitucion = evento.target.form?.querySelector("[data-cuenta-institucional]");

@@ -10,6 +10,7 @@ import {
 } from "./organizacion-comun.js";
 import {
   motivo,
+  motivos,
   referencia,
   selector,
   opcionesEdades,
@@ -53,7 +54,7 @@ export async function atenderEspera(elemento, ctx) {
       ctx,
       `Ofrecer plaza a ${nombreSolicitud(ctx, id)}`,
       "<p>El ofrecimiento reserva la plaza; todavía no confirma el ingreso.</p>" +
-        motivo(),
+        motivo(motivos.ofrecerVacante),
       (d) =>
         enviar(ctx, `${p}/ofrecimientos`, {
           operacionId: lista.operacionId,
@@ -83,7 +84,7 @@ export async function atenderEspera(elemento, ctx) {
       ctx,
       "Registrar respuesta al ofrecimiento",
       selector("respuesta", "Respuesta", opciones) +
-        motivo() +
+        motivo(motivos.respuestaOferta) +
         campo({
           nombre: "referencia",
           etiqueta: "Constancia familiar (obligatoria al aceptar)",
@@ -100,7 +101,7 @@ export async function atenderEspera(elemento, ctx) {
       ctx,
       "Confirmar ingreso desde espera",
       "<p>Se convertirá la reserva aceptada en un ingreso definitivo.</p>" +
-        motivo(),
+        motivo(motivos.confirmarIngreso),
       (d) =>
         enviar(ctx, `/ofrecimientos/${id}/confirmacion`, {
           revision: x.revision,
@@ -121,12 +122,10 @@ export async function atenderEspera(elemento, ctx) {
         ctx,
         "Registrar baja definitiva",
         "<p>La plaza se libera cuando también se completa la baja de su asignación. Una baja pendiente puede reintentarse.</p>" +
-          campo({
-            nombre: "motivo",
+          motivo(motivos.bajaIngreso, {
             etiqueta: "Motivo de la baja",
             valor: x.motivoBaja ?? "",
-            obligatorio: true,
-            atributos: x.bajaEnProceso ? "readonly" : "",
+            soloLectura: x.bajaEnProceso,
           }),
         async (d) => {
           const baja = await enviar(ctx, `/ingresos/${id}/baja`, {

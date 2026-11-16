@@ -9,6 +9,7 @@ import {
 import { base } from "./compartidos.js";
 import { camposDomicilio } from "./pagina-solicitudes.js";
 import { actualizarBorrador, claveBorradores } from "./borradores-solicitud.js";
+import { motivo, motivos } from "./operaciones-formularios.js";
 const opciones = (nombres) => nombres.map(([id, nombre]) => ({ id, nombre }));
 const accionesFormulario = (previa) =>
   `${errorFormulario()}${previa ? '<p class="formulario__nota">Vista previa: los cambios no se guardan.</p>' : ""}<div class="formulario__acciones"><button class="boton boton--secundario" type="button" data-accion="cerrar-dialogo">Cancelar</button><button class="boton" type="submit" ${previa ? "disabled" : ""}>Guardar</button></div>`;
@@ -47,7 +48,7 @@ export async function atenderAccion(elemento, ctx) {
     mostrar(ctx, {
       titulo: d.id ? "Editar datos del jardín" : "Registrar institución",
       formulario: d.id ? "editar-institucion" : "institucion",
-      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre del jardín", valor: d.nombre, obligatorio: true, completo: true })}${campo({ nombre: "codigo", etiqueta: "Código institucional (opcional)", valor: d.codigo })}${campo({ nombre: "telefonoContacto", etiqueta: "Teléfono", valor: d.telefonoContacto, tipo: "tel", obligatorio: true })}${campo({ nombre: "correoElectronicoContacto", etiqueta: "Correo (opcional)", valor: d.correoElectronicoContacto, tipo: "email", completo: true })}${camposDomicilio(d.domicilio)}${campo({ nombre: "latitud", etiqueta: "Latitud (opcional)", tipo: "number", valor: d.coordenadas?.latitud, atributos: 'step="any" min="-90" max="90"' })}${campo({ nombre: "longitud", etiqueta: "Longitud (opcional)", tipo: "number", valor: d.coordenadas?.longitud, atributos: 'step="any" min="-180" max="180"' })}${d.id ? campo({ nombre: "motivo", etiqueta: "Motivo del cambio", obligatorio: true, completo: true }) : ""}</div>`,
+      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre del jardín", valor: d.nombre, obligatorio: true, completo: true })}${campo({ nombre: "codigo", etiqueta: "Código institucional (opcional)", valor: d.codigo })}${campo({ nombre: "telefonoContacto", etiqueta: "Teléfono", valor: d.telefonoContacto, tipo: "tel", obligatorio: true })}${campo({ nombre: "correoElectronicoContacto", etiqueta: "Correo (opcional)", valor: d.correoElectronicoContacto, tipo: "email", completo: true })}${camposDomicilio(d.domicilio)}${campo({ nombre: "latitud", etiqueta: "Latitud (opcional)", tipo: "number", valor: d.coordenadas?.latitud, atributos: 'step="any" min="-90" max="90"' })}${campo({ nombre: "longitud", etiqueta: "Longitud (opcional)", tipo: "number", valor: d.coordenadas?.longitud, atributos: 'step="any" min="-180" max="180"' })}${d.id ? motivo(motivos.cambioInstitucion, { etiqueta: "Motivo del cambio" }) : ""}</div>`,
     });
     return;
   }
@@ -61,6 +62,7 @@ export async function atenderAccion(elemento, ctx) {
           etiqueta: "Ciclo lectivo",
           tipo: "number",
           obligatorio: true,
+          ayuda: "La institución puede tener un solo período por ciclo lectivo.",
           atributos: 'min="1" max="9999" step="1" placeholder="2027"',
         }) +
         `<div class="formulario__rejilla">${campo({ nombre: "inicio", etiqueta: "Inicio previsto", tipo: "date", obligatorio: true })}${campo({ nombre: "fin", etiqueta: "Fin previsto", tipo: "date", obligatorio: true })}</div><p class="formulario__nota">El período se crea en preparación. La recepción se abre después.</p>`,
@@ -82,7 +84,7 @@ export async function atenderAccion(elemento, ctx) {
             ? "La apertura es manual. Prepará y asigná reglas y oferta antes de registrar solicitudes."
             : "Las nuevas solicitudes quedarán fuera de término, pendientes de autorización. Las revisiones podrán continuar.",
           "aviso",
-        ) + campo({ nombre: "motivo", etiqueta: "Motivo", obligatorio: true }),
+        ) + motivo(p.estado === "Preparado" ? motivos.aperturaRecepcion : motivos.cierreRecepcion),
     });
     ctx.operacion.periodo = p;
     return;
@@ -105,7 +107,7 @@ export async function atenderAccion(elemento, ctx) {
     mostrar(ctx, {
       titulo: "Agregar oferta del período",
       formulario: "oferta",
-      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad declarada", tipo: "number", obligatorio: true, ayuda: "Cantidad máxima de lugares para esta aula y turno.", atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad (opcional)", ayuda: "Podés indicar un acta, planilla o norma que respalde la capacidad informada." })}</div><label class="casilla"><input type="checkbox" name="disponible" checked>Disponible en este período</label>${campo({ nombre: "motivo", etiqueta: "Motivo del registro", obligatorio: true, ayuda: "Por ejemplo: Carga inicial de la oferta del período 2027." })}`,
+      contenido: `<div class="formulario__rejilla">${seleccion({ nombre: "aulaId", etiqueta: "Aula", opciones: estado.aulas, obligatorio: true })}${seleccion({ nombre: "turnoId", etiqueta: "Turno", opciones: estado.turnos, obligatorio: true })}${campo({ nombre: "capacidad", etiqueta: "Capacidad declarada", tipo: "number", obligatorio: true, ayuda: "Cantidad máxima de lugares para esta aula y turno.", atributos: 'min="0" step="1"' })}${campo({ nombre: "referenciaCapacidad", etiqueta: "Referencia de capacidad (opcional)", ayuda: "Podés indicar un acta, planilla o norma que respalde la capacidad informada." })}</div><label class="casilla"><input type="checkbox" name="disponible" checked>Disponible en este período</label>${motivo(motivos.oferta, { etiqueta: "Motivo del registro" })}`,
     });
     return;
   }
@@ -126,7 +128,7 @@ export async function atenderAccion(elemento, ctx) {
           tipo: "date",
           obligatorio: true,
         }) +
-        campo({ nombre: "motivo", etiqueta: "Motivo", obligatorio: true }),
+        motivo(motivos.publicacion, { etiqueta: "Motivo de la publicación" }),
     });
     return;
   }
@@ -168,11 +170,7 @@ export async function atenderAccion(elemento, ctx) {
             ["PersonasDiferentes", "Personas diferentes"],
           ]),
         }) +
-        campo({
-          nombre: "motivo",
-          etiqueta: "Motivo de la decisión",
-          obligatorio: true,
-        }),
+        motivo(motivos.duplicado, { etiqueta: "Motivo de la decisión" }),
     });
     ctx.operacion.alerta = d;
     return;
@@ -217,7 +215,7 @@ export async function atenderAccion(elemento, ctx) {
             ["RevisadoManualmente", "Revisado manualmente"],
           ]),
         }) +
-        campo({ nombre: "motivo", etiqueta: "Motivo", obligatorio: true }) +
+        motivo(motivos.revisionDomicilio) +
         campo({
           nombre: "referencia",
           etiqueta: "Referencia de comprobación",
@@ -233,7 +231,7 @@ export async function atenderAccion(elemento, ctx) {
       descripcion:
         "La corrección conserva los datos anteriores en el historial.",
       formulario: "corregir",
-      contenido: `<div class="formulario__rejilla">${camposDomicilio(s.domicilio)}${seleccion({ nombre: "turnoPreferidoId", etiqueta: "Turno preferido", opciones: estado.turnos, valor: s.turnoPreferidoId, obligatorio: true })}${campo({ nombre: "referenciaConsentimiento", etiqueta: "Referencia de consentimiento", valor: s.referenciaConsentimiento })}</div>${campo({ nombre: "motivo", etiqueta: "Motivo de la corrección", obligatorio: true })}<p class="formulario__nota">Se conservarán las alternativas de turno ya aceptadas. Los datos personales compartidos del aspirante se corrigen mediante un procedimiento posterior.</p>`,
+      contenido: `<div class="formulario__rejilla">${camposDomicilio(s.domicilio)}${seleccion({ nombre: "turnoPreferidoId", etiqueta: "Turno preferido", opciones: estado.turnos, valor: s.turnoPreferidoId, obligatorio: true })}${campo({ nombre: "referenciaConsentimiento", etiqueta: "Referencia de consentimiento", valor: s.referenciaConsentimiento })}</div>${motivo(motivos.correccionSolicitud, { etiqueta: "Motivo de la corrección" })}<p class="formulario__nota">Se conservarán las alternativas de turno ya aceptadas. Los datos personales compartidos del aspirante se corrigen mediante un procedimiento posterior.</p>`,
     });
     return;
   }
@@ -243,7 +241,7 @@ export async function atenderAccion(elemento, ctx) {
       titulo: "Editar datos del aspirante",
       descripcion: "La corrección quedará registrada en el historial.",
       formulario: "editar-aspirante",
-      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "" })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">Al guardar, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte del ciclo. Si la edad queda fuera del rango admitido, aparecerá pendiente de revisión.</p>`,
+      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "", sugerencias: ["DNI", "Pasaporte", "Otro documento"] })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">Al guardar, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte del ciclo. Si la edad queda fuera del rango admitido, aparecerá pendiente de revisión.</p>`,
     });
     return;
   }
@@ -306,7 +304,9 @@ export async function atenderAccion(elemento, ctx) {
           etiqueta: "Observación (opcional)",
           valor: dato.observacion,
         }) +
-        campo({ nombre: "motivo", etiqueta: "Motivo", obligatorio: true }),
+        motivo(esDocumento ? motivos.documentacion : motivos.condicion, {
+          etiqueta: nuevo ? "Motivo del registro" : "Motivo de la revisión",
+        }),
     });
     return;
   }
@@ -384,6 +384,8 @@ export async function atenderFormulario(formulario, ctx) {
         apellido: datos.apellido,
         fechaNacimiento: datos.fechaNacimiento,
         dni: datos.dni || null,
+        tipoDocumento: datos.tipoDocumento || null,
+        sexo: datos.sexo || null,
       });
       const guardado = actualizarBorrador(clave, aspirante.id, true);
       if (clave !== claveBorradores(ctx.estado)) return;
@@ -514,10 +516,15 @@ export async function atenderFormulario(formulario, ctx) {
         await ctx.recargarContexto({ institucionId: nueva.id });
       }
     } else if (nombre === "periodo") {
+      const ciclo = Number(datos.ciclo);
+      if (ctx.estado.periodos.some((periodo) => periodo.ciclo === ciclo))
+        throw new Error(
+          `Ya existe un período para el ciclo ${ciclo} en esta institución. Seleccioná el período existente desde el encabezado.`,
+        );
       if (datos.fin < datos.inicio)
         throw new Error("La fecha final no puede ser anterior a la inicial.");
       const periodo = await crear(`${ruta}/periodos`, {
-        ciclo: Number(datos.ciclo),
+        ciclo,
         inicio: datos.inicio,
         fin: datos.fin,
       });

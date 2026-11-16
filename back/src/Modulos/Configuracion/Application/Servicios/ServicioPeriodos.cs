@@ -39,6 +39,10 @@ public sealed class ServicioPeriodos : IModuloPeriodos
             peticion.Ciclo,
             peticion.Inicio,
             peticion.Fin);
+        var periodosExistentes = await _periodos.ListarAsync(institucionId, tokenCancelacion);
+        if (periodosExistentes.Any(x => x.Ciclo == periodo.Ciclo))
+            throw new InvalidOperationException(
+                $"Ya existe un período de inscripción para el ciclo {periodo.Ciclo} en esta institución. Seleccioná el período existente desde el encabezado para continuar.");
         await _periodos.AgregarAsync(
             periodo,
             CrearCambio(periodo, autor.Id, "Periodo.Creacion", "Preparación del período", null),

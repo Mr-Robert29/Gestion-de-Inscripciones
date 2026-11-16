@@ -10,6 +10,7 @@ import {
 } from "./organizacion-comun.js";
 import {
   motivo,
+  motivos,
   referencia,
   selector,
   opcionesEdades,
@@ -25,7 +26,7 @@ export async function atenderAdmision(elemento, ctx) {
   const p = ctx.estado.periodo ? rutaPeriodo(ctx) : null;
   const datos = ctx.organizacion ?? {};
   if (accion === "org-generar-propuesta")
-    formulario(ctx, "Generar propuesta de ingresos", motivo(), async (d) => {
+    formulario(ctx, "Generar propuesta de ingresos", motivo(motivos.propuestaAdmision), async (d) => {
       const x = await enviar(ctx, `${p}/propuestas-ingresos`, d);
       return {
         destino: `vacantes/propuesta/${x.id}`,
@@ -74,7 +75,7 @@ export async function atenderAdmision(elemento, ctx) {
           false,
         ) +
         '<label class="casilla"><input type="checkbox" name="alternativo">El turno elegido es una alternativa aceptada por la familia.</label>' +
-        motivo(),
+        motivo(motivos.revisarPropuesta),
       async (d) => {
         const oferta = ctx.estado.ofertas.find((o) => o.id === d.ofertaId);
         if (d.estado === "IngresoPropuesto" && !oferta)
@@ -171,7 +172,7 @@ export async function atenderAdmision(elemento, ctx) {
         ),
       );
     else if (accion === "org-reabrir")
-      formulario(ctx, "Reabrir caso", motivo(), (d) =>
+      formulario(ctx, "Reabrir caso", motivo(motivos.reabrirCaso), (d) =>
         enviar(ctx, `/casos-revision/${id}/reabrir`, {
           motivo: d.motivo,
           revision: x.revision,
@@ -193,7 +194,7 @@ export async function atenderAdmision(elemento, ctx) {
               ]),
             )
             .join("") +
-          motivo(),
+          motivo(motivos.ordenManual),
         (d) => {
           const posiciones = x.solicitudesAfectadas.map((s, i) => ({
             solicitud: s,

@@ -10,6 +10,7 @@ import {
 } from "./organizacion-comun.js";
 import {
   motivo,
+  motivos,
   referencia,
   selector,
   opcionesEdades,
@@ -71,7 +72,7 @@ export async function atenderSecciones(elemento, ctx) {
               )
               .map((c) => ({ id: c, nombre: c })),
           ) +
-          motivo(),
+          motivo(motivos.composicionSeccion),
         (d) =>
           enviar(ctx, ruta, {
             nuevasEdades: d.edades.split(",").map(Number),
@@ -105,7 +106,7 @@ export async function atenderSecciones(elemento, ctx) {
         [{ id: "", nombre: "Sin sección" }, ...opciones],
         x.seccionId ?? "",
         false,
-      ) + motivo(),
+      ) + motivo(motivos.asignarSeccion),
       (d) =>
         enviar(
           ctx,

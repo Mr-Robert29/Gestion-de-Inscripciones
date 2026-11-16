@@ -9,7 +9,6 @@ import {
   historial,
 } from "./organizacion-comun.js";
 import {
-  motivo,
   referencia,
   selector,
   opcionesEdades,

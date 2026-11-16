@@ -95,12 +95,6 @@ export const icono = (nombre) =>
 export const marca = () =>
   '<span class="marca"><img class="marca__imagen" src="./recursos/marca.svg" alt=""><span><span class="marca__nombre">jardín.</span><span class="marca__leyenda">GESTIÓN DE INSCRIPCIONES</span></span></span>';
 const sugerenciasPorCampo = {
-  motivo: [
-    "Solicitud de la familia",
-    "Corrección de datos registrados",
-    "Verificación de la información disponible",
-    "Revisión administrativa",
-  ],
   tipoVinculo: ["Madre", "Padre", "Tutor/a legal", "Responsable autorizado", "Otro vínculo"],
   tipoDocumento: ["DNI", "Pasaporte", "Otro documento"],
 };
@@ -126,6 +120,25 @@ export function campo({
     ? `list="${id}-opciones" placeholder="${nombre === "motivo" ? "Elegí una sugerencia o escribí el motivo" : "Elegí una sugerencia o escribí una opción"}"`
     : "";
   return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${lista} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${opcionesSugeridas.length ? `<datalist id="${id}-opciones">${opcionesSugeridas.map((opcion) => `<option value="${escapar(opcion)}"></option>`).join("")}</datalist>` : ""}${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
+}
+
+export function campoMotivo({
+  sugerencias = [],
+  etiqueta: rotulo = "Motivo",
+  valor = "",
+  soloLectura = false,
+}) {
+  if (soloLectura)
+    return campo({
+      nombre: "motivo",
+      etiqueta: rotulo,
+      valor,
+      obligatorio: true,
+      atributos: "readonly",
+    });
+
+  const id = "campo-motivo";
+  return `<label class="campo" for="${id}-seleccion"><span class="campo__etiqueta">${escapar(rotulo)} <span aria-hidden="true">*</span></span><select id="${id}-seleccion" class="campo__control" data-motivo-seleccion aria-controls="${id}-otro-contenedor" aria-expanded="false" required><option value="">Seleccioná un motivo</option>${sugerencias.map((opcion) => `<option value="${escapar(opcion)}">${escapar(opcion)}</option>`).join("")}<option value="__otro__">Otro</option></select></label><input type="hidden" name="motivo" data-motivo-final><div id="${id}-otro-contenedor" class="motivo__otro" data-motivo-otro-contenedor hidden><label class="campo" for="${id}-otro"><span class="campo__etiqueta">Especificá el motivo <span aria-hidden="true">*</span></span><textarea id="${id}-otro" class="campo__control" rows="3" data-motivo-otro disabled></textarea></label></div>`;
 }
 export function campoClave({
   nombre,
