@@ -379,29 +379,61 @@ export async function atenderAccion(elemento, ctx) {
     ctx.operacion.fechaCorte = fechaCorteSolicitud;
     return;
   }
-  if (
-    accion === "corregir-articulacion"
-  ) {
+  if (accion === "corregir-articulacion" || accion === "corregir-prioridad") {
     const condicion = ficha.antecedentes.condiciones.find(
       (x) => x.id === elemento.dataset.id,
     );
     if (!condicion || estado.periodo?.estado !== "RecepcionAbierta")
       throw new Error("La respuesta solo se puede cambiar mientras la recepción esté abierta.");
+    const tipos = {
+      articulacion: ["ArticulacionPedagogica", "DeclaracionArticulacionNegativa", "ConsultaArticulacionPedagogica"],
+      hermanos: ["HermanosYGruposConvivientes", "DeclaracionHermanosNegativa"],
+      personal: ["HijosDelPersonal", "DeclaracionHijosPersonalNegativa"],
+    };
+    const grupo = Object.entries(tipos).find(([, valores]) => valores.includes(condicion.tipo))?.[0];
+    if (!grupo) throw new Error("No se reconoce el criterio de prioridad que querés corregir.");
+    const respuestaActual = grupo === "articulacion"
+      ? condicion.tipo === "ArticulacionPedagogica" ? "Si" : condicion.tipo === "ConsultaArticulacionPedagogica" ? "NoEstoySeguro" : "No"
+      : condicion.tipo === tipos[grupo][0] ? "Si" : "No";
+    const prefijoProcedencia = "Institución de procedencia informada por la familia: ";
+    const valorDetalle = grupo === "articulacion"
+      ? condicion.evidenciaReferencia?.startsWith(prefijoProcedencia)
+        ? condicion.evidenciaReferencia.slice(prefijoProcedencia.length)
+        : ""
+      : condicion.tipo === tipos[grupo][0] ? condicion.evidenciaReferencia ?? "" : "";
+    const nombreRespuesta = {
+      articulacion: "respuestaArticulacion",
+      hermanos: "respuestaHermanosGrupo",
+      personal: "respuestaHijoPersonal",
+    }[grupo];
+    const nombreDetalle = {
+      articulacion: "institucionProcedencia",
+      hermanos: "detalleHermanoGrupo",
+      personal: "detalleHijoPersonal",
+    }[grupo];
+    const etiquetaDetalle = {
+      articulacion: "Institución de procedencia",
+      hermanos: "Nombre del alumno/a, sala y vínculo",
+      personal: "Nombre de la persona y dónde trabaja",
+    }[grupo];
+    const opcionesRespuesta = grupo === "articulacion"
+      ? [["Si", "Sí"], ["No", "No"], ["NoEstoySeguro", "No estoy seguro/a"]]
+      : [["Si", "Sí"], ["No", "No"]];
+    const requiereDetalle = grupo === "articulacion"
+      ? ["Si", "NoEstoySeguro"].includes(respuestaActual)
+      : respuestaActual === "Si";
+    const contenidoDetalle = `<div data-prioridad-detalle="${grupo}" ${requiereDetalle ? "" : "hidden"}>${campo({ nombre: nombreDetalle, etiqueta: etiquetaDetalle, valor: valorDetalle, obligatorio: requiereDetalle, completo: true })}</div>`;
     mostrar(ctx, {
-      titulo: "Actualizar respuesta sobre articulación",
-      descripcion: "La respuesta nueva quedará pendiente de revisión y se conservará el cambio en el historial.",
-      formulario: "corregir-articulacion",
+      titulo: `Actualizar prioridad: ${grupo === "articulacion" ? "articulación pedagógica" : grupo === "hermanos" ? "hermanos o grupo conviviente" : "hijo/a del personal"}`,
+      descripcion: "La respuesta nueva quedará pendiente de revisión y el cambio se conservará en el historial.",
+      formulario: "corregir-prioridad",
       id: condicion.id,
       contenido: seleccion({
-        nombre: "respuestaArticulacion",
+        nombre: nombreRespuesta,
         etiqueta: "Respuesta de la familia",
-        valor: condicion.tipo === "ArticulacionPedagogica" ? "Si" : condicion.tipo === "DeclaracionArticulacionNegativa" ? "No" : "NoEstoySeguro",
-        opciones: opciones([
-          ["Si", "Sí"],
-          ["No", "No"],
-          ["NoEstoySeguro", "No estoy seguro/a"],
-        ]),
-      }) + campo({ nombre: "institucionProcedencia", etiqueta: "Institución de procedencia (opcional)", valor: condicion.evidenciaReferencia?.startsWith("Institución de procedencia informada por la familia: ") ? condicion.evidenciaReferencia.slice("Institución de procedencia informada por la familia: ".length) : "" }) + motivo(motivos.condicion, { etiqueta: "Motivo del cambio" }),
+        valor: respuestaActual,
+        opciones: opciones(opcionesRespuesta),
+      }) + contenidoDetalle + motivo(motivos.condicion, { etiqueta: "Motivo del cambio" }),
     });
     return;
   }
@@ -907,22 +939,59 @@ export async function atenderFormulario(formulario, ctx) {
           motivo: datos.motivo,
         },
       );
-    } else if (nombre === "corregir-articulacion") {
+    } else if (nombre === "corregir-prioridad") {
       if (estado.periodo?.estado !== "RecepcionAbierta")
         throw new Error("La respuesta solo se puede cambiar mientras la recepción esté abierta.");
       const condicion = f.antecedentes.condiciones.find((x) => x.id === operacion.id);
-      if (!condicion) throw new Error("No se encontró la declaración de articulación.");
-      const tipos = {
-        Si: ["ArticulacionPedagogica", "La familia declara que la institución de procedencia articula formalmente con este jardín."],
-        No: ["DeclaracionArticulacionNegativa", "La familia responde que no hay una articulación formal conocida con este jardín."],
-        NoEstoySeguro: ["ConsultaArticulacionPedagogica", "La familia no sabe si la institución de procedencia articula formalmente con este jardín."],
+      if (!condicion) throw new Error("No se encontró la declaración de prioridad.");
+      const grupo = {
+        ArticulacionPedagogica: "articulacion",
+        DeclaracionArticulacionNegativa: "articulacion",
+        ConsultaArticulacionPedagogica: "articulacion",
+        HermanosYGruposConvivientes: "hermanos",
+        DeclaracionHermanosNegativa: "hermanos",
+        HijosDelPersonal: "personal",
+        DeclaracionHijosPersonalNegativa: "personal",
+      }[condicion.tipo];
+      const respuestas = {
+        articulacion: datos.respuestaArticulacion,
+        hermanos: datos.respuestaHermanosGrupo,
+        personal: datos.respuestaHijoPersonal,
       };
-      const [tipo, valorDeclarado] = tipos[datos.respuestaArticulacion] ?? [];
+      const detalles = {
+        articulacion: datos.institucionProcedencia,
+        hermanos: datos.detalleHermanoGrupo,
+        personal: datos.detalleHijoPersonal,
+      };
+      const respuesta = respuestas[grupo];
+      const detalle = detalles[grupo]?.trim();
+      if (!grupo) throw new Error("No se reconoce el criterio de prioridad.");
+      const definiciones = {
+        articulacion: {
+          Si: ["ArticulacionPedagogica", "La familia declara que la institución de procedencia articula formalmente con este jardín."],
+          No: ["DeclaracionArticulacionNegativa", "La familia responde que no hay una articulación formal conocida con este jardín."],
+          NoEstoySeguro: ["ConsultaArticulacionPedagogica", "La familia no sabe si la institución de procedencia articula formalmente con este jardín."],
+        },
+        hermanos: {
+          Si: ["HermanosYGruposConvivientes", "La familia declara que el aspirante tiene un hermano o integrante de su grupo conviviente en el jardín."],
+          No: ["DeclaracionHermanosNegativa", "La familia declara que el aspirante no tiene un hermano o integrante de su grupo conviviente en el jardín."],
+        },
+        personal: {
+          Si: ["HijosDelPersonal", "La familia declara que el aspirante es hijo/a de personal del jardín o de una institución que articula con él."],
+          No: ["DeclaracionHijosPersonalNegativa", "La familia declara que el aspirante no es hijo/a de personal del jardín ni de una institución articulada."],
+        },
+      };
+      const [tipo, valorDeclarado] = definiciones[grupo]?.[respuesta] ?? [];
       if (!tipo) throw new Error("Seleccioná una respuesta válida.");
+      if ((grupo === "articulacion" && ["Si", "NoEstoySeguro"].includes(respuesta) || grupo !== "articulacion" && respuesta === "Si") && !detalle)
+        throw new Error("Completá el dato adicional para revisar esta declaración.");
+      const evidenciaReferencia = grupo === "articulacion"
+        ? detalle ? `Institución de procedencia informada por la familia: ${detalle}` : "Institución de procedencia no informada por la familia."
+        : respuesta === "Si" ? detalle : "Respuesta de la familia al registrar la solicitud.";
       await actualizar(`${f.rutaSolicitud}/condiciones/${encodeURIComponent(condicion.id)}/declaracion`, {
         tipo,
         valorDeclarado,
-        evidenciaReferencia: datos.institucionProcedencia ? `Institución de procedencia informada por la familia: ${datos.institucionProcedencia}` : "Institución de procedencia no informada por la familia.",
+        evidenciaReferencia,
         revisionSolicitud: f.antecedentes.revisionSolicitud,
         motivo: datos.motivo,
       });

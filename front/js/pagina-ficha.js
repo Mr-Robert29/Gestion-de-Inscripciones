@@ -11,6 +11,10 @@ const nombreCondicion = (tipo) => ({
   ArticulacionPedagogica: "Articulación pedagógica",
   ConsultaArticulacionPedagogica: "Consulta sobre articulación pedagógica",
   DeclaracionArticulacionNegativa: "Respuesta sobre articulación",
+  HermanosYGruposConvivientes: "Hermanos o grupo conviviente",
+  DeclaracionHermanosNegativa: "Respuesta sobre hermanos o grupo conviviente",
+  HijosDelPersonal: "Hijo/a del personal",
+  DeclaracionHijosPersonalNegativa: "Respuesta sobre hijo/a del personal",
 }[tipo] ?? tipo);
 
 const condicionesPrioridad = {
@@ -48,12 +52,12 @@ function estadoPrioridad(condicion, tipos) {
   return { respuesta: "No", estado: "NoDeclarada" };
 }
 
-function tarjetaPrioridad({ numero: orden, titulo, condicion, tipos, detalle, extra = "" }) {
+function tarjetaPrioridad({ numero: orden, titulo, condicion, tipos, detalle, extra = "", puedeEditar = false }) {
   const estado = estadoPrioridad(condicion, tipos);
   const detalleDeclarado = condicion?.evidenciaReferencia || condicion?.valorDeclarado;
   return `<article class="prioridad-ficha">
     <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">${orden}</span><div><h3>${titulo}</h3><p>Respuesta familiar: <strong>${e(estado.respuesta)}</strong></p></div>${etiqueta(estado.estado)}</div>
-    <div class="prioridad-ficha__detalle">${detalle(condicion, detalleDeclarado)}${condicion?.observacion ? `<p><strong>Observación del jardín:</strong> ${e(condicion.observacion)}</p>` : ""}${extra}</div>
+    <div class="prioridad-ficha__detalle">${detalle(condicion, detalleDeclarado)}${condicion?.observacion ? `<p><strong>Observación del jardín:</strong> ${e(condicion.observacion)}</p>` : ""}${extra}${puedeEditar && condicion ? `<div class="prioridad-ficha__acciones"><button class="boton boton--secundario boton--pequeno" data-accion="corregir-prioridad" data-id="${e(condicion.id)}">Editar respuesta</button></div>` : ""}</div>
   </article>`;
 }
 
@@ -106,6 +110,7 @@ export async function ficha(ruta, ctx) {
           ctx.api(`${rutaSolicitud}/distancias`),
         ]);
     const condiciones = antecedentes.condiciones ?? [];
+    ctx.ficha.antecedentes = antecedentes;
     const articulacion = buscarCondicion(condiciones, [
       condicionesPrioridad.articulacion.afirmativa,
       condicionesPrioridad.articulacion.negativa,
@@ -122,18 +127,19 @@ export async function ficha(ruta, ctx) {
     const distanciaActual = distancias.find((medicion) => medicion.esVigente);
     const tarjetaCercania = `<article class="prioridad-ficha">
       <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">3</span><div><h3>Cercanía al jardín</h3><p>Se evalúa con el domicilio y una distancia vigente registrada.</p></div>${etiqueta(distanciaActual ? "ManualProvisional" : "PendienteRevision")}</div>
-      <div class="prioridad-ficha__detalle"><p><strong>Domicilio declarado:</strong> ${e(direccionTexto(s.domicilio))}</p>${distanciaActual ? `<p><strong>Distancia registrada:</strong> ${numero(distanciaActual.distanciaMetros)} m</p><p><strong>Referencia de la medición:</strong> ${e(distanciaActual.referencia || "Sin referencia informada")}</p>` : `<p>${distancias.length ? "La última medición quedó desactualizada; hace falta registrar una nueva." : "Todavía no hay una distancia registrada para esta solicitud."}</p>`}<p><strong>Revisión del domicilio:</strong> ${e(revision.estado ?? "Sin revisión")}</p><p class="formulario__nota">La medición manual es provisoria. La distancia aporta información para evaluar esta prioridad; no confirma por sí sola una vacante.</p></div>
+      <div class="prioridad-ficha__detalle"><p><strong>Domicilio declarado:</strong> ${e(direccionTexto(s.domicilio))}</p>${distanciaActual ? `<p><strong>Distancia registrada:</strong> ${numero(distanciaActual.distanciaMetros)} m</p><p><strong>Referencia de la medición:</strong> ${e(distanciaActual.referencia || "Sin referencia informada")}</p>` : `<p>${distancias.length ? "La última medición quedó desactualizada; hace falta registrar una nueva." : "Todavía no hay una distancia registrada para esta solicitud."}</p>`}<p><strong>Revisión del domicilio:</strong> ${e(revision.estado ?? "Sin revisión")}</p><p class="formulario__nota">La medición manual es provisoria. La distancia aporta información para evaluar esta prioridad; no confirma por sí sola una vacante.</p><a class="boton boton--texto boton--pequeno" href="#solicitud/${encodeURIComponent(id)}/domicilio">Gestionar domicilio y distancia</a></div>
     </article>`;
     ctx.ficha.prioridades = { condiciones, revision, distancias };
     contenido = tarjeta({
       titulo: "Prioridades declaradas y verificadas",
       descripcion:
-        "Consultá qué informó la familia y qué verificó el jardín para cada criterio. Una declaración afirmativa no concede prioridad hasta que corresponda y quede verificada.",
+        `${!recepcionAbierta ? "La recepción está cerrada: las respuestas de la familia ya no se pueden modificar. " : puedeCorregirDatos ? "Mientras la recepción esté abierta, podés corregir las declaraciones; el cambio las deja pendientes de revisión. " : "La recepción está abierta, pero tu cuenta no tiene permiso para corregir estas declaraciones. "}Consultá lo informado por la familia y lo verificado por el jardín. Una respuesta afirmativa no concede prioridad hasta que corresponda y quede verificada.`,
       cuerpo: `<div class="prioridades-ficha">${tarjetaPrioridad({
         numero: 1,
         titulo: "Articulación pedagógica",
         condicion: articulacion,
         tipos: condicionesPrioridad.articulacion,
+        puedeEditar: puedeCorregirDatos,
         detalle: (condicion, dato) => {
           if (!condicion) return '<p>No se registró una respuesta sobre articulación.</p>';
           if (condicion.tipo === condicionesPrioridad.articulacion.negativa) return `<p>${e(condicion.valorDeclarado)}</p>`;
@@ -148,6 +154,7 @@ export async function ficha(ruta, ctx) {
         titulo: "Hermanos o grupo conviviente",
         condicion: hermanos,
         tipos: condicionesPrioridad.hermanos,
+        puedeEditar: puedeCorregirDatos,
         detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.hermanos.afirmativa
           ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
           : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
@@ -156,6 +163,7 @@ export async function ficha(ruta, ctx) {
         titulo: "Hijo/a del personal",
         condicion: personal,
         tipos: condicionesPrioridad.personal,
+        puedeEditar: puedeCorregirDatos,
         detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.personal.afirmativa
           ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
           : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
@@ -186,7 +194,7 @@ export async function ficha(ruta, ctx) {
       ? { revisionSolicitud: 1, documentos: [], condiciones: [] }
       : await ctx.api(`${rutaSolicitud}/antecedentes`);
     ctx.ficha.antecedentes = a;
-    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Documentación", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-documento">+ Registrar</button>', cuerpo: a.documentos.length ? a.documentos.map((d) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(d.tipo)}</strong><span class="acceso-rapido__descripcion">${e(d.referencia ?? "Sin referencia")}</span></div>${etiqueta(d.estado)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-documento" data-id="${e(d.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">No hay documentos registrados. Esto no significa que el legajo esté completo.</p>' })}${tarjeta({ titulo: "Condiciones declaradas", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nueva-condicion">+ Declarar</button>', cuerpo: a.condiciones.length ? a.condiciones.map((c) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(nombreCondicion(c.tipo))}</strong><span class="acceso-rapido__descripcion">${e(c.valorDeclarado)}</span></div>${c.tipo === "DeclaracionArticulacionNegativa" ? etiqueta("NoDeclarada") : etiqueta(c.estadoVerificacion)}${c.tipo.startsWith("Articulacion") || c.tipo === "ConsultaArticulacionPedagogica" ? `<button class="boton boton--texto boton--pequeno" data-accion="revisar-condicion" data-id="${e(c.id)}">Revisar</button>${puedeCorregirDatos ? `<button class="boton boton--texto boton--pequeno" data-accion="corregir-articulacion" data-id="${e(c.id)}">Cambiar respuesta</button>` : ""}` : `<button class="boton boton--texto boton--pequeno" data-accion="revisar-condicion" data-id="${e(c.id)}">Revisar</button>`}</div>`).join("") : '<p class="formulario__nota">Sin condiciones declaradas. Declarar una condición no la verifica ni concede prioridad automáticamente.</p>' })}</div>`;
+    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Documentación", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-documento">+ Registrar</button>', cuerpo: a.documentos.length ? a.documentos.map((d) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(d.tipo)}</strong><span class="acceso-rapido__descripcion">${e(d.referencia ?? "Sin referencia")}</span></div>${etiqueta(d.estado)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-documento" data-id="${e(d.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">No hay documentos registrados. Esto no significa que el legajo esté completo.</p>' })}${tarjeta({ titulo: "Condiciones declaradas", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nueva-condicion">+ Declarar</button>', cuerpo: a.condiciones.length ? a.condiciones.map((c) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(nombreCondicion(c.tipo))}</strong><span class="acceso-rapido__descripcion">${e(c.valorDeclarado)}</span></div>${c.tipo.endsWith("Negativa") ? etiqueta("NoDeclarada") : etiqueta(c.estadoVerificacion)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-condicion" data-id="${e(c.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">Sin condiciones declaradas. Declarar una condición no la verifica ni concede prioridad automáticamente.</p>' })}</div>`;
   } else if (pestana === "responsables") {
     const vinculos = persona.responsables ?? [];
     contenido = tarjeta({

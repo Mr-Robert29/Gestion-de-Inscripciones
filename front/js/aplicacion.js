@@ -657,12 +657,15 @@ document.addEventListener("submit", async (evento) => {
 document.addEventListener("change", (evento) => {
   const selecciones = {
     articulacionPedagogica: "articulacion",
+    respuestaArticulacion: "articulacion",
     hermanosGrupoConviviente: "hermanos",
+    respuestaHermanosGrupo: "hermanos",
     hijoPersonal: "personal",
+    respuestaHijoPersonal: "personal",
   };
   const grupo = selecciones[evento.target.name];
   if (!grupo) return;
-  const formulario = evento.target.closest('[data-formulario="solicitud"]');
+  const formulario = evento.target.closest("[data-formulario]");
   const detalle = formulario?.querySelector(`[data-prioridad-detalle="${grupo}"]`);
   if (!detalle) return;
   const mostrar = grupo === "articulacion"

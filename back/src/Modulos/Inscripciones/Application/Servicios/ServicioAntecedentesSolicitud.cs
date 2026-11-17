@@ -272,6 +272,8 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
                 estado,
                 token) =>
             {
+                if (estado != "RecepcionAbierta")
+                    throw new InvalidOperationException("Las respuestas de prioridad solo se pueden corregir mientras la recepción esté abierta.");
                 ComprobarRevision(
                     solicitud,
                     peticion.RevisionSolicitud,

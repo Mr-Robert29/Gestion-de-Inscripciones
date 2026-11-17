@@ -463,6 +463,11 @@
 .prioridad-ficha__detalle .formulario__nota {
   margin-top: 0.45rem;
 }
+.prioridad-ficha__acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.6rem;
+}
 @media (max-width: 760px) {
   .prioridades-ficha {
     grid-template-columns: 1fr;
