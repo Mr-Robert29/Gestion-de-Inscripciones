@@ -15,8 +15,16 @@ public sealed record ConsultarListaEsperaRespuesta(
     IReadOnlyList<string> OrdenProcedimiento,
     int TotalEnEspera,
     int TotalPendientes,
+    IReadOnlyList<DatosResumenListaEspera> ResumenPreferencias,
     DatosPaginaListaEspera EnEspera,
     DatosPaginaListaEspera Pendientes);
+
+public sealed record DatosResumenListaEspera(
+    int? Sala,
+    Guid TurnoPreferidoId,
+    int EnEspera,
+    int ConReserva,
+    int Pendientes);
 
 public sealed record DatosPaginaListaEspera(
     IReadOnlyList<DatosIntegranteListaEspera> Resultados,

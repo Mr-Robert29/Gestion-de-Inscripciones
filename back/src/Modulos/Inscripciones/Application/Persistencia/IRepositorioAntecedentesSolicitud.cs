@@ -8,6 +8,10 @@ public interface IRepositorioAntecedentesSolicitud
         Guid institucionId,
         Guid solicitudId,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<CondicionArticulacionInterna>> ListarArticulacionesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default);
     Task AgregarDocumentoAsync(
         SolicitudInscripcion solicitud,
         DocumentacionSolicitud documento,

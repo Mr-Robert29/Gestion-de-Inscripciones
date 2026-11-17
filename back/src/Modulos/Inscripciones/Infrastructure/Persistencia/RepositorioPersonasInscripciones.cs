@@ -22,6 +22,41 @@ public sealed class RepositorioPersonasInscripciones : IRepositorioPersonasInscr
                 .Any(r => r.InstitucionId == institucionId && r.ResponsableId == v.ResponsableId)))
             .ThenInclude(v => v.Responsable).SingleOrDefaultAsync(tokenCancelacion);
 
+    public async Task<IReadOnlyList<Aspirante>> ListarAspirantesAsync(
+        Guid institucionId,
+        IReadOnlyCollection<Guid> aspiranteIds,
+        CancellationToken tokenCancelacion = default)
+    {
+        if (aspiranteIds.Count == 0) return [];
+        var ids = aspiranteIds.Distinct().ToArray();
+        return await _contexto.Aspirantes.AsNoTracking()
+            .Where(a => ids.Contains(a.Id) && _contexto.AspirantesInstituciones
+                .Any(r => r.InstitucionId == institucionId && r.AspiranteId == a.Id))
+            .ToArrayAsync(tokenCancelacion);
+    }
+
+    // Implementa IRepositorioPersonasInscripciones.ObtenerAspiranteParaActualizarAsync con seguimiento de EF Core.
+    public Task<Aspirante?> ObtenerAspiranteParaActualizarAsync(
+        Guid institucionId,
+        Guid aspiranteId,
+        CancellationToken tokenCancelacion = default)
+        => _contexto.Aspirantes.Where(a => a.Id == aspiranteId && _contexto.AspirantesInstituciones
+                .Any(r => r.InstitucionId == institucionId && r.AspiranteId == a.Id))
+            .Include(a => a.Vinculos.Where(v => _contexto.ResponsablesInstituciones
+                .Any(r => r.InstitucionId == institucionId && r.ResponsableId == v.ResponsableId)))
+            .ThenInclude(v => v.Responsable)
+            .SingleOrDefaultAsync(tokenCancelacion);
+
+    // Implementa IRepositorioPersonasInscripciones.GuardarCorreccionAspiranteAsync con su cambio de historial.
+    public async Task GuardarCorreccionAspiranteAsync(
+        CambioInscripciones cambio,
+        CancellationToken tokenCancelacion = default)
+    {
+        _contexto.Cambios.Add(cambio);
+        try { await _contexto.SaveChangesAsync(tokenCancelacion); }
+        catch (DbUpdateConcurrencyException) { throw new ConflictoRevisionSolicitudException(); }
+    }
+
     // Implementa IRepositorioPersonasInscripciones.ObtenerResponsableAsync.
     public Task<Responsable?> ObtenerResponsableAsync(
         Guid institucionId,

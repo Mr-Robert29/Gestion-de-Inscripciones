@@ -8,12 +8,18 @@ public sealed class UsuarioPersonal
     public string Nombre { get; private set; } = "";
     public string CorreoElectronico { get; private set; } = "";
     public bool Activo { get; private set; }
+    public Guid? IdentidadPersonalId { get; private set; }
+    public IdentidadPersonal? IdentidadPersonal { get; private set; }
+    public bool DebeCambiarClave { get; private set; }
 
     public IReadOnlyCollection<AccesoInstitucion> Accesos => _accesos.AsReadOnly();
 
     private UsuarioPersonal() { }
 
     public UsuarioPersonal(Guid id, string nombre, string correoElectronico)
+        : this(id, nombre, correoElectronico, null, false) { }
+
+    public UsuarioPersonal(Guid id, string nombre, string correoElectronico, Guid? identidadPersonalId, bool debeCambiarClave = false)
     {
         if (id == Guid.Empty) throw new ArgumentException("El identificador no puede ser vacío.", nameof(id));
         ArgumentException.ThrowIfNullOrWhiteSpace(nombre);
@@ -22,7 +28,18 @@ public sealed class UsuarioPersonal
         Id = id;
         Nombre = nombre.Trim();
         CorreoElectronico = correoElectronico.Trim();
+        IdentidadPersonalId = identidadPersonalId;
+        DebeCambiarClave = debeCambiarClave;
         Activo = true;
+    }
+
+    public void MarcarClaveActualizada() => DebeCambiarClave = false;
+
+    public void ReasignarIdentidad(IdentidadPersonal identidad)
+    {
+        ArgumentNullException.ThrowIfNull(identidad);
+        IdentidadPersonalId = identidad.Id;
+        IdentidadPersonal = identidad;
     }
 
     public void Activar() => Activo = true;

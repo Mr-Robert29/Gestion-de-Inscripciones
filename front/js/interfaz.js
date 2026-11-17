@@ -38,6 +38,8 @@ export const textos = {
   Presentada: "Presentada",
   Observada: "Observada",
   Verificada: "Verificada",
+  NoAcreditada: "No acreditada",
+  NoDeclarada: "Sin prioridad declarada",
   Observado: "Observado",
   DuplicacionConfirmada: "Duplicación confirmada",
   PersonasDiferentes: "Personas diferentes",
@@ -54,7 +56,7 @@ export function etiqueta(estado, variante = "") {
     "ManualProvisional",
     "Preparado",
   ].includes(estado);
-  const error = ["Observado", "Observada", "DuplicacionConfirmada"].includes(
+  const error = ["Observado", "Observada", "NoAcreditada", "DuplicacionConfirmada"].includes(
     estado,
   );
   return `<span class="etiqueta ${variante ? `etiqueta--${variante}` : aviso ? "etiqueta--aviso" : error ? "etiqueta--error" : ""}"><span class="etiqueta__punto"></span>${escapar(textoEstado(estado))}</span>`;
@@ -94,6 +96,10 @@ export const icono = (nombre) =>
   `<svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${trazos[nombre] ?? trazos.solicitudes}</svg>`;
 export const marca = () =>
   '<span class="marca"><img class="marca__imagen" src="./recursos/marca.svg" alt=""><span><span class="marca__nombre">jardín.</span><span class="marca__leyenda">GESTIÓN DE INSCRIPCIONES</span></span></span>';
+const sugerenciasPorCampo = {
+  tipoVinculo: ["Madre", "Padre", "Tutor/a legal", "Responsable autorizado", "Otro vínculo"],
+  tipoDocumento: ["DNI", "Pasaporte", "Otro documento"],
+};
 export function jardinIlustrado() {
   return `<svg viewBox="0 0 360 210" fill="none" aria-hidden="true"><circle cx="284" cy="45" r="23" fill="#dec58f"/><path d="M5 170c80-45 135 30 210 0s104-17 143-12v52H5Z" fill="#8fac83" opacity=".45"/><path d="M9 193c92-40 122 12 208-8s111-5 141 6" stroke="#c7d3a4" stroke-width="1.5"/><path d="M174 181V73m0 65c-42 5-67-19-60-55 38-1 66 20 60 55Zm0-29c-3-40 18-61 54-58 3 36-16 61-54 58Z" fill="#a2bc8e" stroke="#c7d3a4" stroke-width="2"/><path d="M174 139 138 105m37 5 33-38" stroke="#567b55" stroke-width="2"/><path d="M151 164h48l-7 35h-33Z" fill="#dfb785"/><path d="M69 182v-43m0 22c-23 0-31-13-28-29 19 0 30 12 28 29Zm0-17c0-21 10-31 28-30 1 19-10 31-28 30Z" fill="#b7c99b"/><path d="M57 175h26l-4 23H61Z" fill="#d5dfb8"/><path d="M270 188v-56m0 24c-22 1-34-12-32-30 20-1 35 12 32 30Zm0-17c-1-26 12-38 34-36 2 23-12 38-34 36Z" fill="#b4c797"/><path d="M255 179h30l-5 22h-20Z" fill="#e0ca9c"/><path d="M33 76h25m-13-12v25m271-7h13m-6-6v13" stroke="#d2d9b7" opacity=".5" stroke-width="1.5"/></svg>`;
 }
@@ -106,15 +112,42 @@ export function campo({
   ayuda = "",
   atributos = "",
   completo = false,
+  sugerencias = [],
 }) {
   const id = `campo-${nombre}`;
-  return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
+  const opcionesSugeridas = sugerencias.length
+    ? sugerencias
+    : (sugerenciasPorCampo[nombre] ?? []);
+  const lista = opcionesSugeridas.length
+    ? `list="${id}-opciones" placeholder="${nombre === "motivo" ? "Elegí una sugerencia o escribí el motivo" : "Elegí una sugerencia o escribí una opción"}"`
+    : "";
+  return `<label class="campo ${completo ? "campo--completo" : ""}" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="${tipo}" value="${escapar(valor)}" ${obligatorio ? "required" : ""} ${lista} ${atributos} ${ayuda ? `aria-describedby="${id}-ayuda"` : ""}>${opcionesSugeridas.length ? `<datalist id="${id}-opciones">${opcionesSugeridas.map((opcion) => `<option value="${escapar(opcion)}"></option>`).join("")}</datalist>` : ""}${ayuda ? `<span id="${id}-ayuda" class="campo__ayuda">${escapar(ayuda)}</span>` : ""}</label>`;
+}
+
+export function campoMotivo({
+  sugerencias = [],
+  etiqueta: rotulo = "Motivo",
+  valor = "",
+  soloLectura = false,
+}) {
+  if (soloLectura)
+    return campo({
+      nombre: "motivo",
+      etiqueta: rotulo,
+      valor,
+      obligatorio: true,
+      atributos: "readonly",
+    });
+
+  const id = "campo-motivo";
+  return `<label class="campo" for="${id}-seleccion"><span class="campo__etiqueta">${escapar(rotulo)} <span aria-hidden="true">*</span></span><select id="${id}-seleccion" class="campo__control" data-motivo-seleccion aria-controls="${id}-otro-contenedor" aria-expanded="false" required><option value="">Seleccioná un motivo</option>${sugerencias.map((opcion) => `<option value="${escapar(opcion)}">${escapar(opcion)}</option>`).join("")}<option value="__otro__">Otro</option></select></label><input type="hidden" name="motivo" data-motivo-final><div id="${id}-otro-contenedor" class="motivo__otro" data-motivo-otro-contenedor hidden><label class="campo" for="${id}-otro"><span class="campo__etiqueta">Especificá el motivo <span aria-hidden="true">*</span></span><textarea id="${id}-otro" class="campo__control" rows="3" data-motivo-otro disabled></textarea></label></div>`;
 }
 export function campoClave({
   nombre,
   etiqueta: rotulo,
   obligatorio = false,
   confirmacion = false,
+  placeholder = "",
 }) {
   const id = `campo-${nombre}`;
   const tipoCampo = confirmacion ? "confirmacion" : "inicial";
@@ -124,7 +157,7 @@ export function campoClave({
   const descripcion = confirmacion
     ? `${id}-coincidencia`
     : `${id}-requisitos`;
-  return `<label class="campo campo--clave" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><span class="campo-clave"><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="password" ${obligatorio ? "required" : ""} autocomplete="new-password" minlength="6" aria-describedby="${descripcion}" data-clave-${tipoCampo}><button type="button" class="boton boton--texto boton--icono campo-clave__alternar" data-accion="alternar-clave" data-target="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></span>${requisitos}</label>`;
+  return `<label class="campo campo--clave" for="${id}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? ' <span aria-hidden="true">*</span>' : ""}</span><span class="campo-clave"><input id="${id}" class="campo__control" name="${escapar(nombre)}" type="password" ${obligatorio ? "required" : ""} placeholder="${escapar(placeholder)}" autocomplete="new-password" minlength="6" aria-describedby="${descripcion}" data-clave-${tipoCampo}><button type="button" class="boton boton--texto boton--icono campo-clave__alternar" data-accion="alternar-clave" data-target="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></span>${requisitos}</label>`;
 }
 export function seleccion({
   nombre,
@@ -132,8 +165,9 @@ export function seleccion({
   opciones,
   valor = "",
   obligatorio = false,
+  completo = false,
 }) {
-  return `<label class="campo"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? " *" : ""}</span><select name="${escapar(nombre)}" class="campo__control" ${obligatorio ? "required" : ""}>${opciones.map((o) => `<option value="${escapar(o.id)}" ${String(o.id) === String(valor) ? "selected" : ""}>${escapar(o.nombre)}</option>`).join("")}</select></label>`;
+  return `<label class="campo ${completo ? "campo--completo" : ""}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? " *" : ""}</span><select name="${escapar(nombre)}" class="campo__control" ${obligatorio ? "required" : ""}>${opciones.map((o) => `<option value="${escapar(o.id)}" ${String(o.id) === String(valor) ? "selected" : ""}>${escapar(o.nombre)}</option>`).join("")}</select></label>`;
 }
 export const aviso = (mensaje, variante = "") =>
   `<div class="aviso ${variante ? `aviso--${variante}` : ""}" role="status">${icono("ayuda")}<div class="aviso__contenido">${mensaje}</div></div>`;

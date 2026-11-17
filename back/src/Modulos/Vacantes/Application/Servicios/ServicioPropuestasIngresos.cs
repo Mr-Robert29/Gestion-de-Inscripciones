@@ -10,26 +10,29 @@ using Jardin.Vacantes.Domain.Servicios;
 
 namespace Jardin.Vacantes.Application.Servicios;
 
-public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
+public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos, IProcesadorPropuestaIngresosEnSegundoPlano
 {
     private readonly IAutorizacionPropuestasIngresos _autorizacion;
     private readonly IContextoPropuestaIngresos _contexto;
     private readonly IRepositorioPropuestasIngresos _propuestas;
     private readonly IRepositorioSorteos _sorteos;
     private readonly IRepositorioCasosRevision _casos;
+    private readonly IModuloPrioridades _prioridades;
 
     public ServicioPropuestasIngresos(
         IAutorizacionPropuestasIngresos autorizacion,
         IContextoPropuestaIngresos contexto,
         IRepositorioPropuestasIngresos propuestas,
         IRepositorioSorteos sorteos,
-        IRepositorioCasosRevision casos)
+        IRepositorioCasosRevision casos,
+        IModuloPrioridades prioridades)
     {
         _autorizacion = autorizacion;
         _contexto = contexto;
         _propuestas = propuestas;
         _sorteos = sorteos;
         _casos = casos;
+        _prioridades = prioridades;
     }
 
     // Implementa IModuloPropuestasIngresos.GenerarAsync: coordina una nueva propuesta, sin confirmar ingresos.
@@ -41,8 +44,21 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         ArgumentNullException.ThrowIfNull(peticion);
         ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
         var autor = await _autorizacion.AutorizarPropuestaAsync(periodoId, tokenCancelacion);
-        return await _contexto.ConPeriodoProtegidoAsync(
+        return await GenerarAutorizadoAsync(periodoId, peticion, autor, tokenCancelacion);
+    }
+
+    public async Task<ConsultarPropuestaIngresosRespuesta> GenerarAutorizadoAsync(
+        Guid periodoId,
+        GenerarPropuestaIngresosPeticion peticion,
+        AutorizacionVacantes autor,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        ArgumentNullException.ThrowIfNull(autor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+        return await _contexto.ConPeriodoProtegidoComoAsync(
             periodoId,
+            autor.UsuarioId,
             async token =>
             {
                 var datos = await LeerAsync(periodoId, token);
@@ -50,6 +66,11 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                     throw new InvalidOperationException("Cerrá la recepción antes de generar una propuesta.");
                 if (datos.Entradas.InstitucionId != autor.InstitucionId)
                     throw new UnauthorizedAccessException();
+                var procesamiento = await _prioridades.ConsultarEstadoAsync(periodoId, token);
+                if (procesamiento.PendientesRevision > 0)
+                    throw new InvalidOperationException($"Quedan {procesamiento.PendientesRevision} prioridades por revisar antes de generar la propuesta.");
+                if (!procesamiento.Procesado || !procesamiento.Vigente)
+                    throw new InvalidOperationException("Primero procesá la lista de aspirantes. Si cambió algún dato, volvé a procesarla antes de generar la propuesta.");
                 var resultados = PlanificadorPropuestaIngresos.Generar(
                     datos.Entradas,
                     datos.Sorteos,
@@ -176,6 +197,69 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
             peticion.Referencia);
         await _propuestas.GuardarAceptacionAsync(aceptacion, tokenCancelacion);
         return Mapear(aceptacion);
+    }
+
+    public async Task<IReadOnlyList<DatosAceptacionTurno>> RegistrarAceptacionesTurnoLoteAsync(
+        Guid propuestaId,
+        RegistrarAceptacionesTurnoLotePeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        var referencia = peticion.ReferenciaComun?.Trim();
+        if (string.IsNullOrWhiteSpace(referencia) || referencia.Length > 250)
+            throw new ArgumentException("Indicá una referencia común válida para las aceptaciones.");
+        if (!peticion.ConfirmaAceptacionesFamiliares)
+            throw new ArgumentException("Confirmá que las familias aceptaron el turno alternativo.");
+        var solicitudIds = peticion.SolicitudIds?.Where(x => x != Guid.Empty).Distinct().ToArray()
+            ?? throw new ArgumentException("Seleccioná al menos una solicitud.");
+        if (solicitudIds.Length == 0)
+            throw new ArgumentException("Seleccioná al menos una solicitud.");
+
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        var autor = await _autorizacion.AutorizarAceptacionTurnoAsync(propuesta.PeriodoId, tokenCancelacion);
+        if (!await EstaVigenteAsync(propuesta, tokenCancelacion))
+            throw new InvalidOperationException("La propuesta está desactualizada.");
+
+        var resultados = DeserializarResultados(propuesta)
+            .Where(x => solicitudIds.Contains(x.SolicitudId))
+            .ToDictionary(x => x.SolicitudId);
+        if (resultados.Count != solicitudIds.Length || solicitudIds.Any(id =>
+                resultados[id].Estado != "IngresoPropuesto" || !resultados[id].EsTurnoAlternativo || resultados[id].TurnoId is null))
+            throw new ArgumentException("Todas las solicitudes deben tener un ingreso propuesto en turno alternativo.");
+
+        var existentes = await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion);
+        var clavesExistentes = existentes.Select(x => (x.SolicitudId, x.TurnoId)).ToHashSet();
+        var nuevas = solicitudIds
+            .Select(id => resultados[id])
+            .Where(x => !clavesExistentes.Contains((x.SolicitudId, x.TurnoId!.Value)))
+            .Select(x => new AceptacionTurnoFamiliar(
+                propuesta.PeriodoId,
+                propuesta.Id,
+                x.SolicitudId,
+                x.TurnoId!.Value,
+                autor.UsuarioId,
+                referencia))
+            .ToArray();
+        await _propuestas.GuardarAceptacionesAsync(nuevas, tokenCancelacion);
+
+        var guardadas = await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion);
+        return solicitudIds
+            .Select(id => guardadas.Single(x => x.SolicitudId == id && x.TurnoId == resultados[id].TurnoId))
+            .Select(Mapear)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<DatosAceptacionTurno>> ConsultarAceptacionesTurnoAsync(
+        Guid propuestaId,
+        CancellationToken tokenCancelacion = default)
+    {
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        await _autorizacion.AutorizarPropuestaAsync(propuesta.PeriodoId, tokenCancelacion);
+        return (await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion))
+            .Select(Mapear)
+            .ToArray();
     }
 
     public async Task<IReadOnlyList<DatosConfirmacionIngreso>> ConfirmarAsync(

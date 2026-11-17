@@ -7,6 +7,60 @@ import {
 } from "./interfaz.js";
 import { encabezado, tarjeta, base, volver } from "./compartidos.js";
 import { detalleEjemplo } from "./datos-previa.js";
+const nombreCondicion = (tipo) => ({
+  ArticulacionPedagogica: "Articulación pedagógica",
+  ConsultaArticulacionPedagogica: "Consulta sobre articulación pedagógica",
+  DeclaracionArticulacionNegativa: "Respuesta sobre articulación",
+  HermanosYGruposConvivientes: "Hermanos o grupo conviviente",
+  DeclaracionHermanosNegativa: "Respuesta sobre hermanos o grupo conviviente",
+  HijosDelPersonal: "Hijo/a del personal",
+  DeclaracionHijosPersonalNegativa: "Respuesta sobre hijo/a del personal",
+}[tipo] ?? tipo);
+
+const condicionesPrioridad = {
+  articulacion: {
+    afirmativa: "ArticulacionPedagogica",
+    negativa: "DeclaracionArticulacionNegativa",
+    consulta: "ConsultaArticulacionPedagogica",
+  },
+  hermanos: {
+    afirmativa: "HermanosYGruposConvivientes",
+    negativa: "DeclaracionHermanosNegativa",
+  },
+  personal: {
+    afirmativa: "HijosDelPersonal",
+    negativa: "DeclaracionHijosPersonalNegativa",
+  },
+};
+
+function buscarCondicion(condiciones, tipos) {
+  return [...condiciones]
+    .filter((condicion) => tipos.includes(condicion.tipo))
+    .sort((a, b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro))[0];
+}
+
+function estadoPrioridad(condicion, tipos) {
+  if (!condicion) {
+    return { respuesta: "Sin declaración registrada", estado: "NoDeclarada" };
+  }
+  if (condicion.tipo === tipos.afirmativa) {
+    return { respuesta: "Sí", estado: condicion.estadoVerificacion };
+  }
+  if (condicion.tipo === tipos.consulta) {
+    return { respuesta: "No está seguro/a", estado: condicion.estadoVerificacion };
+  }
+  return { respuesta: "No", estado: "NoDeclarada" };
+}
+
+function tarjetaPrioridad({ numero: orden, titulo, condicion, tipos, detalle, extra = "", puedeEditar = false }) {
+  const estado = estadoPrioridad(condicion, tipos);
+  const detalleDeclarado = condicion?.evidenciaReferencia || condicion?.valorDeclarado;
+  return `<article class="prioridad-ficha">
+    <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">${orden}</span><div><h3>${titulo}</h3><p>Respuesta familiar: <strong>${e(estado.respuesta)}</strong></p></div>${etiqueta(estado.estado)}</div>
+    <div class="prioridad-ficha__detalle">${detalle(condicion, detalleDeclarado)}${condicion?.observacion ? `<p><strong>Observación del jardín:</strong> ${e(condicion.observacion)}</p>` : ""}${extra}${puedeEditar && condicion ? `<div class="prioridad-ficha__acciones"><button class="boton boton--secundario boton--pequeno" data-accion="corregir-prioridad" data-id="${e(condicion.id)}">Editar respuesta</button></div>` : ""}</div>
+  </article>`;
+}
+
 export async function ficha(ruta, ctx) {
   const [, id, pestana = "solicitud"] = ruta.split("/");
   if (!id) throw new Error("Elegí una solicitud desde el listado.");
@@ -19,6 +73,23 @@ export async function ficha(ruta, ctx) {
     : await ctx.api(
         `${base(ctx.estado)}/aspirantes/${encodeURIComponent(s.aspiranteId)}`,
       );
+  const asignacionesSeccion = ctx.estado.previa || pestana !== "solicitud"
+    ? []
+    : await ctx.api(
+        `/periodos/${encodeURIComponent(s.periodoId)}/secciones/asignaciones-activas`,
+      );
+  const asignacionSeccion = asignacionesSeccion.find(
+    (asignacion) => asignacion.solicitudId === s.id,
+  );
+  const periodoFicha = ctx.estado.periodos.find((p) => p.id === s.periodoId);
+  const recepcionAbierta =
+    ctx.estado.previa || periodoFicha?.estado === "RecepcionAbierta";
+  const puedeCorregirDatos =
+    recepcionAbierta &&
+    (ctx.estado.previa ||
+      ctx.estado.usuario?.permisos?.includes(
+        "Solicitudes.CorregirDuranteRecepcion",
+      ));
   const cabecera = encabezado({
     titulo: `${persona.nombre} ${persona.apellido}`,
     descripcion: `Solicitud ${s.id} · Ciclo ${ctx.estado.periodos.find((p) => p.id === s.periodoId)?.ciclo ?? ""}`,
@@ -26,6 +97,7 @@ export async function ficha(ruta, ctx) {
   });
   const pestanas = `<nav class="pestanas" aria-label="Secciones de la ficha">${[
     ["solicitud", "Datos de inscripción"],
+    ["prioridades", "Prioridades"],
     ["documentos", "Documentación y condiciones"],
     ["domicilio", "Domicilio y distancia"],
     ["responsables", "Responsables"],
@@ -37,7 +109,75 @@ export async function ficha(ruta, ctx) {
     .join("")}</nav>`;
   ctx.ficha = { solicitud: s, persona, rutaSolicitud };
   let contenido;
-  if (pestana === "domicilio") {
+  if (pestana === "prioridades") {
+    const [antecedentes, revision, distancias] = ctx.estado.previa
+      ? [{ condiciones: [] }, { estado: "PendienteRevision", historial: [] }, []]
+      : await Promise.all([
+          ctx.api(`${rutaSolicitud}/antecedentes`),
+          ctx.api(`${rutaSolicitud}/revision-domicilio`),
+          ctx.api(`${rutaSolicitud}/distancias`),
+        ]);
+    const condiciones = antecedentes.condiciones ?? [];
+    ctx.ficha.antecedentes = antecedentes;
+    const articulacion = buscarCondicion(condiciones, [
+      condicionesPrioridad.articulacion.afirmativa,
+      condicionesPrioridad.articulacion.negativa,
+      condicionesPrioridad.articulacion.consulta,
+    ]);
+    const hermanos = buscarCondicion(condiciones, [
+      condicionesPrioridad.hermanos.afirmativa,
+      condicionesPrioridad.hermanos.negativa,
+    ]);
+    const personal = buscarCondicion(condiciones, [
+      condicionesPrioridad.personal.afirmativa,
+      condicionesPrioridad.personal.negativa,
+    ]);
+    const distanciaActual = distancias.find((medicion) => medicion.esVigente);
+    const tarjetaCercania = `<article class="prioridad-ficha">
+      <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">3</span><div><h3>Cercanía al jardín</h3><p>Se evalúa con el domicilio y una distancia vigente registrada.</p></div>${etiqueta(distanciaActual ? "ManualProvisional" : "PendienteRevision")}</div>
+      <div class="prioridad-ficha__detalle"><p><strong>Domicilio declarado:</strong> ${e(direccionTexto(s.domicilio))}</p>${distanciaActual ? `<p><strong>Distancia registrada:</strong> ${numero(distanciaActual.distanciaMetros)} m</p><p><strong>Referencia de la medición:</strong> ${e(distanciaActual.referencia || "Sin referencia informada")}</p>` : `<p>${distancias.length ? "La última medición quedó desactualizada; hace falta registrar una nueva." : "Todavía no hay una distancia registrada para esta solicitud."}</p>`}<p><strong>Revisión del domicilio:</strong> ${e(revision.estado ?? "Sin revisión")}</p><p class="formulario__nota">La medición manual es provisoria. La distancia aporta información para evaluar esta prioridad; no confirma por sí sola una vacante.</p><a class="boton boton--texto boton--pequeno" href="#solicitud/${encodeURIComponent(id)}/domicilio">Gestionar domicilio y distancia</a></div>
+    </article>`;
+    ctx.ficha.prioridades = { condiciones, revision, distancias };
+    contenido = tarjeta({
+      titulo: "Prioridades declaradas y verificadas",
+      descripcion:
+        `${!recepcionAbierta ? "La recepción está cerrada: las respuestas de la familia ya no se pueden modificar. " : puedeCorregirDatos ? "Mientras la recepción esté abierta, podés corregir las declaraciones; el cambio las deja pendientes de revisión. " : "La recepción está abierta, pero tu cuenta no tiene permiso para corregir estas declaraciones. "}Consultá lo informado por la familia y lo verificado por el jardín. Una respuesta afirmativa no concede prioridad hasta que corresponda y quede verificada.`,
+      cuerpo: `<div class="prioridades-ficha">${tarjetaPrioridad({
+        numero: 1,
+        titulo: "Articulación pedagógica",
+        condicion: articulacion,
+        tipos: condicionesPrioridad.articulacion,
+        puedeEditar: puedeCorregirDatos,
+        detalle: (condicion, dato) => {
+          if (!condicion) return '<p>No se registró una respuesta sobre articulación.</p>';
+          if (condicion.tipo === condicionesPrioridad.articulacion.negativa) return `<p>${e(condicion.valorDeclarado)}</p>`;
+          const prefijo = "Institución de procedencia informada por la familia: ";
+          const institucion = condicion.evidenciaReferencia?.startsWith(prefijo)
+            ? condicion.evidenciaReferencia.slice(prefijo.length)
+            : condicion.evidenciaReferencia;
+          return institucion ? `<p><strong>Institución de procedencia informada:</strong> ${e(institucion)}</p>` : `<p>${e(dato)}</p>`;
+        },
+      })}${tarjetaPrioridad({
+        numero: 2,
+        titulo: "Hermanos o grupo conviviente",
+        condicion: hermanos,
+        tipos: condicionesPrioridad.hermanos,
+        puedeEditar: puedeCorregirDatos,
+        detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.hermanos.afirmativa
+          ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
+          : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
+      })}${tarjetaCercania}${tarjetaPrioridad({
+        numero: 4,
+        titulo: "Hijo/a del personal",
+        condicion: personal,
+        tipos: condicionesPrioridad.personal,
+        puedeEditar: puedeCorregirDatos,
+        detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.personal.afirmativa
+          ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
+          : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
+      })}</div>`,
+    });
+  } else if (pestana === "domicilio") {
     const [revision, distancias] = ctx.estado.previa
       ? [
           {
@@ -62,7 +202,7 @@ export async function ficha(ruta, ctx) {
       ? { revisionSolicitud: 1, documentos: [], condiciones: [] }
       : await ctx.api(`${rutaSolicitud}/antecedentes`);
     ctx.ficha.antecedentes = a;
-    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Documentación", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-documento">+ Registrar</button>', cuerpo: a.documentos.length ? a.documentos.map((d) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(d.tipo)}</strong><span class="acceso-rapido__descripcion">${e(d.referencia ?? "Sin referencia")}</span></div>${etiqueta(d.estado)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-documento" data-id="${e(d.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">No hay documentos registrados. Esto no significa que el legajo esté completo.</p>' })}${tarjeta({ titulo: "Condiciones declaradas", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nueva-condicion">+ Declarar</button>', cuerpo: a.condiciones.length ? a.condiciones.map((c) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(c.tipo)}</strong><span class="acceso-rapido__descripcion">${e(c.valorDeclarado)}</span></div>${etiqueta(c.estadoVerificacion)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-condicion" data-id="${e(c.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">Sin condiciones declaradas. Declarar una condición no la verifica ni concede prioridad automáticamente.</p>' })}</div>`;
+    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Documentación", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nuevo-documento">+ Registrar</button>', cuerpo: a.documentos.length ? a.documentos.map((d) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(d.tipo)}</strong><span class="acceso-rapido__descripcion">${e(d.referencia ?? "Sin referencia")}</span></div>${etiqueta(d.estado)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-documento" data-id="${e(d.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">No hay documentos registrados. Esto no significa que el legajo esté completo.</p>' })}${tarjeta({ titulo: "Condiciones declaradas", accion: '<button class="boton boton--texto boton--pequeno" data-accion="nueva-condicion">+ Declarar</button>', cuerpo: a.condiciones.length ? a.condiciones.map((c) => `<div class="acceso-rapido"><div class="acceso-rapido__texto"><strong class="acceso-rapido__titulo">${e(nombreCondicion(c.tipo))}</strong><span class="acceso-rapido__descripcion">${e(c.valorDeclarado)}</span></div>${c.tipo.endsWith("Negativa") ? etiqueta("NoDeclarada") : etiqueta(c.estadoVerificacion)}<button class="boton boton--texto boton--pequeno" data-accion="revisar-condicion" data-id="${e(c.id)}">Revisar</button></div>`).join("") : '<p class="formulario__nota">Sin condiciones declaradas. Declarar una condición no la verifica ni concede prioridad automáticamente.</p>' })}</div>`;
   } else if (pestana === "responsables") {
     const vinculos = persona.responsables ?? [];
     contenido = tarjeta({
@@ -79,7 +219,13 @@ export async function ficha(ruta, ctx) {
         : '<p class="formulario__nota">No hay responsables vinculados. Podés registrar uno nuevo o vincular uno existente.</p>',
     });
   } else {
-    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Datos del aspirante", cuerpo: `<dl class="datos"><div><dt>Nombre</dt><dd>${e(persona.nombre)}</dd></div><div><dt>Apellido</dt><dd>${e(persona.apellido)}</dd></div><div><dt>Fecha de nacimiento</dt><dd>${fecha(persona.fechaNacimiento ?? s.fechaNacimientoUtilizada)}</dd></div><div><dt>DNI</dt><dd>${e(persona.dni || "Sin DNI declarado")}</dd></div><div><dt>Grupo etario</dt><dd>${s.sala ? `Sala de ${e(s.sala)} años` : "Pendiente de revisión de edad"}</dd></div><div><dt>Fecha de corte utilizada</dt><dd>${fecha(s.fechaCorteUtilizada)}</dd></div></dl>` })}${tarjeta({ titulo: "Datos de inscripción", cuerpo: `<dl class="datos"><div><dt>Recepción</dt><dd>${etiqueta(s.estadoRecepcion)}</dd></div><div><dt>Turno preferido</dt><dd>${e(ctx.estado.turnos.find((t) => t.id === s.turnoPreferidoId)?.nombre ?? "Turno registrado")}</dd></div><div class="campo--completo"><dt>Domicilio</dt><dd>${e(direccionTexto(s.domicilio))}</dd></div><div><dt>Fecha de registro</dt><dd>${fecha(s.fechaRegistro)}</dd></div><div><dt>Referencia de consentimiento</dt><dd>${e(s.referenciaConsentimiento ?? "No informada")}</dd></div></dl><div class="formulario__acciones"><button class="boton boton--secundario" data-accion="corregir-solicitud">Corregir datos de solicitud</button></div>` })}</div>`;
+    const ayudaEdicion = recepcionAbierta
+      ? "Mientras la recepción esté abierta, podés corregir estos datos. Si cambiás la fecha de nacimiento, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte indicada."
+      : "La recepción está cerrada. Los datos del aspirante y de la inscripción ya no se pueden corregir.";
+    const asignacionActual = asignacionSeccion
+      ? `<div class="campo--completo"><dt>Asignación actual</dt><dd>Sala ${e(asignacionSeccion.sala)} · ${e(ctx.estado.turnos.find((t) => t.id === asignacionSeccion.turnoId)?.nombre ?? "Turno registrado")} · Sección ${e(asignacionSeccion.nombreSeccion)}</dd></div>`
+      : "";
+    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Datos del aspirante", accion: puedeCorregirDatos ? '<button class="boton boton--secundario boton--pequeno" data-accion="editar-aspirante">Editar aspirante</button>' : '<button class="boton boton--secundario boton--pequeno" disabled aria-label="Editar aspirante: disponible cuando la recepción esté abierta">Editar aspirante</button>', cuerpo: `<dl class="datos"><div><dt>Nombre</dt><dd>${e(persona.nombre)}</dd></div><div><dt>Apellido</dt><dd>${e(persona.apellido)}</dd></div><div><dt>Fecha de nacimiento</dt><dd>${fecha(persona.fechaNacimiento ?? s.fechaNacimientoUtilizada)}</dd></div><div><dt>DNI</dt><dd>${e(persona.dni || "Sin DNI declarado")}</dd></div><div><dt>Tipo de documento</dt><dd>${e(persona.tipoDocumento || "No informado")}</dd></div><div><dt>Sexo</dt><dd>${e(persona.sexo || "No informado")}</dd></div><div><dt>Grupo etario</dt><dd>${s.sala ? `Sala de ${e(s.sala)} años` : "Pendiente de revisión de edad"}</dd></div><div><dt>Fecha de corte utilizada</dt><dd>${fecha(s.fechaCorteUtilizada)}</dd></div></dl><p class="formulario__nota">${ayudaEdicion}</p>` })}${tarjeta({ titulo: "Datos de inscripción", cuerpo: `<dl class="datos"><div><dt>Recepción</dt><dd>${etiqueta(s.estadoRecepcion)}</dd></div><div><dt>Turno preferido</dt><dd>${e(ctx.estado.turnos.find((t) => t.id === s.turnoPreferidoId)?.nombre ?? "Turno registrado")}</dd></div>${asignacionActual}<div class="campo--completo"><dt>Domicilio</dt><dd>${e(direccionTexto(s.domicilio))}</dd></div><div><dt>Fecha de registro</dt><dd>${fecha(s.fechaRegistro)}</dd></div><div><dt>Referencia de consentimiento</dt><dd>${e(s.referenciaConsentimiento ?? "No informada")}</dd></div></dl>${puedeCorregirDatos ? '<div class="formulario__acciones"><button class="boton boton--secundario" data-accion="corregir-solicitud">Corregir datos de solicitud</button></div>' : ""}` })}</div>`;
   }
   return cabecera + pestanas + contenido;
 }

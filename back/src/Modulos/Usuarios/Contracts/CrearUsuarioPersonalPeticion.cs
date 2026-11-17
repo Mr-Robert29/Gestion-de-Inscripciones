@@ -5,4 +5,5 @@ public sealed record CrearUsuarioPersonalPeticion(
     string CorreoElectronico,
     string ClaveInicial,
     string RolGlobal,
+    string Dni,
     Guid? InstitucionInicialId = null);

@@ -22,6 +22,18 @@ internal static class MapeoOferta
         turno.Property(t => t.Nombre).IsRequired();
         turno.HasOne<Institucion>().WithMany().HasForeignKey(t => t.InstitucionId).OnDelete(DeleteBehavior.Restrict);
 
+        var ofertaInstitucional = modelo.Entity<OfertaInstitucional>();
+        ofertaInstitucional.ToTable("ofertas_institucionales");
+        ofertaInstitucional.HasKey(o => o.Id);
+        ofertaInstitucional.Property(o => o.Id).ValueGeneratedNever();
+        ofertaInstitucional.Property(o => o.ReferenciaCapacidad).IsRequired();
+        ofertaInstitucional.HasIndex(o => new { o.InstitucionId, o.AulaId, o.TurnoId })
+            .IsUnique()
+            .HasDatabaseName("UX_OfertaInstitucional_Institucion_Aula_Turno");
+        ofertaInstitucional.HasOne<Institucion>().WithMany().HasForeignKey(o => o.InstitucionId).OnDelete(DeleteBehavior.Restrict);
+        ofertaInstitucional.HasOne<Aula>().WithMany().HasForeignKey(o => o.AulaId).OnDelete(DeleteBehavior.Restrict);
+        ofertaInstitucional.HasOne<Turno>().WithMany().HasForeignKey(o => o.TurnoId).OnDelete(DeleteBehavior.Restrict);
+
         var oferta = modelo.Entity<OfertaAulaTurno>();
         oferta.ToTable("ofertas_aula_turno");
         oferta.HasKey(o => o.Id);

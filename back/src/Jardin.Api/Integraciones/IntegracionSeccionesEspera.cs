@@ -29,6 +29,6 @@ public sealed class IntegracionSeccionesEspera : IIntegracionSeccionesEspera
             periodoId,
             aulaId,
             turnoId,
-            (secciones, token) => operacion(secciones.Select(x => new ComposicionVacante(x.Id, x.EdadesAdmitidas, x.Capacidad, x.Revision)).ToArray(), token),
+            (secciones, token) => operacion(secciones.Select(x => new ComposicionVacante(x.Id, x.EdadesAdmitidas, x.Capacidad, x.Revision, x.Nombre)).ToArray(), token),
             tokenCancelacion);
 }

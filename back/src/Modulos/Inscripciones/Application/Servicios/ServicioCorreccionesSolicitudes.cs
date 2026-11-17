@@ -75,18 +75,15 @@ public sealed class ServicioCorreccionesSolicitudes : IModuloCorreccionesSolicit
         return await _periodo.EjecutarCorreccionAsync(
             institucionId,
             solicitud.PeriodoId,
+            solicitud.VersionReglasId,
             solicitud.VersionOfertaId,
             async (periodo, token) =>
             {
-                var operacion = periodo.Estado switch
-                {
-                    "RecepcionAbierta" => OperacionInscripciones.CorregirDuranteRecepcion,
-                    "RecepcionCerrada" => OperacionInscripciones.CorregirDespuesDelCierre,
-                    _ => throw new InvalidOperationException("El estado del período no permite corregir solicitudes.")
-                };
+                if (periodo.Estado != "RecepcionAbierta")
+                    throw new InvalidOperationException("Los datos solo se pueden corregir mientras la recepción del período está abierta.");
                 var autor = await _acceso.AutorizarOperacionAsync(
                     institucionId,
-                    operacion,
+                    OperacionInscripciones.CorregirDuranteRecepcion,
                     token);
                 if (solicitud.RevisionDatos != peticion.RevisionSolicitud) throw new ConflictoRevisionSolicitudException();
                 if (!periodo.TurnosDisponibles.Contains(peticion.TurnoPreferidoId) ||

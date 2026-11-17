@@ -19,6 +19,16 @@ public sealed class RepositorioCorreccionesSolicitudes : IRepositorioCorreccione
         => _contexto.Solicitudes.AsSingleQuery().Include(s => s.TurnosAlternativos)
             .SingleOrDefaultAsync(s => s.InstitucionId == institucionId && s.Id == solicitudId, tokenCancelacion);
 
+    public async Task<IReadOnlyList<SolicitudInscripcion>> ObtenerDelAspiranteEnPeriodoAsync(
+        Guid institucionId,
+        Guid periodoId,
+        Guid aspiranteId,
+        CancellationToken tokenCancelacion = default)
+        => await _contexto.Solicitudes
+            .Where(s => s.InstitucionId == institucionId && s.PeriodoId == periodoId && s.AspiranteId == aspiranteId)
+            .OrderBy(s => s.Id)
+            .ToArrayAsync(tokenCancelacion);
+
     // Implementa IRepositorioCorreccionesSolicitudes.BuscarAsync: filtros y paginación se ejecutan en la base.
     public async Task<IReadOnlyList<DatosSolicitudEncontrada>> BuscarAsync(
         Guid institucionId,

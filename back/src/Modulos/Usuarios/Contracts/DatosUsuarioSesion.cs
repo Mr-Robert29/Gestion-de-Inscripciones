@@ -7,4 +7,5 @@ public sealed record DatosUsuarioSesion(
     bool Activo,
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permisos,
-    IReadOnlyList<DatosAccesoInstitucion> Accesos);
+    IReadOnlyList<DatosAccesoInstitucion> Accesos,
+    bool DebeCambiarClave = false);

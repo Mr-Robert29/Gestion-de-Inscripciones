@@ -15,6 +15,51 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
         _versiones = versiones;
     }
 
+    public Task<T> EjecutarConReglasAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Func<DatosReglasEdadSolicitud, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+        => EjecutarConReglasProtegidasAsync(institucionId, periodoId, operacion, tokenCancelacion);
+
+    private async Task<T> EjecutarConReglasProtegidasAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Func<DatosReglasEdadSolicitud, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        return await _periodos.EjecutarConPeriodoProtegidoAsync(
+            periodoId,
+            async (periodo, token) =>
+            {
+                if (periodo.InstitucionId != institucionId)
+                    throw new KeyNotFoundException("El período no pertenece a esta institución.");
+                if (periodo.VersionReglasId is null)
+                    throw new InvalidOperationException("Todavía no se puede validar la edad: el período necesita una fecha de corte y reglas de inscripción configuradas.");
+                var version = await _versiones.ConsultarAsync(periodo.VersionReglasId.Value, token);
+                if (version is null || version.PeriodoId != periodoId || version.Tipo != "Reglas" || version.Formato != 1)
+                    throw new InvalidOperationException("Las reglas publicadas del período no tienen un formato compatible.");
+                DatosReglasPeriodo reglas;
+                try
+                {
+                    reglas = version.Datos.Deserialize<DatosReglasPeriodo>() ?? throw new InvalidOperationException("Reglas vacías.");
+                }
+                catch (JsonException)
+                {
+                    throw new InvalidOperationException("No se pudieron interpretar las reglas publicadas del período.");
+                }
+                if (reglas.FechaCorte == default || reglas.CombinacionesEdades is null || reglas.CombinacionesEdades.Count == 0 ||
+                    reglas.CombinacionesEdades.Any(edades => edades is null))
+                    throw new InvalidOperationException("Las reglas del período no indican una fecha de corte y edades admitidas.");
+                var edades = reglas.CombinacionesEdades.SelectMany(x => x).Distinct().Order().ToArray();
+                if (edades.Length == 0)
+                    throw new InvalidOperationException("Las reglas del período no contienen edades admitidas.");
+                return await operacion(new DatosReglasEdadSolicitud(reglas.FechaCorte, edades), token);
+            },
+            tokenCancelacion);
+    }
+
     // Implementa IEjecucionPeriodoSolicitud.EjecutarAsync: conserva el bloqueo hasta terminar la operación.
     public Task<T> EjecutarAsync<T>(
         Guid institucionId,
@@ -42,8 +87,13 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
                 }
                 catch (JsonException) { throw new InvalidOperationException("No se pudieron interpretar las versiones publicadas."); }
                 if (datosReglas.Perfil != "Prototipo-2026-1" || datosReglas.FechaCorte == default ||
+                    datosReglas.CombinacionesEdades is null || datosReglas.CombinacionesEdades.Count == 0 ||
+                    datosReglas.CombinacionesEdades.Any(edades => edades is null) ||
                     datosOferta.Any(o => o is null || o.PeriodoId != periodo.Id))
                     throw new InvalidOperationException("La configuración publicada no es compatible con el registro de solicitudes.");
+                var edadesAdmitidas = datosReglas.CombinacionesEdades.SelectMany(edades => edades).Distinct().Order().ToArray();
+                if (edadesAdmitidas.Length == 0)
+                    throw new InvalidOperationException("Las reglas del período no contienen edades admitidas.");
                 return await operacion(new DatosPeriodoSolicitud(
                     periodo.InstitucionId,
                     periodo.Id,
@@ -52,7 +102,8 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
                     reglas.Id,
                     oferta.Id,
                     datosReglas.FechaCorte,
-                    datosOferta.Where(o => o.Disponible).Select(o => o.TurnoId).Distinct().ToArray()), token);
+                    datosOferta.Where(o => o.Disponible).Select(o => o.TurnoId).Distinct().ToArray(),
+                    edadesAdmitidas), token);
             },
             tokenCancelacion);
     // Implementa IEjecucionPeriodoSolicitud.EjecutarRevisionAsync: revisar no reinterpreta la configuración publicada.
@@ -74,6 +125,7 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
     public Task<T> EjecutarCorreccionAsync<T>(
         Guid institucionId,
         Guid periodoId,
+        Guid versionReglasId,
         Guid versionOfertaId,
         Func<DatosPeriodoCorreccionSolicitud, CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default)
@@ -85,17 +137,29 @@ public sealed class EjecucionPeriodoSolicitud : IEjecucionPeriodoSolicitud
             {
                 if (periodo.InstitucionId != institucionId) throw new KeyNotFoundException("El período no pertenece a esta institución.");
                 var version = await _versiones.ConsultarAsync(versionOfertaId, token);
-                if (version is null || version.PeriodoId != periodoId || version.Tipo != "Oferta" || version.Formato != 1)
-                    throw new InvalidOperationException("La versión de oferta de la solicitud no es compatible.");
+                var versionReglas = await _versiones.ConsultarAsync(versionReglasId, token);
+                if (version is null || version.PeriodoId != periodoId || version.Tipo != "Oferta" || version.Formato != 1 ||
+                    versionReglas is null || versionReglas.PeriodoId != periodoId || versionReglas.Tipo != "Reglas" || versionReglas.Formato != 1)
+                    throw new InvalidOperationException("Las versiones históricas de la solicitud no son compatibles.");
                 ConsultarOfertaRespuesta[] oferta;
+                DatosReglasPeriodo reglas;
                 try
                 {
                     oferta = version.Datos.Deserialize<ConsultarOfertaRespuesta[]>() ?? throw new InvalidOperationException("Oferta vacía.");
+                    reglas = versionReglas.Datos.Deserialize<DatosReglasPeriodo>() ?? throw new InvalidOperationException("Reglas vacías.");
                 }
                 catch (JsonException) { throw new InvalidOperationException("No se pudo interpretar la oferta publicada."); }
-                if (oferta.Any(o => o is null || o.PeriodoId != periodoId)) throw new InvalidOperationException("Oferta incompatible.");
+                if (oferta.Any(o => o is null || o.PeriodoId != periodoId) || reglas.FechaCorte == default ||
+                    reglas.CombinacionesEdades is null || reglas.CombinacionesEdades.Count == 0 ||
+                    reglas.CombinacionesEdades.Any(edades => edades is null))
+                    throw new InvalidOperationException("La configuración histórica de la solicitud no es compatible.");
+                var edadesAdmitidas = reglas.CombinacionesEdades.SelectMany(edades => edades).Distinct().Order().ToArray();
+                if (edadesAdmitidas.Length == 0)
+                    throw new InvalidOperationException("Las reglas históricas no contienen edades admitidas.");
                 return await operacion(new DatosPeriodoCorreccionSolicitud(
                     periodo.Estado,
+                    reglas.FechaCorte,
+                    edadesAdmitidas,
                     oferta.Where(o => o.Disponible).Select(o => o.TurnoId).Distinct().ToArray()), token);
             },
             tokenCancelacion);

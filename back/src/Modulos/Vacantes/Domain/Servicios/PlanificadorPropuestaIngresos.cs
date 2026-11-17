@@ -30,8 +30,7 @@ public static class PlanificadorPropuestaIngresos
         // También valida que la ocupación existente permita una composición aprobada.
         ComprobadorDistribucionProvisional.Buscar(recursos, [], entradas.Combinaciones, tokenCancelacion);
         var salida = new List<ResultadoPropuestaIngreso>();
-        var elegidos = new List<CandidatoProvisional>();
-        IReadOnlyList<AsignacionProvisional> distribucion = [];
+        var candidatos = new List<CandidatoProvisional>();
         var turnosPendientes = new HashSet<Guid>();
         var solicitudes = entradas.Solicitudes.ToDictionary(x => x.Id);
         var repetidos = entradas.Solicitudes.GroupBy(x => x.AspiranteId).Where(x => x.Count() > 1)
@@ -111,27 +110,43 @@ public static class PlanificadorPropuestaIngresos
                         turnosPendientes.UnionWith(Turnos(solicitud));
                         continue;
                     }
-                    var candidato = new CandidatoProvisional(solicitud.Id, sala, solicitud.TurnoPreferidoId, solicitud.Alternativas);
-                    var intento = ComprobadorDistribucionProvisional.Buscar(
-                        recursos,
-                        elegidos.Append(candidato).ToArray(),
-                        entradas.Combinaciones,
-                        tokenCancelacion);
-                    if (intento is null)
-                        salida.Add(Resultado(solicitud, "EsperaPropuesta", "No hay una distribución factible sin desplazar candidatos anteriores y respetando los turnos aceptados."));
-                    else
-                    {
-                        elegidos.Add(candidato);
-                        distribucion = intento;
-                        salida.Add(Resultado(solicitud, "IngresoPropuesto", "Lugar propuesto con distribución provisional factible; requiere revisión y confirmación posterior."));
-                    }
+                    var candidato = new CandidatoProvisional(
+                        solicitud.Id,
+                        sala,
+                        solicitud.TurnoPreferidoId,
+                        solicitud.Alternativas);
+                    candidatos.Add(candidato);
+                    salida.Add(Resultado(solicitud, "PendienteDistribucion", ""));
                 }
             }
         }
-        var asignaciones = distribucion.ToDictionary(x => x.SolicitudId);
-        return salida.Select(x => asignaciones.TryGetValue(x.SolicitudId, out var a)
-            ? x with { OfertaId = a.OfertaId, TurnoId = a.TurnoId, EsTurnoAlternativo = a.TurnoId != solicitudes[x.SolicitudId].TurnoPreferidoId }
-            : x).ToArray();
+        var distribucion = ComprobadorDistribucionProvisional.ResolverPrioritario(
+            recursos,
+            candidatos,
+            entradas.Combinaciones,
+            tokenCancelacion);
+        var asignaciones = distribucion.Asignaciones.ToDictionary(x => x.SolicitudId);
+        var idsProcesados = candidatos.Select(x => x.SolicitudId).ToHashSet();
+        return salida.Select(resultado =>
+        {
+            if (!idsProcesados.Contains(resultado.SolicitudId)) return resultado;
+            if (!distribucion.SolicitudesAdmitidas.Contains(resultado.SolicitudId))
+                return resultado with
+                {
+                    Estado = "EsperaPropuesta",
+                    Explicacion = "No hay una distribución factible sin desplazar aspirantes de mayor prioridad y respetando los turnos aceptados."
+                };
+            if (!asignaciones.TryGetValue(resultado.SolicitudId, out var asignacion))
+                throw new InvalidOperationException("CP-SAT admitió un aspirante sin devolver una asignación.");
+            return resultado with
+            {
+                Estado = "IngresoPropuesto",
+                Explicacion = "Lugar propuesto con distribución provisional factible; requiere revisión y confirmación posterior.",
+                OfertaId = asignacion.OfertaId,
+                TurnoId = asignacion.TurnoId,
+                EsTurnoAlternativo = asignacion.TurnoId != solicitudes[resultado.SolicitudId].TurnoPreferidoId
+            };
+        }).ToArray();
     }
 
     private static SolicitudPropuesta[]? OrdenarGrupo(

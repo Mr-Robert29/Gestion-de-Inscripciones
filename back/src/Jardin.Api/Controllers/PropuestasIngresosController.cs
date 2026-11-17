@@ -35,6 +35,10 @@ public sealed class PropuestasIngresosController : ControllerBase
             return propuesta is null ? NotFound() : Ok(propuesta);
         });
 
+    [HttpGet("api/v1/propuestas-ingresos/{propuestaId:guid}/aceptaciones-turno")]
+    public Task<IActionResult> ConsultarAceptacionesTurno(Guid propuestaId, CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.ConsultarAceptacionesTurnoAsync(propuestaId, tokenCancelacion)));
+
     [HttpPatch("api/v1/propuestas-ingresos/{propuestaId:guid}")]
     public Task<IActionResult> Modificar(
         Guid propuestaId,
@@ -48,6 +52,13 @@ public sealed class PropuestasIngresosController : ControllerBase
         RegistrarAceptacionTurnoPeticion peticion,
         CancellationToken tokenCancelacion)
         => EjecutarAsync(async () => Ok(await _propuestas.RegistrarAceptacionTurnoAsync(propuestaId, peticion, tokenCancelacion)));
+
+    [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/aceptaciones-turno/lote")]
+    public Task<IActionResult> AceptarTurnosLote(
+        Guid propuestaId,
+        RegistrarAceptacionesTurnoLotePeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.RegistrarAceptacionesTurnoLoteAsync(propuestaId, peticion, tokenCancelacion)));
 
     [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/confirmacion")]
     public Task<IActionResult> Confirmar(

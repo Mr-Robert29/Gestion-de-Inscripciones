@@ -10,6 +10,7 @@ import {
 } from "./organizacion-comun.js";
 import {
   motivo,
+  motivos,
   referencia,
   selector,
   opcionesEdades,
@@ -24,13 +25,19 @@ export async function atenderSecciones(elemento, ctx) {
   const id = elemento.dataset.id;
   const p = ctx.estado.periodo ? rutaPeriodo(ctx) : null;
   const datos = ctx.organizacion ?? {};
-  if (accion === "org-definir-seccion")
+  if (accion === "org-definir-seccion") {
+    const ofertas = (ctx.estado.ofertasPublicadas ?? []).filter((oferta) => oferta.capacidad > 0);
+    if (!ofertas.length)
+      throw new Error("Este período todavía no tiene ofertas habilitadas y publicadas. Prepará la oferta antes de definir secciones.");
+    const opcionesOferta = ofertas.map((oferta) => ({
+      id: `${oferta.aulaId}|${oferta.turnoId}`,
+      nombre: `${nombreAula(ctx, oferta.aulaId)} · ${nombreTurno(ctx, oferta.turnoId)} · ${oferta.capacidad} lugares`,
+    }));
     formulario(
       ctx,
       "Definir sección",
       campo({ nombre: "nombre", etiqueta: "Nombre", obligatorio: true }) +
-        selector("aulaId", "Aula", ctx.estado.aulas) +
-        selector("turnoId", "Turno", ctx.estado.turnos) +
+        selector("oferta", "Oferta habilitada", opcionesOferta) +
         selector(
           "edades",
           "Composición",
@@ -39,16 +46,18 @@ export async function atenderSecciones(elemento, ctx) {
             nombre: x.includes(",") ? `Multiedad ${x}` : `Pura de ${x}`,
           })),
         ),
-      (d) =>
-        enviar(ctx, `${p}/secciones`, {
-          periodoId: ctx.estado.periodo.id,
-          nombre: d.nombre,
-          aulaId: d.aulaId,
-          turnoId: d.turnoId,
-          edadesAdmitidas: d.edades.split(",").map(Number),
-        }),
+        (d) => {
+          const [aulaId, turnoId] = d.oferta.split("|");
+          return enviar(ctx, `${p}/secciones`, {
+            periodoId: ctx.estado.periodo.id,
+            nombre: d.nombre,
+            aulaId,
+            turnoId,
+            edadesAdmitidas: d.edades.split(",").map(Number),
+          });
+        },
     );
-  else if (["org-composicion", "org-composicion-historial"].includes(accion)) {
+  } else if (["org-composicion", "org-composicion-historial"].includes(accion)) {
     const x = exigirRegistro(datos.secciones, id);
     const ruta = `${p}/secciones/${id}/composicion`;
     if (accion === "org-composicion-historial")
@@ -61,7 +70,7 @@ export async function atenderSecciones(elemento, ctx) {
       formulario(
         ctx,
         "Ampliar sección a multiedad",
-        `<p>${e(x.nombre)} · ${e(x.edadesAdmitidas.join(", "))} años. Se comprobarán capacidad y compatibilidad.</p>` +
+        `<p>${e(x.nombre)} · ${e(x.edadesAdmitidas.join(", "))} años. Ampliar las edades admitidas no agrega cupos. Se comprobará que los alumnos asignados sigan siendo compatibles y que la ocupación no supere la capacidad publicada.</p>` +
           selector(
             "edades",
             "Nueva composición",
@@ -71,7 +80,7 @@ export async function atenderSecciones(elemento, ctx) {
               )
               .map((c) => ({ id: c, nombre: c })),
           ) +
-          motivo(),
+          motivo(motivos.composicionSeccion),
         (d) =>
           enviar(ctx, ruta, {
             nuevasEdades: d.edades.split(",").map(Number),
@@ -105,7 +114,7 @@ export async function atenderSecciones(elemento, ctx) {
         [{ id: "", nombre: "Sin sección" }, ...opciones],
         x.seccionId ?? "",
         false,
-      ) + motivo(),
+      ) + motivo(motivos.asignarSeccion),
       (d) =>
         enviar(
           ctx,

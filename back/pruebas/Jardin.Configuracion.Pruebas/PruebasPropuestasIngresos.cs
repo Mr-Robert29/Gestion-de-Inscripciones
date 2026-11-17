@@ -36,6 +36,20 @@ public static class PruebasPropuestasIngresos
         comprobar(reasignada.Single(x => x.SolicitudId == flexible.SolicitudId).TurnoId == tarde &&
             reasignada.Single(x => x.SolicitudId == soloManana.SolicitudId).TurnoId == manana,
             "HU18: reacomoda la propuesta completa utilizando únicamente una alternativa aceptada.");
+        var recursosSimulados = Enumerable.Range(0, 4)
+            .Select(_ => new RecursoProvisional(Guid.NewGuid(), manana, 25, []))
+            .ToArray();
+        var candidatosSimulados = Enumerable.Range(0, 300)
+            .Select(_ => Candidato(5, manana))
+            .ToArray();
+        var distribucionSimulada = ComprobadorDistribucionProvisional.ResolverPrioritario(
+            recursosSimulados,
+            candidatosSimulados,
+            [[5]]);
+        comprobar(distribucionSimulada.SolicitudesAdmitidas.Count == 100 &&
+            distribucionSimulada.Asignaciones.Count == 100 &&
+            candidatosSimulados.Take(100).All(x => distribucionSimulada.SolicitudesAdmitidas.Contains(x.SolicitudId)),
+            "HU18: maximiza los cupos disponibles entre 300 aspirantes y conserva el orden prioritario.");
         comprobar(ComprobadorDistribucionProvisional.Buscar(
             [new RecursoProvisional(oferta, tarde, 2, [])],
             [soloManana],

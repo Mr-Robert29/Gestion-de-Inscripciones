@@ -79,7 +79,7 @@ export async function solicitar(ruta, opciones = {}) {
       method: opciones.metodo ?? "GET",
       headers: cabeceras,
       body: cuerpo,
-      signal: AbortSignal.timeout(configuracion.tiempoEspera),
+      signal: AbortSignal.timeout(opciones.tiempoEspera ?? configuracion.tiempoEspera),
       credentials: "omit",
       cache: "no-store",
       redirect: "error",

@@ -9,4 +9,5 @@ public sealed record DatosAsignacionPropuesta(
     string? MotivoSinSeccion,
     Guid? ModificadaPor,
     DateTimeOffset? ModificadaEn,
-    string? MotivoModificacion);
+    string? MotivoModificacion,
+    Guid? SolicitudId = null);

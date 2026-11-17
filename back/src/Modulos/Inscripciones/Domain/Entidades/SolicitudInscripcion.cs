@@ -51,7 +51,13 @@ public sealed class SolicitudInscripcion
         int revisionPeriodo,
         bool fueraDeTermino,
         Guid usuarioRegistroId,
-        string? referenciaConsentimiento = null)
+        string? referenciaConsentimiento = null,
+        string? articulacionPedagogica = "No",
+        string? institucionProcedencia = null,
+        string? hermanosGrupoConviviente = "No",
+        string? detalleHermanoGrupo = null,
+        string? hijoPersonal = "No",
+        string? detalleHijoPersonal = null)
     {
         ArgumentNullException.ThrowIfNull(aspirante);
         ArgumentNullException.ThrowIfNull(domicilio);
@@ -80,6 +86,72 @@ public sealed class SolicitudInscripcion
         FechaRegistro = DateTimeOffset.UtcNow;
         ReferenciaConsentimiento = string.IsNullOrWhiteSpace(referenciaConsentimiento) ? null : referenciaConsentimiento.Trim();
         RevisionDatos = 1;
+
+        var respuestaArticulacion = string.IsNullOrWhiteSpace(articulacionPedagogica)
+            ? "No"
+            : articulacionPedagogica.Trim();
+        var referenciaArticulacion = string.IsNullOrWhiteSpace(institucionProcedencia)
+            ? "Institución de procedencia no informada por la familia."
+            : $"Institución de procedencia informada por la familia: {institucionProcedencia.Trim()}";
+        if (respuestaArticulacion is not ("Si" or "No" or "NoEstoySeguro"))
+            throw new ArgumentException("La respuesta sobre articulación pedagógica no es válida.", nameof(articulacionPedagogica));
+        if (respuestaArticulacion == "Si")
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "ArticulacionPedagogica",
+                "La familia declara que la institución de procedencia articula formalmente con este jardín.",
+                referenciaArticulacion,
+                usuarioRegistroId));
+        else if (respuestaArticulacion == "NoEstoySeguro")
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "ConsultaArticulacionPedagogica",
+                "La familia no sabe si la institución de procedencia articula formalmente con este jardín.",
+                referenciaArticulacion,
+                usuarioRegistroId));
+        else
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "DeclaracionArticulacionNegativa",
+                "La familia responde que no hay una articulación formal conocida con este jardín.",
+                "Respuesta de la familia al registrar la solicitud.",
+                usuarioRegistroId));
+
+        RegistrarDeclaracion(
+            hermanosGrupoConviviente,
+            detalleHermanoGrupo,
+            "HermanosYGruposConvivientes",
+            "DeclaracionHermanosNegativa",
+            "La familia declara que el aspirante tiene un hermano o integrante de su grupo conviviente en el jardín.",
+            "La familia declara que el aspirante no tiene un hermano o integrante de su grupo conviviente en el jardín.");
+        RegistrarDeclaracion(
+            hijoPersonal,
+            detalleHijoPersonal,
+            "HijosDelPersonal",
+            "DeclaracionHijosPersonalNegativa",
+            "La familia declara que el aspirante es hijo/a de personal del jardín o de una institución que articula con él.",
+            "La familia declara que el aspirante no es hijo/a de personal del jardín ni de una institución articulada.");
+
+        void RegistrarDeclaracion(
+            string? respuesta,
+            string? detalle,
+            string tipoAfirmativo,
+            string tipoNegativo,
+            string afirmacion,
+            string negacion)
+        {
+            var valor = string.IsNullOrWhiteSpace(respuesta) ? "No" : respuesta.Trim();
+            if (valor is not ("Si" or "No"))
+                throw new ArgumentException("La respuesta de prioridad debe ser Sí o No.");
+            if (valor == "Si" && string.IsNullOrWhiteSpace(detalle))
+                throw new ArgumentException("Completá el dato solicitado para revisar la prioridad declarada.");
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                valor == "Si" ? tipoAfirmativo : tipoNegativo,
+                valor == "Si" ? afirmacion : negacion,
+                valor == "Si" ? detalle!.Trim() : "Respuesta de la familia al registrar la solicitud.",
+                usuarioRegistroId));
+        }
     }
     // Corrige datos de esta solicitud sin cambiar la persona, recepción ni versiones históricas.
     public bool CorregirDatos(
@@ -111,6 +183,16 @@ public sealed class SolicitudInscripcion
         if (cambioDomicilio) RevisionDomicilio++;
         RevisionDatos++;
         return cambioDomicilio;
+    }
+
+    // Recalcula la edad de esta solicitud con su fecha de corte original tras corregir al aspirante.
+    public void RecalcularDatosEtarios(Aspirante aspirante)
+    {
+        ArgumentNullException.ThrowIfNull(aspirante);
+        if (aspirante.Id != AspiranteId)
+            throw new ArgumentException("El aspirante no corresponde a esta solicitud.", nameof(aspirante));
+        CalculoEdad.Recalcular(aspirante);
+        RevisionDatos++;
     }
 
     // Invalida la revisión anterior cuando cambian antecedentes usados para evaluar la solicitud.

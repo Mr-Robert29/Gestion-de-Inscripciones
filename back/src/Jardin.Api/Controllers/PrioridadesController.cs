@@ -17,10 +17,28 @@ public sealed class PrioridadesController : ControllerBase
     }
 
     [HttpGet("{periodoId:guid}/prioridades")]
-    public Task<IActionResult> Evaluar(
+    public Task<IActionResult> Consultar(
         Guid periodoId,
         CancellationToken cancellationToken)
-        => EjecutarAsync(async () => Ok(await _prioridades.EvaluarAsync(periodoId, cancellationToken)));
+        => EjecutarAsync(async () =>
+        {
+            var estado = await _prioridades.ConsultarEstadoAsync(periodoId, cancellationToken);
+            if (!estado.RecepcionCerrada)
+                return Conflict(new ProblemDetails { Status = 409, Detail = "Las prioridades solo se consultan después de cerrar la recepción." });
+            return Ok(estado.Vigente ? estado.Resultados : []);
+        });
+
+    [HttpGet("{periodoId:guid}/prioridades/estado")]
+    public Task<IActionResult> Estado(
+        Guid periodoId,
+        CancellationToken cancellationToken)
+        => EjecutarAsync(async () => Ok(await _prioridades.ConsultarEstadoAsync(periodoId, cancellationToken)));
+
+    [HttpPost("{periodoId:guid}/prioridades/procesamiento")]
+    public Task<IActionResult> Procesar(
+        Guid periodoId,
+        CancellationToken cancellationToken)
+        => EjecutarAsync(async () => Ok(await _prioridades.ProcesarAsync(periodoId, cancellationToken)));
 
     [HttpGet("{periodoId:guid}/prioridades/historial")]
     public Task<IActionResult> Historial(

@@ -53,4 +53,23 @@ public class AutenticacionController : ControllerBase
 
         return Ok(sesion);
     }
+
+    [HttpPost("cambiar-clave")]
+    [Authorize]
+    [ProducesResponseType(typeof(RespuestaAutenticacion), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CambiarClave([FromBody] CambiarClavePeticion peticion, CancellationToken cancellationToken)
+    {
+        var identificador = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(identificador, out var usuarioId))
+            return Unauthorized(new { mensaje = "Identificador de usuario inválido en el token." });
+        try
+        {
+            return Ok(await _moduloUsuarios.CambiarClaveAsync(usuarioId, peticion, cancellationToken));
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
 }

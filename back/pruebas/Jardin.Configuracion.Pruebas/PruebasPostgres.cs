@@ -245,5 +245,8 @@ public static class PruebasPostgres
                 true,
                 new Dictionary<Guid, bool>()));
         }
+
+        public Task<UsuarioConfiguracion?> ObtenerAsync(Guid usuarioId, CancellationToken tokenCancelacion = default)
+            => ObtenerAsync(tokenCancelacion);
     }
 }

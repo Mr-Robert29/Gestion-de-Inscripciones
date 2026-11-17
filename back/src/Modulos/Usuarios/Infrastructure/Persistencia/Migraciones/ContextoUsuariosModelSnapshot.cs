@@ -47,6 +47,59 @@ namespace Jardin.Usuarios.Infrastructure.Persistencia.Migraciones
                     b.ToTable("accesos_institucion", "usuarios");
                 });
 
+            modelBuilder.Entity("Jardin.Usuarios.Domain.Entidades.EventoAuditoriaPersonal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("ActorUsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Detalle")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UsuarioAfectadoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaUtc");
+
+                    b.ToTable("auditoria_personal", "usuarios");
+                });
+
+            modelBuilder.Entity("Jardin.Usuarios.Domain.Entidades.IdentidadPersonal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DniNormalizado")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DniNormalizado")
+                        .IsUnique();
+
+                    b.ToTable("identidades_personal", "usuarios");
+                });
+
             modelBuilder.Entity("Jardin.Usuarios.Domain.Entidades.UsuarioPersonal", b =>
                 {
                     b.Property<Guid>("Id")
@@ -61,6 +114,12 @@ namespace Jardin.Usuarios.Infrastructure.Persistencia.Migraciones
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("DebeCambiarClave")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("IdentidadPersonalId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -70,6 +129,8 @@ namespace Jardin.Usuarios.Infrastructure.Persistencia.Migraciones
 
                     b.HasIndex("CorreoElectronico")
                         .IsUnique();
+
+                    b.HasIndex("IdentidadPersonalId");
 
                     b.ToTable("personal", "usuarios");
                 });
@@ -276,6 +337,16 @@ namespace Jardin.Usuarios.Infrastructure.Persistencia.Migraciones
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Jardin.Usuarios.Domain.Entidades.UsuarioPersonal", b =>
+                {
+                    b.HasOne("Jardin.Usuarios.Domain.Entidades.IdentidadPersonal", "IdentidadPersonal")
+                        .WithMany()
+                        .HasForeignKey("IdentidadPersonalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdentidadPersonal");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

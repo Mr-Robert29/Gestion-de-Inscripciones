@@ -157,6 +157,40 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                     b.ToTable("ofertas_aula_turno", "configuracion");
                 });
 
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.OfertaInstitucional", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AulaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Capacidad")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InstitucionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenciaCapacidad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TurnoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AulaId");
+
+                    b.HasIndex("TurnoId");
+
+                    b.HasIndex("InstitucionId", "AulaId", "TurnoId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_OfertaInstitucional_Institucion_Aula_Turno");
+
+                    b.ToTable("ofertas_institucionales", "configuracion");
+                });
+
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -413,6 +447,27 @@ namespace Jardin.Configuracion.Infrastructure.Persistencia.Migraciones
                         });
 
                     b.Navigation("Ocupaciones");
+                });
+
+            modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.OfertaInstitucional", b =>
+                {
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Aula", null)
+                        .WithMany()
+                        .HasForeignKey("AulaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Institucion", null)
+                        .WithMany()
+                        .HasForeignKey("InstitucionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jardin.Configuracion.Domain.Entidades.Turno", null)
+                        .WithMany()
+                        .HasForeignKey("TurnoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Jardin.Configuracion.Domain.Entidades.PeriodoInscripcion", b =>

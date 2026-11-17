@@ -7,4 +7,5 @@ public sealed record RegistrarAspirantePeticion(
     DateOnly FechaNacimiento,
     string? Dni = null,
     string? TipoDocumento = null,
-    string? Sexo = null);
+    string? Sexo = null,
+    Guid? PeriodoId = null);

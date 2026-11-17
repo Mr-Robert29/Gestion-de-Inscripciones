@@ -9,4 +9,9 @@ public interface IContextoPropuestaIngresos
         Guid periodoId,
         Func<CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default);
+    Task<T> ConPeriodoProtegidoComoAsync<T>(
+        Guid periodoId,
+        Guid usuarioId,
+        Func<CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
 }

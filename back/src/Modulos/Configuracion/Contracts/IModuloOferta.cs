@@ -13,6 +13,15 @@ public interface IModuloOferta
         RegistrarTurnoPeticion peticion,
         CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<ConsultarTurnoRespuesta>> ListarTurnosAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<ConsultarOfertaInstitucionalRespuesta>> ListarOfertasInstitucionalesAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
+    Task<RegistrarOfertaRespuesta> RegistrarOfertaInstitucionalAsync(
+        Guid institucionId,
+        RegistrarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion = default);
+    Task<ActualizarOfertaInstitucionalRespuesta> ActualizarOfertaInstitucionalAsync(
+        Guid ofertaId,
+        ActualizarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion = default);
     Task<RegistrarOfertaRespuesta> RegistrarOfertaAsync(
         Guid periodoId,
         RegistrarOfertaPeticion peticion,

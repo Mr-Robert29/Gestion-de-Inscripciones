@@ -6,4 +6,6 @@ public sealed record ConsultarListaEsperaPeticion(
     Guid? TurnoId = null,
     string? Estado = null,
     int Pagina = 1,
-    int TamanoPagina = 20);
+    int TamanoPagina = 20,
+    string? Busqueda = null,
+    Guid? TurnoPreferidoId = null);

@@ -5,4 +5,7 @@ public sealed record DatosUsuarioPersonal(
     string Nombre,
     string CorreoElectronico,
     bool Activo,
-    IReadOnlyList<DatosAccesoInstitucion> Accesos);
+    IReadOnlyList<string> RolesGlobales,
+    IReadOnlyList<DatosAccesoInstitucion> Accesos,
+    Guid? IdentidadPersonalId = null,
+    string? DniEnmascarado = null);

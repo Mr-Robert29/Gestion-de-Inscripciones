@@ -1,6 +1,5 @@
 import {
   solicitar,
-  configurarDireccion,
   establecerToken,
   obtenerDireccionApi,
 } from "./api.js";
@@ -11,8 +10,10 @@ import {
   marca,
   jardinIlustrado,
   campo,
+  campoClave,
   notificar,
   vacio,
+  etiqueta,
 } from "./interfaz.js";
 import {
   institucionEjemplo,
@@ -21,9 +22,11 @@ import {
   turnosEjemplo,
   ofertasEjemplo,
 } from "./datos-previa.js";
-import { presentarPagina, titulos } from "./paginas.js";
-import { atenderAccion, atenderFormulario } from "./acciones.js";
+import { presentarPagina, titulos } from "./paginas.js?v=20261117-lista-espera-filtros-v2";
+import { atenderAccion, atenderFormulario } from "./acciones.js?v=20261117-lista-espera-filtros-v2";
 import { actualizarIndicadoresClave } from "./validacion-clave.js";
+import { validarClave } from "./validacion-clave.js";
+import { edadesDeReglas } from "./reglas-edad.js";
 
 const raiz = document.getElementById("aplicacion");
 const estado = {
@@ -33,9 +36,14 @@ const estado = {
   institucion: null,
   periodos: [],
   periodo: null,
+  fechaCortePeriodo: null,
+  edadesAdmitidasPeriodo: null,
   aulas: [],
   turnos: [],
+  ofertasInstitucionales: [],
   ofertas: [],
+  ofertasVersionadas: [],
+  ofertasPublicadas: [],
   turnosSolicitud: [],
   pagina: 1,
   filtros: {},
@@ -48,7 +56,7 @@ const contexto = {
   estado,
   api: solicitar,
   navegar,
-  actualizar: () => cargarVista(),
+  actualizar: () => actualizarVista(),
   notificar,
   abrirDialogo,
   cerrarDialogo,
@@ -76,7 +84,7 @@ function puedeResolver() {
   return puedeEditar();
 }
 function navegar(destino) {
-  if (location.hash === `#${destino}`) cargarVista();
+  if (location.hash === `#${destino}`) actualizarVista();
   else location.hash = destino;
 }
 function cerrarDialogo() {
@@ -86,6 +94,103 @@ function abrirDialogo({ titulo, descripcion = "", contenido }) {
   const dialogo = document.getElementById("dialogo");
   dialogo.innerHTML = `<div class="dialogo__cabecera"><div><h2 id="titulo-dialogo">${escapar(titulo)}</h2><p class="tarjeta__descripcion">${escapar(descripcion)}</p></div><button class="boton boton--texto boton--icono" data-accion="cerrar-dialogo" aria-label="Cerrar ventana">${icono("cerrar")}</button></div>${contenido}`;
   dialogo.showModal();
+}
+
+async function mostrarDatosUsuario(usuarioId) {
+  const usuario = contexto.organizacion?.usuarios?.find((x) => x.id === usuarioId);
+  if (!usuario) {
+    notificar("No se encontró la cuenta. Actualizá la pantalla e intentá de nuevo.", true);
+    return;
+  }
+  const identidad = await contexto.api(`/usuarios/${encodeURIComponent(usuarioId)}/dni`);
+  const rolesGlobales = usuario.rolesGlobales?.length
+    ? usuario.rolesGlobales.map((rol) => etiqueta(rol)).join(" ")
+    : '<span class="tabla__detalle">Sin rol global asignado</span>';
+  const accesos = usuario.accesos?.length
+    ? `<ul class="usuarios__datos-accesos">${usuario.accesos.map((acceso) => {
+        const institucion = estado.instituciones.find((x) => x.id === acceso.institucionId);
+        return `<li><div><span class="usuarios__dato-etiqueta">Institución</span><strong>${escapar(institucion?.nombre ?? "Institución no disponible")}</strong></div><div><span class="usuarios__dato-etiqueta">Rol en esta institución</span>${etiqueta(acceso.rol)}</div></li>`;
+      }).join("")}</ul>`
+    : '<p class="tabla__detalle">Sin instituciones asignadas</p>';
+  abrirDialogo({
+    titulo: "Datos de la cuenta",
+    descripcion: `${usuario.nombre} · ${usuario.correoElectronico}`,
+    contenido: `<div class="usuarios__datos"><section class="usuarios__dato"><h3>DNI completo</h3><p>${escapar(identidad.dni ?? "Sin DNI vinculado")}</p></section><section class="usuarios__dato"><h3>Rol global</h3><div>${rolesGlobales}</div></section><section class="usuarios__dato usuarios__dato--ancho"><h3>Accesos institucionales</h3>${accesos}</section></div><div class="formulario__acciones"><button class="boton" data-accion="cerrar-dialogo">Cerrar</button></div>`,
+  });
+}
+
+function actualizarFiltroCuentas() {
+  const filtro = document.querySelector("[data-filtro-cuentas]")?.value ?? "activo";
+  const busqueda = (document.querySelector("[data-buscar-cuentas]")?.value ?? "")
+    .trim().toLocaleLowerCase("es");
+  const filas = [...document.querySelectorAll("tr[data-estado-cuenta]")];
+  for (const fila of filas) {
+    const coincideEstado = filtro === "todas" || fila.dataset.estadoCuenta === filtro;
+    const coincideBusqueda = !busqueda || fila.textContent.toLocaleLowerCase("es").includes(busqueda);
+    fila.hidden = !(coincideEstado && coincideBusqueda);
+  }
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  const vacio = document.querySelector("[data-cuentas-vacio]");
+  if (vacio) {
+    vacio.hidden = visibles > 0;
+    vacio.textContent = busqueda
+      ? "No se encontraron cuentas con esos datos para el filtro seleccionado."
+      : filtro === "activo"
+        ? "No hay cuentas activas para mostrar con este filtro."
+        : filtro === "inactivo"
+          ? "No hay cuentas inactivas para mostrar con este filtro."
+          : "No hay cuentas para mostrar.";
+  }
+}
+
+function normalizarTextoBusqueda(valor) {
+  return String(valor ?? "")
+    .trim()
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function actualizarFiltroDistribucion() {
+  const panel = document.querySelector("[data-distribucion-filtros]");
+  if (!panel) return;
+  const texto = normalizarTextoBusqueda(panel.querySelector("[data-buscar-distribucion]")?.value);
+  const dni = texto.replace(/\D/g, "");
+  const seccion = panel.querySelector("[data-filtro-distribucion-seccion]")?.value ?? "todas";
+  const turno = panel.querySelector("[data-filtro-distribucion-turno]")?.value ?? "todos";
+  const filas = [...document.querySelectorAll("tr[data-distribucion-fila]")];
+  for (const fila of filas) {
+    const nombre = normalizarTextoBusqueda(fila.dataset.nombre);
+    const coincideBusqueda = !texto || nombre.includes(texto) || (dni.length > 0 && fila.dataset.dni.includes(dni));
+    const coincideSeccion = seccion === "todas" || fila.dataset.seccion === seccion;
+    const coincideTurno = turno === "todos" || fila.dataset.turno === turno;
+    fila.hidden = !(coincideBusqueda && coincideSeccion && coincideTurno);
+  }
+  const resumen = panel.querySelector("[data-resumen-distribucion]");
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  if (resumen) resumen.textContent = visibles === 0
+    ? `No hay coincidencias · 0 de ${filas.length}`
+    : `${visibles} de ${filas.length} aspirantes`;
+}
+
+function actualizarFiltroIngresos() {
+  const panel = document.querySelector("[data-filtros-ingresos]");
+  if (!panel) return;
+  const texto = normalizarTextoBusqueda(panel.querySelector("[data-buscar-ingreso]")?.value);
+  const dni = texto.replace(/\D/g, "");
+  const estado = panel.querySelector("[data-filtro-ingreso-estado]")?.value ?? "todos";
+  const filas = [...document.querySelectorAll("tr[data-ingreso-historico]")];
+  for (const fila of filas) {
+    const nombre = normalizarTextoBusqueda(fila.dataset.nombre);
+    const coincideBusqueda = !texto || nombre.includes(texto) || (dni.length > 0 && fila.dataset.dni.includes(dni));
+    const coincideEstado = estado === "todos" || fila.dataset.estadoIngreso === estado;
+    fila.hidden = !(coincideBusqueda && coincideEstado);
+  }
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  const resumen = panel.querySelector("[data-resumen-ingresos]");
+  if (resumen) resumen.textContent = visibles === 0
+    ? `No hay coincidencias · 0 de ${filas.length}`
+    : `${visibles} de ${filas.length} registros`;
 }
 
 function salir(mensaje = "") {
@@ -99,9 +204,14 @@ function salir(mensaje = "") {
     institucion: null,
     periodos: [],
     periodo: null,
+    fechaCortePeriodo: null,
+    edadesAdmitidasPeriodo: null,
     aulas: [],
     turnos: [],
+    ofertasInstitucionales: [],
     ofertas: [],
+    ofertasVersionadas: [],
+    ofertasPublicadas: [],
     borrador: null,
     borradores: [],
     filtros: {},
@@ -118,7 +228,7 @@ window.addEventListener("sesion-vencida", () =>
 
 function presentarAcceso() {
   document.title = "Ingresar · Jardín";
-  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p><div class="acceso__previa"><button class="boton boton--secundario boton--ancho" data-accion="vista-previa">Explorar la vista previa ${icono("ojo")}</button><p>Recorré las pantallas con datos ficticios. Sin iniciar sesión.</p></div><details class="acceso__detalle"><summary>Configurar conexión al servidor</summary>${campo({ nombre: "servidor", etiqueta: "Dirección de la API", tipo: "url", valor: obtenerDireccionApi(), ayuda: "Para desarrollo local. La contraseña se envía únicamente al servidor indicado." })}</details></div></section></main>`;
+  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__presentacion"><div>${marca()}</div><div class="acceso__mensaje"><p class="acceso__epigrafe">Cada comienzo cuenta</p><h2 class="acceso__titulo">Un lugar para<br>crecer.<br><em>Una gestión<br>más simple.</em></h2><p class="acceso__descripcion">Acompañá cada inscripción, organizá tu jardín y dedicá más tiempo a lo que importa.</p></div><div class="acceso__ilustracion">${jardinIlustrado()}</div><p class="acceso__pie">Un espacio de trabajo para tu comunidad educativa.</p></section><section class="acceso__formulario" aria-label="Inicio de sesión"><div class="acceso__panel"><p class="acceso__saludo">Bienvenido a tu jardín</p><h1>Iniciá sesión</h1><p class="acceso__instruccion">Ingresá con tu cuenta para continuar.</p><form class="formulario" id="formulario-acceso">${campo({ nombre: "correo", etiqueta: "Correo electrónico", tipo: "email", obligatorio: true, atributos: 'autocomplete="username" placeholder="nombre@institucion.edu.ar"' })}<div class="campo"><label class="campo__etiqueta" for="clave-acceso">Contraseña *</label><div class="acceso__clave"><input id="clave-acceso" class="campo__control" type="password" name="clave" required autocomplete="current-password" placeholder="Ingresá tu contraseña"><button type="button" class="boton boton--texto boton--icono acceso__mostrar" data-accion="mostrar-clave" aria-label="Mostrar contraseña" aria-pressed="false">${icono("ojo")}</button></div></div><p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Ingresar al sistema ${icono("flecha")}</button></form><p class="acceso__seguridad">${icono("candado")} Acceso exclusivo para personal autorizado</p></div></section></main>`;
 }
 
 async function entrar(formulario) {
@@ -130,7 +240,6 @@ async function entrar(formulario) {
   boton.textContent = "Ingresando…";
   error.hidden = true;
   try {
-    configurarDireccion(document.getElementById("campo-servidor").value);
     const acceso = await solicitar("/Autenticacion/iniciar-sesion", {
       metodo: "POST",
       datos: {
@@ -146,6 +255,15 @@ async function entrar(formulario) {
     )
       throw new Error("El servidor no devolvió una sesión válida.");
     establecerToken(acceso.token);
+    if (acceso.debeCambiarClave) {
+      formulario.reset();
+      presentarCambioClave();
+      vencimiento = setTimeout(
+        () => salir("Tu sesión venció. Volvé a ingresar."),
+        Math.min(Date.parse(acceso.expiracion) - Date.now(), 2147483647),
+      );
+      return;
+    }
     const usuario = await solicitar("/Autenticacion/mi-acceso");
     if (intento !== versionVista) return;
     if (!usuario?.activo) throw new Error("La cuenta no está habilitada.");
@@ -171,6 +289,45 @@ async function entrar(formulario) {
       boton.disabled = false;
       boton.innerHTML = `Ingresar al sistema ${icono("flecha")}`;
     }
+  }
+}
+
+function presentarCambioClave() {
+  raiz.innerHTML = `<main class="acceso" id="contenido"><section class="acceso__formulario" aria-label="Cambio obligatorio de contraseña"><div class="acceso__panel"><p class="acceso__saludo">Primer ingreso</p><h1>Elegí una contraseña propia</h1><p class="acceso__instruccion">La contraseña temporal que te asignaron ya no se usará después de este cambio.</p><form class="formulario" id="formulario-cambio-clave">${campo({ nombre: "claveActual", etiqueta: "Contraseña temporal", tipo: "password", obligatorio: true, atributos: 'autocomplete="current-password"' })}${campoClave({ nombre: "claveNueva", etiqueta: "Nueva contraseña", obligatorio: true })}${campoClave({ nombre: "confirmarClave", etiqueta: "Confirmar nueva contraseña", obligatorio: true, confirmacion: true })}<p class="formulario__error" data-error role="alert" hidden></p><button class="boton boton--ancho" type="submit">Guardar contraseña nueva ${icono("flecha")}</button></form><p class="acceso__seguridad">Por seguridad, este paso es obligatorio para continuar.</p></div></section></main>`;
+}
+
+async function cambiarClaveInicial(formulario) {
+  const boton = formulario.querySelector('button[type="submit"]');
+  const error = formulario.querySelector("[data-error]");
+  const datos = Object.fromEntries(new FormData(formulario));
+  boton.disabled = true;
+  error.hidden = true;
+  try {
+    validarClave(datos.claveNueva, datos.confirmarClave);
+    const acceso = await solicitar("/Autenticacion/cambiar-clave", {
+      metodo: "POST",
+      datos: { claveActual: datos.claveActual, claveNueva: datos.claveNueva },
+    });
+    if (!acceso?.token || acceso.debeCambiarClave)
+      throw new Error("No se pudo completar el cambio obligatorio de contraseña.");
+    establecerToken(acceso.token);
+    const usuario = await solicitar("/Autenticacion/mi-acceso");
+    if (!usuario?.activo) throw new Error("La cuenta no está habilitada.");
+    estado.usuario = usuario;
+    vencimiento = setTimeout(
+      () => salir("Tu sesión venció. Volvé a ingresar."),
+      Math.min(Date.parse(acceso.expiracion) - Date.now(), 2147483647),
+    );
+    await cargarContexto();
+    navegar("inicio");
+    notificar("La contraseña se actualizó. Ya podés usar el sistema.");
+  } catch (problema) {
+    if (formulario.isConnected) {
+      error.textContent = problema.message;
+      error.hidden = false;
+    }
+  } finally {
+    if (boton.isConnected) boton.disabled = false;
   }
 }
 
@@ -220,27 +377,48 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
   if (!estado.institucion) {
     estado.periodos = [];
     estado.periodo = null;
+    estado.fechaCortePeriodo = null;
+    estado.edadesAdmitidasPeriodo = null;
     estado.aulas = [];
     estado.turnos = [];
+    estado.ofertasInstitucionales = [];
     estado.ofertas = [];
+    estado.ofertasVersionadas = [];
+    estado.ofertasPublicadas = [];
     estado.turnosSolicitud = [];
     return;
   }
   const ruta = `/instituciones/${encodeURIComponent(estado.institucion.id)}`;
-  const [periodos, aulas, turnos] = estado.previa
-    ? [periodosEjemplo, aulasEjemplo, turnosEjemplo]
+  const [periodos, aulas, turnos, ofertasInstitucionales] = estado.previa
+    ? [
+        periodosEjemplo,
+        aulasEjemplo,
+        turnosEjemplo,
+        ofertasEjemplo.map((oferta) => ({
+          id: oferta.id,
+          institucionId: institucionEjemplo.id,
+          aulaId: oferta.aulaId,
+          turnoId: oferta.turnoId,
+          capacidad: oferta.capacidad,
+          referenciaCapacidad: oferta.referenciaCapacidad,
+        })),
+      ]
     : await Promise.all([
         solicitar(`${ruta}/periodos`),
         solicitar(`${ruta}/aulas`),
         solicitar(`${ruta}/turnos`),
+        solicitar(`${ruta}/ofertas-reutilizables`),
       ]);
   estado.periodos = periodos;
   estado.aulas = aulas;
   estado.turnos = turnos;
+  estado.ofertasInstitucionales = ofertasInstitucionales;
   estado.periodo =
     periodos.find((p) => p.id === (periodoId ?? estado.periodo?.id ?? contextoGuardado?.periodoId)) ??
     periodos[0] ??
     null;
+  estado.fechaCortePeriodo = estado.previa ? "2027-06-30" : null;
+  estado.edadesAdmitidasPeriodo = estado.previa ? [3, 4, 5] : null;
   estado.ofertas = !estado.periodo
     ? []
     : estado.previa
@@ -248,7 +426,11 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       : await solicitar(
           `/periodos/${encodeURIComponent(estado.periodo.id)}/ofertas`,
         );
-  if (estado.previa) estado.turnosSolicitud = turnos;
+  if (estado.previa) {
+    estado.turnosSolicitud = turnos;
+    estado.ofertasVersionadas = ofertasEjemplo;
+    estado.ofertasPublicadas = ofertasEjemplo.filter((oferta) => oferta.disponible);
+  }
   else if (estado.periodo?.versionOfertaId) {
     const version = await solicitar(
       `/versiones-configuracion/${encodeURIComponent(estado.periodo.versionOfertaId)}`,
@@ -261,11 +443,39 @@ async function cargarContexto({ institucionId, periodoId } = {}) {
       throw new Error(
         "La oferta publicada utiliza un formato que este frontend todavía no interpreta.",
       );
-    const disponibles = version.datos
-      .filter((o) => o.Disponible ?? o.disponible)
-      .map((o) => o.TurnoId ?? o.turnoId);
+    estado.ofertasVersionadas = version.datos.map((oferta) => ({
+        id: oferta.Id ?? oferta.id,
+        revision: oferta.Revision ?? oferta.revision,
+        aulaId: oferta.AulaId ?? oferta.aulaId,
+        turnoId: oferta.TurnoId ?? oferta.turnoId,
+        capacidad: oferta.Capacidad ?? oferta.capacidad,
+        capacidadNetaInicial: oferta.CapacidadNetaInicial ?? oferta.capacidadNetaInicial ?? oferta.Capacidad ?? oferta.capacidad,
+        ocupaciones: oferta.Ocupaciones ?? oferta.ocupaciones ?? [],
+        disponible: oferta.Disponible ?? oferta.disponible,
+      }));
+    estado.ofertasPublicadas = estado.ofertasVersionadas
+      .filter((oferta) => oferta.disponible)
+      .filter((oferta) => oferta.aulaId && oferta.turnoId && oferta.capacidad > 0);
+    const disponibles = estado.ofertasPublicadas.map((oferta) => oferta.turnoId);
     estado.turnosSolicitud = turnos.filter((t) => disponibles.includes(t.id));
-  } else estado.turnosSolicitud = [];
+  } else {
+    estado.turnosSolicitud = [];
+    estado.ofertasVersionadas = [];
+    estado.ofertasPublicadas = [];
+  }
+  if (!estado.previa && estado.periodo?.versionReglasId) {
+    const versionReglas = await solicitar(
+      `/versiones-configuracion/${encodeURIComponent(estado.periodo.versionReglasId)}`,
+    );
+    if (
+      versionReglas.formato !== 1 ||
+      versionReglas.tipo !== "Reglas" ||
+      !versionReglas.datos
+    )
+      throw new Error("Las reglas publicadas del período no tienen un formato compatible.");
+    estado.fechaCortePeriodo = versionReglas.datos.FechaCorte ?? versionReglas.datos.fechaCorte ?? null;
+    estado.edadesAdmitidasPeriodo = edadesDeReglas(versionReglas.datos);
+  }
   guardarContextoPersistido();
 }
 contexto.recargarContexto = cargarContexto;
@@ -279,7 +489,6 @@ function estructura(ruta) {
       elementos: [
         ["solicitudes", "solicitudes", "Solicitudes"],
         ["domicilios", "ubicacion", "Domicilios y distancias"],
-        ["documentacion", "lista", "Documentación"],
         ["duplicados", "personas", "Posibles duplicados"],
       ],
     },
@@ -297,6 +506,7 @@ function estructura(ruta) {
         ["vacantes", "personas", "Vacantes y admisión"],
         ["secciones", "aulas", "Secciones"],
         ["reportes", "lista", "Resultados e historial"],
+        ...(esRoot() || rolActual() === "Directivo" ? [["personal", "personas", "Personal del jardín"]] : []),
         ...(esRoot() ? [["usuarios", "personas", "Usuarios y permisos"]] : []),
       ],
     },
@@ -314,7 +524,7 @@ function estructura(ruta) {
           )
           .join("")
       : `<option>${vacia}</option>`;
-  raiz.innerHTML = `<div class="sistema"><aside class="menu" id="menu-principal" aria-label="Navegación principal"><a href="#inicio" class="menu__marca" aria-label="Jardín, inicio">${marca()}</a><nav>${grupos.map((g) => `<p class="menu__grupo">${g.nombre}</p>${g.elementos.map(([destino, dibujo, nombre]) => `<a class="menu__enlace ${activo === destino ? "menu__enlace--activo" : ""}" href="#${destino}" ${activo === destino ? 'aria-current="page"' : ""}>${icono(dibujo)}${nombre}</a>`).join("")}`).join("")}</nav><div class="menu__nota">Cada inscripción es<br>un nuevo comienzo.</div><div class="menu__pie"><a class="menu__enlace" href="#ayuda">${icono("ayuda")}Ayuda y estado del sistema</a><button class="boton boton--texto boton--ancho" data-accion="salir">${icono("salir")}${estado.previa ? "Salir de la vista previa" : "Cerrar sesión"}</button></div></aside><div class="sistema__principal"><header class="cabecera"><div class="cabecera__contexto"><button class="boton boton--texto boton--icono cabecera__menu" data-accion="menu" aria-controls="menu-principal" aria-expanded="false" aria-label="Abrir menú">${icono("lista")}</button><div class="cabecera__selector"><label for="institucion-activa">Institución</label><select id="institucion-activa" ${estado.instituciones.length ? "" : "disabled"}>${opciones(estado.instituciones, estado.institucion?.id, "Sin institución")}</select></div><div class="cabecera__separador"></div><div class="cabecera__selector"><label for="periodo-activo">Período de inscripción</label><select id="periodo-activo" ${estado.periodos.length ? "" : "disabled"}>${opciones(estado.periodos, estado.periodo?.id, "Sin período")}</select></div></div><div class="cabecera__cuenta"><div><p class="cabecera__nombre">${escapar(estado.usuario?.nombre)}</p><p class="cabecera__rol">${escapar(rolActual())}</p></div><span class="avatar">${escapar(iniciales(estado.usuario?.nombre))}</span></div></header>${estado.previa ? `<div class="aviso aviso--previa" role="status">${icono("ojo")}Vista previa · Todos los datos son ficticios. Los cambios no se guardan.<a href="#acceso" data-accion="salir">Iniciar sesión real</a></div>` : ""}<main class="contenido" id="contenido" tabindex="-1"><p class="contenido__miga">Mi espacio <span aria-hidden="true">/</span> ${escapar(titulos[pagina] ?? "Ficha de solicitud")}</p><div id="vista"><div class="cargando" role="status"><div class="cargando__rueda"></div><p>Cargando información…</p></div></div><footer class="contenido__pie"><span>Jardín · Gestión de inscripciones</span><span>${estado.previa ? "Primera versión · Vista previa" : "Primera versión · Entorno de desarrollo"}</span></footer></main></div></div>`;
+  raiz.innerHTML = `<div class="sistema"><aside class="menu" id="menu-principal" aria-label="Navegación principal"><a href="#inicio" class="menu__marca" aria-label="Jardín, inicio">${marca()}</a><nav>${grupos.map((g) => `<p class="menu__grupo">${g.nombre}</p>${g.elementos.map(([destino, dibujo, nombre]) => `<a class="menu__enlace ${activo === destino ? "menu__enlace--activo" : ""}" href="#${destino}" ${activo === destino ? 'aria-current="page"' : ""}>${icono(dibujo)}${nombre}</a>`).join("")}`).join("")}</nav><div class="menu__nota">Cada inscripción es<br>un nuevo comienzo.</div><div class="menu__pie"><a class="menu__enlace ${activo === "tutorial" ? "menu__enlace--activo" : ""}" href="#tutorial" ${activo === "tutorial" ? 'aria-current="page"' : ""}>${icono("ayuda")}Tutorial de uso</a><a class="menu__enlace ${activo === "ayuda" ? "menu__enlace--activo" : ""}" href="#ayuda" ${activo === "ayuda" ? 'aria-current="page"' : ""}>${icono("ayuda")}Ayuda y estado del sistema</a><button class="boton boton--texto boton--ancho" data-accion="salir">${icono("salir")}${estado.previa ? "Salir de la vista previa" : "Cerrar sesión"}</button></div></aside><div class="sistema__principal"><header class="cabecera"><div class="cabecera__contexto"><button class="boton boton--texto boton--icono cabecera__menu" data-accion="menu" aria-controls="menu-principal" aria-expanded="false" aria-label="Abrir menú">${icono("lista")}</button><div class="cabecera__selector"><label for="institucion-activa">Institución</label><select id="institucion-activa" ${estado.instituciones.length ? "" : "disabled"}>${opciones(estado.instituciones, estado.institucion?.id, "Sin institución")}</select></div><div class="cabecera__separador"></div><div class="cabecera__selector"><label for="periodo-activo">Período de inscripción</label><select id="periodo-activo" ${estado.periodos.length ? "" : "disabled"}>${opciones(estado.periodos, estado.periodo?.id, "Sin período")}</select></div></div><div class="cabecera__cuenta"><div><p class="cabecera__nombre">${escapar(estado.usuario?.nombre)}</p><p class="cabecera__rol">${escapar(rolActual())}</p><p class="cabecera__correo" title="${escapar(estado.usuario?.correoElectronico)}">${escapar(estado.usuario?.correoElectronico)}</p></div><span class="avatar">${escapar(iniciales(estado.usuario?.nombre))}</span></div></header>${estado.previa ? `<div class="aviso aviso--previa" role="status">${icono("ojo")}Vista previa · Todos los datos son ficticios. Los cambios no se guardan.<a href="#acceso" data-accion="salir">Iniciar sesión real</a></div>` : ""}<main class="contenido" id="contenido" tabindex="-1"><p class="contenido__miga">Mi espacio <span aria-hidden="true">/</span> ${escapar(titulos[pagina] ?? "Ficha de solicitud")}</p><div id="vista"><div class="cargando" role="status"><div class="cargando__rueda"></div><p>Cargando información…</p></div></div><footer class="contenido__pie"><span>Jardín · Gestión de inscripciones</span><span>${estado.previa ? "Primera versión · Vista previa" : "Primera versión · Entorno de desarrollo"}</span></footer></main></div></div>`;
 }
 
 async function cargarVista() {
@@ -345,6 +555,45 @@ async function cargarVista() {
         '<button class="boton" data-accion="recargar">Intentar nuevamente</button>',
       dibujo: "alerta",
     });
+  }
+}
+
+async function actualizarVista() {
+  if (!estado.usuario) {
+    presentarAcceso();
+    return;
+  }
+  const vista = document.getElementById("vista");
+  if (!vista || !document.querySelector(".sistema")) {
+    await cargarVista();
+    return;
+  }
+  const ruta = location.hash.slice(1) || "inicio";
+  if (ruta === "acceso") {
+    salir();
+    return;
+  }
+  const intento = ++versionVista;
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+  try {
+    const html = await presentarPagina(ruta, contexto);
+    if (intento !== versionVista) return;
+    const vistaActual = document.getElementById("vista");
+    if (!vistaActual) return;
+    vistaActual.innerHTML = html;
+    window.scrollTo(scrollX, scrollY);
+  } catch (error) {
+    if (intento !== versionVista) return;
+    const vistaActual = document.getElementById("vista");
+    if (!vistaActual) return;
+    vistaActual.innerHTML = vacio({
+      titulo: "No pudimos actualizar esta página",
+      descripcion: error.message,
+      accion: '<button class="boton" data-accion="recargar">Intentar nuevamente</button>',
+      dibujo: "alerta",
+    });
+    window.scrollTo(scrollX, scrollY);
   }
 }
 
@@ -441,6 +690,14 @@ document.addEventListener("click", async (evento) => {
     cerrarDialogo();
     return;
   }
+  if (accion === "ver-datos-usuario") {
+    try {
+      await mostrarDatosUsuario(elemento.dataset.id);
+    } catch (error) {
+      notificar(error.message, true);
+    }
+    return;
+  }
   if (accion === "menu") {
     const abierto = document
       .getElementById("menu-principal")
@@ -452,6 +709,19 @@ document.addEventListener("click", async (evento) => {
     await cargarVista();
     return;
   }
+  if (accion === "usuarios-tab") {
+    const seleccionada = elemento.dataset.panel;
+    document.querySelectorAll("[data-usuarios-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.usuariosPanel !== seleccionada;
+    });
+    document.querySelectorAll('[data-accion="usuarios-tab"]').forEach((pestana) => {
+      const activa = pestana.dataset.panel === seleccionada;
+      pestana.classList.toggle("pestanas__enlace--activo", activa);
+      pestana.setAttribute("aria-selected", String(activa));
+    });
+    return;
+  }
+  if (elemento.closest("#dialogo") && accion.startsWith("org-")) cerrarDialogo();
   try {
     await atenderAccion(elemento, contexto);
   } catch (error) {
@@ -464,19 +734,122 @@ document.addEventListener("submit", async (evento) => {
     await entrar(evento.target);
     return;
   }
+  if (evento.target.id === "formulario-cambio-clave") {
+    evento.preventDefault();
+    await cambiarClaveInicial(evento.target);
+    return;
+  }
   if (!evento.target.matches("[data-formulario]")) return;
   evento.preventDefault();
   await atenderFormulario(evento.target, contexto);
 });
+document.addEventListener("change", (evento) => {
+  const selecciones = {
+    articulacionPedagogica: "articulacion",
+    respuestaArticulacion: "articulacion",
+    hermanosGrupoConviviente: "hermanos",
+    respuestaHermanosGrupo: "hermanos",
+    hijoPersonal: "personal",
+    respuestaHijoPersonal: "personal",
+  };
+  const grupo = selecciones[evento.target.name];
+  if (!grupo) return;
+  const formulario = evento.target.closest("[data-formulario]");
+  const detalle = formulario?.querySelector(`[data-prioridad-detalle="${grupo}"]`);
+  if (!detalle) return;
+  const mostrar = grupo === "articulacion"
+    ? ["Si", "NoEstoySeguro"].includes(evento.target.value)
+    : evento.target.value === "Si";
+  detalle.hidden = !mostrar;
+  const entrada = detalle.querySelector("input");
+  if (entrada) {
+    entrada.required = mostrar;
+    if (!mostrar) entrada.value = "";
+  }
+});
 document.addEventListener("input", (evento) => {
   if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
     actualizarIndicadoresClave(evento.target.form);
+  if (evento.target.matches("[data-buscar-cuentas]")) actualizarFiltroCuentas();
+  if (evento.target.matches("[data-buscar-distribucion]")) actualizarFiltroDistribucion();
+  if (evento.target.matches("[data-buscar-ingreso]")) actualizarFiltroIngresos();
+  if (evento.target.matches("[data-motivo-otro]")) {
+    const valorFinal = evento.target.form?.querySelector("[data-motivo-final]");
+    if (valorFinal) valorFinal.value = evento.target.value.trim();
+  }
 });
 document.addEventListener("change", (evento) => {
+  if (evento.target.matches("[data-filtro-aceptacion-turno]")) {
+    const filtro = evento.target.value;
+    const filas = [...document.querySelectorAll(".propuesta__tabla tr[data-estado-cuenta]")];
+    for (const fila of filas)
+      fila.hidden = filtro !== "todas" && fila.dataset.estadoCuenta !== filtro;
+    const visibles = filas.filter((fila) => !fila.hidden).length;
+    const resumen = document.querySelector("[data-resumen-aceptacion-turno]");
+    if (resumen)
+      resumen.textContent = filtro === "todas"
+        ? `${filas.filter((fila) => fila.dataset.estadoCuenta === "pendiente").length} pendientes de registrar`
+        : `${visibles} aspirantes visibles`;
+  }
+  if (evento.target.matches("[data-motivo-seleccion]")) {
+    const form = evento.target.form;
+    const esOtro = evento.target.value === "__otro__";
+    const contenedorOtro = form?.querySelector("[data-motivo-otro-contenedor]");
+    const textoOtro = form?.querySelector("[data-motivo-otro]");
+    const valorFinal = form?.querySelector("[data-motivo-final]");
+    if (contenedorOtro) contenedorOtro.hidden = !esOtro;
+    evento.target.setAttribute("aria-expanded", String(esOtro));
+    if (textoOtro) {
+      textoOtro.disabled = !esOtro;
+      textoOtro.required = esOtro;
+      if (esOtro) textoOtro.focus();
+    }
+    if (valorFinal)
+      valorFinal.value = esOtro ? (textoOtro?.value.trim() ?? "") : evento.target.value;
+    return;
+  }
+  if (evento.target.matches("[data-tipo-cuenta]")) {
+    const institucional = evento.target.value === "institucional";
+    const camposInstitucion = evento.target.form?.querySelector("[data-cuenta-institucional]");
+    const notaRoot = evento.target.form?.querySelector("[data-cuenta-root]");
+    if (camposInstitucion) {
+      camposInstitucion.hidden = !institucional;
+      camposInstitucion.disabled = !institucional;
+    }
+    if (notaRoot) notaRoot.hidden = institucional;
+    return;
+  }
+  if (evento.target.matches("[data-filtro-cuentas]")) {
+    actualizarFiltroCuentas();
+    return;
+  }
+  if (evento.target.matches("[data-filtro-distribucion-seccion], [data-filtro-distribucion-turno]")) {
+    actualizarFiltroDistribucion();
+    return;
+  }
+  if (evento.target.matches("[data-filtro-ingreso-estado]")) {
+    actualizarFiltroIngresos();
+    return;
+  }
   if (evento.target.id === "institucion-activa")
     cambiarContexto("institucion", evento.target.value);
   if (evento.target.id === "periodo-activo")
     cambiarContexto("periodo", evento.target.value);
+  if (evento.target.id === "filtro-seguimiento-domicilio") {
+    const filtro = evento.target.value;
+    const filas = [...document.querySelectorAll("tr[data-distancia-estado]")];
+    for (const fila of filas) {
+      const coincide = filtro === "todos"
+        || (filtro === "domicilio-pendiente" && fila.dataset.domicilioEstado === "pendiente")
+        || (filtro === "distancia-pendiente" && fila.dataset.distanciaEstado === "pendiente")
+        || (filtro === "distancia-manual" && fila.dataset.distanciaEstado === "manual")
+        || (filtro === "distancia-desactualizada" && fila.dataset.distanciaEstado === "desactualizada");
+      fila.hidden = !coincide;
+    }
+    const visibles = filas.filter((fila) => !fila.hidden).length;
+    const resumen = document.querySelector("[data-resultados-domicilio]");
+    if (resumen) resumen.textContent = `${visibles} solicitudes visibles en esta página`;
+  }
 });
 window.addEventListener("hashchange", cargarVista);
 presentarAcceso();

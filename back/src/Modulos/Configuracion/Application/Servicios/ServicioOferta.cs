@@ -109,6 +109,90 @@ public sealed class ServicioOferta : IModuloOferta
                 t.Nombre)).ToArray();
     }
 
+    // Implementa IModuloOferta.ListarOfertasInstitucionalesAsync.
+    public async Task<IReadOnlyList<ConsultarOfertaInstitucionalRespuesta>> ListarOfertasInstitucionalesAsync(
+        Guid institucionId,
+        CancellationToken tokenCancelacion = default)
+    {
+        await AutorizarAsync(institucionId, false, tokenCancelacion);
+        await ComprobarInstitucionAsync(institucionId, tokenCancelacion);
+        return (await _oferta.ListarOfertasInstitucionalesAsync(institucionId, tokenCancelacion))
+            .Select(MapearOfertaInstitucional)
+            .ToArray();
+    }
+
+    // Implementa IModuloOferta.RegistrarOfertaInstitucionalAsync.
+    public async Task<RegistrarOfertaRespuesta> RegistrarOfertaInstitucionalAsync(
+        Guid institucionId,
+        RegistrarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        var autor = await AutorizarAsync(institucionId, true, tokenCancelacion);
+        await ComprobarInstitucionAsync(institucionId, tokenCancelacion);
+        ArgumentNullException.ThrowIfNull(peticion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+
+        var aula = await _oferta.ObtenerAulaAsync(peticion.AulaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el aula.");
+        var turno = await _oferta.ObtenerTurnoAsync(peticion.TurnoId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el turno.");
+        if (aula.InstitucionId != institucionId || turno.InstitucionId != institucionId)
+            throw new ArgumentException("El aula y el turno deben pertenecer a la institución.");
+        if (await _oferta.ExisteOfertaInstitucionalAsync(institucionId, aula.Id, turno.Id, tokenCancelacion))
+            throw new InvalidOperationException("Esa combinación ya existe en las ofertas reutilizables de la institución.");
+
+        var oferta = new OfertaInstitucional(
+            institucionId,
+            aula.Id,
+            turno.Id,
+            peticion.Capacidad,
+            peticion.ReferenciaCapacidad);
+        await _oferta.AgregarOfertaInstitucionalAsync(
+            oferta,
+            Cambio(
+                institucionId,
+                autor.Id,
+                "OfertaInstitucional.Creacion",
+                peticion.Motivo.Trim(),
+                null,
+                MapearOfertaInstitucional(oferta)),
+            tokenCancelacion);
+        return new RegistrarOfertaRespuesta(oferta.Id);
+    }
+
+    public async Task<ActualizarOfertaInstitucionalRespuesta> ActualizarOfertaInstitucionalAsync(
+        Guid ofertaId,
+        ActualizarOfertaInstitucionalPeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        var oferta = await _oferta.ObtenerOfertaInstitucionalAsync(ofertaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la oferta reutilizable.");
+        var autor = await AutorizarAsync(oferta.InstitucionId, true, tokenCancelacion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+
+        var aula = await _oferta.ObtenerAulaAsync(peticion.AulaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el aula.");
+        var turno = await _oferta.ObtenerTurnoAsync(peticion.TurnoId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el turno.");
+        if (aula.InstitucionId != oferta.InstitucionId || turno.InstitucionId != oferta.InstitucionId)
+            throw new ArgumentException("El aula y el turno deben pertenecer a la institución de la oferta.");
+
+        var anteriores = JsonSerializer.Serialize(MapearOfertaInstitucional(oferta));
+        oferta.Actualizar(aula.Id, turno.Id, peticion.Capacidad, peticion.ReferenciaCapacidad);
+        await _oferta.ActualizarOfertaInstitucionalAsync(
+            oferta,
+            Cambio(
+                oferta.InstitucionId,
+                autor.Id,
+                "OfertaInstitucional.Actualizacion",
+                peticion.Motivo.Trim(),
+                anteriores,
+                MapearOfertaInstitucional(oferta)),
+            tokenCancelacion);
+        return new ActualizarOfertaInstitucionalRespuesta(oferta.Id);
+    }
+
     // Implementa IModuloOferta.RegistrarOfertaAsync.
     public async Task<RegistrarOfertaRespuesta> RegistrarOfertaAsync(
         Guid periodoId,
@@ -284,5 +368,16 @@ public sealed class ServicioOferta : IModuloOferta
             oferta.Ocupaciones.OrderBy(o => o.Sala).Select(o => new DatosOcupacionInicial(o.Sala, o.Cantidad)).ToArray(),
             oferta.CapacidadNetaInicial,
             oferta.Revision);
+    }
+
+    private static ConsultarOfertaInstitucionalRespuesta MapearOfertaInstitucional(OfertaInstitucional oferta)
+    {
+        return new ConsultarOfertaInstitucionalRespuesta(
+            oferta.Id,
+            oferta.InstitucionId,
+            oferta.AulaId,
+            oferta.TurnoId,
+            oferta.Capacidad,
+            oferta.ReferenciaCapacidad);
     }
 }

@@ -2,6 +2,9 @@ namespace Jardin.Vacantes.Contracts;
 
 public interface IModuloOfrecimientos
 {
+    Task<ConsultarCandidatosGeneralesRespuesta> ConsultarCandidatosGeneralesAsync(
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default);
     Task<ConsultarCandidatosVacanteRespuesta> ConsultarCandidatosAsync(
         Guid periodoId,
         Guid ofertaId,
@@ -39,6 +42,27 @@ public sealed record ConsultarCandidatosVacanteRespuesta(
     Guid OfertaId,
     Guid? PropuestaListaId,
     IReadOnlyList<DatosIntegranteListaEspera> Candidatos);
+public sealed record ConsultarCandidatosGeneralesRespuesta(
+    Guid PeriodoId,
+    Guid? PropuestaListaId,
+    IReadOnlyList<DatosCandidatoGeneral> Candidatos,
+    IReadOnlyList<DatosOfertaDisponible> OfertasDisponibles);
+public sealed record DatosCandidatoGeneral(
+    DatosIntegranteListaEspera Candidato,
+    IReadOnlyList<DatosOfertaCandidata> OfertasCompatibles);
+public sealed record DatosOfertaCandidata(
+    Guid OfertaId,
+    Guid AulaId,
+    Guid TurnoId,
+    string? NombreSeccion,
+    IReadOnlyList<int> EdadesAdmitidas);
+public sealed record DatosOfertaDisponible(
+    Guid OfertaId,
+    Guid AulaId,
+    Guid TurnoId,
+    string? NombreSeccion,
+    IReadOnlyList<int> EdadesAdmitidas,
+    int CuposDisponibles);
 public sealed record ConsultarOfrecimientoRespuesta(
     Guid Id,
     Guid OperacionId,

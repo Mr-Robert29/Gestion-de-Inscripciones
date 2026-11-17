@@ -1,5 +1,5 @@
-import { vacantes } from "./pagina-vacantes.js";
-import { secciones } from "./pagina-secciones.js";
+import { vacantes } from "./pagina-vacantes.js?v=20261117-ofrecimientos-seccion-v3";
+import { secciones } from "./pagina-secciones.js?v=20261117-distribucion-filtros-v1";
 import { reportes } from "./pagina-reportes.js";
 import { usuarios } from "./pagina-usuarios.js";
 import { escapar as e, icono, etiqueta, vacio } from "./interfaz.js";
@@ -14,8 +14,11 @@ import {
   oferta,
 } from "./pagina-configuracion.js";
 import { ficha } from "./pagina-ficha.js";
+import { tutorial } from "./pagina-tutorial.js?v=20261117-lista-espera-filtros-v2";
+import { personalInstitucion } from "./pagina-personal.js";
 export const titulos = {
   inicio: "Inicio",
+  tutorial: "Tutorial de uso",
   solicitudes: "Solicitudes",
   "nueva-solicitud": "Nueva solicitud",
   solicitud: "Ficha de solicitud",
@@ -30,6 +33,7 @@ export const titulos = {
   ayuda: "Ayuda y estado del sistema",
   reportes: "Resultados e historial",
   usuarios: "Usuarios y permisos",
+  personal: "Personal del jardín",
 };
 async function duplicados(ctx) {
   const lista = ctx.estado.previa
@@ -38,18 +42,30 @@ async function duplicados(ctx) {
         `${base(ctx.estado)}/periodos/${encodeURIComponent(ctx.estado.periodo.id)}/duplicados?tamanoPagina=100`,
       );
   ctx.duplicados = lista.resultados;
+  const valor = (objeto, propiedad) => objeto?.[propiedad] ?? objeto?.[propiedad[0].toUpperCase() + propiedad.slice(1)];
+  const aspiranteEnAlerta = (datos, letra, id) => {
+    const solicitud = valor(datos, letra);
+    const nombre = [valor(solicitud, "nombre"), valor(solicitud, "apellido")].filter(Boolean).join(" ");
+    return `<a class="duplicado__persona" href="#solicitud/${encodeURIComponent(id)}"><span>${e(nombre || "Aspirante sin nombre")}</span><small>Solicitud <span class="duplicado__id">${e(id.slice(0, 8))}</span></small></a>`;
+  };
+  const criterioLegible = {
+    MismoAspirante: "Mismo aspirante registrado",
+    DniCompleto: "Mismo DNI completo",
+    NombreApellidoNacimiento: "Mismo nombre, apellido y fecha de nacimiento",
+  };
   return (
     encabezado({
       titulo: "Posibles duplicados",
-      descripcion: "Revisá las coincidencias antes de procesar los resultados.",
+      descripcion: "Encontrá solicitudes que podrían corresponder al mismo aspirante y revisalas antes de avanzar con la admisión.",
       accion:
         '<button class="boton boton--secundario" data-accion="detectar-duplicados">Revisar coincidencias</button>',
     }) +
-    `<div class="aviso">Una coincidencia no elimina, fusiona ni excluye solicitudes. Las decisiones deben registrarse con su motivo.</div><section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Alertas del período</h2></div>${lista.resultados.length ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Solicitudes</th><th>Coincidencias</th><th>Estado</th><th>Acción</th></tr></thead><tbody>${lista.resultados.map((d) => `<tr><td><a href="#solicitud/${encodeURIComponent(d.solicitudAId)}">${e(d.solicitudAId.slice(0, 8))}</a> / <a href="#solicitud/${encodeURIComponent(d.solicitudBId)}">${e(d.solicitudBId.slice(0, 8))}</a></td><td>${e(d.criterios.join(", "))}</td><td>${etiqueta(d.estado)}</td><td>${ctx.puedeResolver() ? `<button class="boton boton--secundario boton--pequeno" data-accion="resolver-duplicado" data-id="${e(d.id)}">Registrar decisión</button>` : "Requiere Directivo"}</td></tr>`).join("")}</tbody></table></div>` : vacio({ titulo: "Sin alertas en esta consulta", descripcion: "Podés ejecutar la detección sobre las solicitudes existentes. Los nuevos registros también generan alertas cuando corresponde.", dibujo: "listo" })}${lista.hayMas ? '<div class="tarjeta__pie">Se muestran las primeras 100 alertas. Hay más resultados; la paginación de esta pantalla se incorporará posteriormente.</div>' : ""}</section>`
+    `<div class="aviso"><strong>¿Para qué sirve?</strong> Señala solicitudes que podrían ser de la misma persona. Compará los datos de ambas fichas y registrá si es una duplicación o si son personas diferentes. Esta alerta no cambia ni elimina solicitudes.</div><section class="tarjeta"><div class="tarjeta__cabecera"><h2 class="tarjeta__titulo">Alertas del período</h2><span class="formulario__nota">${lista.resultados.length} ${lista.resultados.length === 1 ? "caso para revisar" : "casos para revisar"}</span></div>${lista.resultados.length ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr><th>Solicitudes comparadas</th><th>Por qué se marcó</th><th>Estado</th><th>Acción</th></tr></thead><tbody>${lista.resultados.map((d) => `<tr><td><div class="duplicado__pareja">${aspiranteEnAlerta(d.datosEvaluados, "a", d.solicitudAId)}<span class="duplicado__separador" aria-hidden="true">↔</span>${aspiranteEnAlerta(d.datosEvaluados, "b", d.solicitudBId)}</div></td><td><div class="duplicado__criterios">${d.criterios.map((criterio) => `<span class="etiqueta etiqueta--neutra">${e(criterioLegible[criterio] ?? criterio)}</span>`).join("")}</div></td><td>${etiqueta(d.estado)}</td><td>${ctx.puedeResolver() ? `<button class="boton boton--secundario boton--pequeno" data-accion="resolver-duplicado" data-id="${e(d.id)}">Revisar y decidir</button>` : "Requiere Directivo"}</td></tr>`).join("")}</tbody></table></div>` : vacio({ titulo: "No hay alertas para revisar", descripcion: "Podés ejecutar la detección para comparar las solicitudes existentes. Las nuevas solicitudes también se revisan automáticamente.", dibujo: "listo" })}${lista.hayMas ? '<div class="tarjeta__pie">Se muestran las primeras 100 alertas. Hay más resultados; la paginación de esta pantalla se incorporará posteriormente.</div>' : ""}</section>`
   );
 }
 export async function presentarPagina(ruta, ctx) {
   const pagina = ruta.split("/")[0];
+  if (pagina === "tutorial") return tutorial(ctx);
   if (pagina === "ayuda")
     return (
       encabezado({
@@ -64,6 +80,7 @@ export async function presentarPagina(ruta, ctx) {
     );
   if (pagina === "usuarios") return usuarios(ctx);
   if (!ctx.estado.institucion) return sinInstitucion(ctx);
+  if (pagina === "personal") return personalInstitucion(ctx);
   if (pagina === "inicio") return inicio(ctx);
   if (pagina === "institucion") return institucion(ctx);
   if (pagina === "periodos") return periodos(ctx);

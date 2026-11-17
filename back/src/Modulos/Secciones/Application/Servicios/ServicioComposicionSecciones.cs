@@ -42,8 +42,8 @@ public sealed class ServicioComposicionSecciones(
                         protegido) ?? throw new InvalidOperationException("No existe oferta para la sección.");
                     var ocupaciones = datos.Ocupaciones.Where(x => x.OfertaId == recurso.Id).ToArray();
                     var capacidad = Math.Min(recurso.Capacidad, seccion.Capacidad);
-                    if (recurso.CantidadInicial + ocupaciones.Length >= capacidad || asignados.Count >= capacidad)
-                        throw new InvalidOperationException("No hay una vacante libre para cambiar la composición.");
+                    if (recurso.CantidadInicial + ocupaciones.Length > capacidad || asignados.Count > capacidad)
+                        throw new InvalidOperationException("La ocupación actual supera la capacidad publicada. Revisá las vacantes y las asignaciones antes de cambiar la composición.");
                     var ingresos = datos.Ingresos.ToDictionary(x => x.IngresoId);
                     if (asignados.Any(x => !ingresos.ContainsKey(x)))
                         throw new InvalidOperationException("Hay asignaciones sin ingreso activo. Revisá las bajas antes de cambiar.");

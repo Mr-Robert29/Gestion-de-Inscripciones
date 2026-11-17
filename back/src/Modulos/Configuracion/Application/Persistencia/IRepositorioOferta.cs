@@ -9,6 +9,8 @@ public interface IRepositorioOferta
     Task<Turno?> ObtenerTurnoAsync(Guid id, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<Aula>> ListarAulasAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<Turno>> ListarTurnosAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<OfertaInstitucional>> ListarOfertasInstitucionalesAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
+    Task<OfertaInstitucional?> ObtenerOfertaInstitucionalAsync(Guid id, CancellationToken tokenCancelacion = default);
     Task<OfertaAulaTurno?> ObtenerOfertaAsync(Guid id, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<OfertaAulaTurno>> ListarOfertasAsync(Guid periodoId, CancellationToken tokenCancelacion = default);
     Task<bool> ExisteCombinacionAsync(
@@ -16,12 +18,21 @@ public interface IRepositorioOferta
         Guid aulaId,
         Guid turnoId,
         CancellationToken tokenCancelacion = default);
+    Task<bool> ExisteOfertaInstitucionalAsync(Guid institucionId, Guid aulaId, Guid turnoId, CancellationToken tokenCancelacion = default);
     Task AgregarAulaAsync(
         Aula aula,
         CambioInstitucion cambio,
         CancellationToken tokenCancelacion = default);
     Task AgregarTurnoAsync(
         Turno turno,
+        CambioInstitucion cambio,
+        CancellationToken tokenCancelacion = default);
+    Task AgregarOfertaInstitucionalAsync(
+        OfertaInstitucional oferta,
+        CambioInstitucion cambio,
+        CancellationToken tokenCancelacion = default);
+    Task ActualizarOfertaInstitucionalAsync(
+        OfertaInstitucional oferta,
         CambioInstitucion cambio,
         CancellationToken tokenCancelacion = default);
     Task AgregarOfertaAsync(

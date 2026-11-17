@@ -27,6 +27,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.AddSingleton<Jardin.Api.Trabajos.ColaPropuestasIngresos>();
+builder.Services.AddHostedService<Jardin.Api.Trabajos.ProcesadorColaPropuestasIngresos>();
 
 
 builder.Services.AddOpenApi();

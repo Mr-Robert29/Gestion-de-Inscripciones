@@ -3,6 +3,11 @@ namespace Jardin.Inscripciones.Application.Configuracion;
 // La integración con Configuración ejecuta el registro mientras protege el estado del período.
 public interface IEjecucionPeriodoSolicitud
 {
+    Task<T> EjecutarConReglasAsync<T>(
+        Guid institucionId,
+        Guid periodoId,
+        Func<DatosReglasEdadSolicitud, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
     Task<T> EjecutarAsync<T>(
         Guid institucionId,
         Guid periodoId,
@@ -17,6 +22,7 @@ public interface IEjecucionPeriodoSolicitud
     Task<T> EjecutarCorreccionAsync<T>(
         Guid institucionId,
         Guid periodoId,
+        Guid versionReglasId,
         Guid versionOfertaId,
         Func<DatosPeriodoCorreccionSolicitud, CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default);
@@ -30,6 +36,13 @@ public sealed record DatosPeriodoSolicitud(
     Guid VersionReglasId,
     Guid VersionOfertaId,
     DateOnly FechaCorte,
-    IReadOnlyList<Guid> TurnosDisponibles);
+    IReadOnlyList<Guid> TurnosDisponibles,
+    IReadOnlyList<int> EdadesAdmitidas);
 
-public sealed record DatosPeriodoCorreccionSolicitud(string Estado, IReadOnlyList<Guid> TurnosDisponibles);
+public sealed record DatosReglasEdadSolicitud(DateOnly FechaCorte, IReadOnlyList<int> EdadesAdmitidas);
+
+public sealed record DatosPeriodoCorreccionSolicitud(
+    string Estado,
+    DateOnly FechaCorte,
+    IReadOnlyList<int> EdadesAdmitidas,
+    IReadOnlyList<Guid> TurnosDisponibles);
