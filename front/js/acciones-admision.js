@@ -52,6 +52,8 @@ export async function atenderAdmision(elemento, ctx) {
     );
     if (!articulacion)
       throw new Error("La declaración cambió. Actualizá la pantalla e intentá de nuevo.");
+    const esArticulacion = ["ArticulacionPedagogica", "ConsultaArticulacionPedagogica"].includes(articulacion.condicion.tipo);
+    const categoria = esArticulacion ? "articulación pedagógica" : articulacion.condicion.tipo === "HermanosYGruposConvivientes" ? "hermanos o grupo conviviente" : "hijo/a del personal";
     const opcionesEstado = [
       { id: "", nombre: "Seleccioná una decisión" },
       { id: "Verificada", nombre: "Verificada: corresponde aplicar la prioridad" },
@@ -61,16 +63,16 @@ export async function atenderAdmision(elemento, ctx) {
       opcionesEstado.push({ id: "NoAcreditada", nombre: "No acreditada al cierre: no se aplica esta prioridad" });
     formulario(
       ctx,
-      "Revisar articulación pedagógica",
-      `<p><strong>${e(nombreSolicitud(ctx, articulacion.solicitudId))}</strong></p><p>${e(articulacion.condicion.valorDeclarado)}</p><p class="formulario__nota">Elegí “Verificada” solo si comprobaste que existe un acuerdo formal entre las instituciones y que incluye a este aspirante. “Observada” deja el caso pendiente de aclaración. “No acreditada al cierre” registra que no se pudo comprobar antes del cierre.</p>` +
+      `Revisar ${categoria}`,
+      `<p><strong>${e(nombreSolicitud(ctx, articulacion.solicitudId))}</strong></p><p>${e(articulacion.condicion.valorDeclarado)}</p><p><strong>Dato informado:</strong> ${e(articulacion.condicion.evidenciaReferencia ?? "No se informó un detalle")}</p><p class="formulario__nota">“Verificada” confirma que la declaración corresponde a este aspirante. “Observada” deja el caso pendiente de aclaración. “No acreditada al cierre” registra que no se pudo comprobar antes del cierre.</p>` +
         selector("estado", "Decisión", opcionesEstado) +
         campo({ nombre: "observacion", etiqueta: "Aclaración (opcional)", ayuda: "Anotá un dato útil para el seguimiento, como qué falta revisar o por qué no corresponde." }) +
         motivo([
-          "Se confirmó la articulación con documentación institucional",
-          "La articulación no comprende a este aspirante",
-          "Falta documentación para confirmar la articulación",
-          "La institución de procedencia no pudo ser identificada",
-          "No se acreditó la articulación antes del cierre",
+          `Se verificó la prioridad de ${categoria}`,
+          `La declaración de ${categoria} no corresponde a este aspirante`,
+          "Falta información para confirmar la declaración",
+          "El dato informado no pudo ser corroborado",
+          "No se acreditó la prioridad antes del cierre",
         ], { etiqueta: "Motivo de la decisión" }),
       (d) => {
         return enviar(

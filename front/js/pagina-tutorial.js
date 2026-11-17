@@ -147,7 +147,7 @@ export function tutorial(ctx) {
         [
           "Comprobá que la institución y el período correctos estén seleccionados y que la recepción esté abierta. En <strong>Solicitudes</strong>, elegí <strong>Nueva solicitud</strong>.",
           "En la primera parte, escribí nombre, apellido y fecha de nacimiento. El calendario limita las fechas según la fecha de corte y las edades admitidas para el ciclo; el sistema vuelve a comprobarlo al guardar. El DNI es opcional: dejalo vacío si no lo tenés, no ingreses un número inventado. Si el aspirante ya existe, podés seleccionarlo con su identificador; también se verificará su fecha antes de registrar la solicitud.",
-          "En la segunda parte, completá el domicilio y los turnos. También preguntá si la institución de procedencia tiene una articulación pedagógica formal con este jardín. La respuesta de la familia queda como declaración: no concede prioridad hasta que el jardín la verifique en la ficha.",
+          "En la segunda parte, completá el domicilio y los turnos. También preguntá si la institución de procedencia tiene una articulación pedagógica formal con este jardín. La familia declara articulación, hermanos/grupo conviviente y vínculo con personal cuando corresponda. Las respuestas afirmativas quedan pendientes hasta que el jardín las verifique.",
           "La solicitud registrada todavía no significa que el aspirante haya obtenido una vacante. Abrí su ficha para agregar responsables y continuar con las revisiones.",
           "Si la recepción está cerrada, la pantalla avisa que el registro quedará fuera de término y pendiente de autorización. No continúes por esa vía salvo que corresponda.",
         ],

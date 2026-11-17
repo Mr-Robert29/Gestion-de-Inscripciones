@@ -8,4 +8,8 @@ public sealed record RegistrarSolicitudPeticion(
     IReadOnlyList<Guid>? TurnosAlternativosAceptados = null,
     string? ReferenciaConsentimiento = null,
     string? ArticulacionPedagogica = "No",
-    string? InstitucionProcedencia = null);
+    string? InstitucionProcedencia = null,
+    string? HermanosGrupoConviviente = "No",
+    string? DetalleHermanoGrupo = null,
+    string? HijoPersonal = "No",
+    string? DetalleHijoPersonal = null);

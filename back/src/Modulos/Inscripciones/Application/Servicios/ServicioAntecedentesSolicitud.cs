@@ -226,12 +226,12 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
                 var decision = LeerEstado<EstadoVerificacionCondicion>(peticion.Estado);
                 if (decision == EstadoVerificacionCondicion.NoAcreditada &&
                     estado != "RecepcionCerrada")
-                    throw new InvalidOperationException("La articulación solo puede marcarse como no acreditada después de cerrar la recepción.");
+                    throw new InvalidOperationException("Una prioridad solo puede marcarse como no acreditada después de cerrar la recepción.");
                 var condicion = solicitud.Condiciones.SingleOrDefault(c => c.Id == condicionId)
                     ?? throw new KeyNotFoundException("No se encontró la condición en esta solicitud.");
                 if (decision == EstadoVerificacionCondicion.NoAcreditada &&
-                    condicion.Tipo is not ("ArticulacionPedagogica" or "ConsultaArticulacionPedagogica"))
-                    throw new InvalidOperationException("Solo una declaración de articulación puede marcarse como no acreditada.");
+                    condicion.Tipo is not ("ArticulacionPedagogica" or "ConsultaArticulacionPedagogica" or "HermanosYGruposConvivientes" or "HijosDelPersonal"))
+                    throw new InvalidOperationException("Solo una prioridad declarada puede marcarse como no acreditada.");
                 var anteriores = MapearCondicion(condicion);
                 condicion.Revisar(
                     decision,

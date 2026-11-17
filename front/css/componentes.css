@@ -312,6 +312,7 @@
   height: 1rem;
   margin-top: 0.2rem;
 }
+.prioridad-respuesta{border:0;padding:0;margin:0;min-width:0}.prioridad-respuesta legend{font-size:.9rem;font-weight:600;margin-bottom:.5rem}.prioridad-respuesta__opciones{display:flex;flex-wrap:wrap;gap:.55rem}.prioridad-respuesta__opciones label{position:relative;cursor:pointer}.prioridad-respuesta__opciones input{position:absolute;opacity:0;pointer-events:none}.prioridad-respuesta__opciones span{display:block;padding:.6rem .95rem;border:1px solid var(--borde,#dce4da);border-radius:999px;background:#fff;color:var(--color-texto,#294137);font-size:.88rem;transition:background .15s,border-color .15s,box-shadow .15s}.prioridad-respuesta__opciones input:checked+span{background:#eaf1eb;border-color:#7d9d86;color:#214d39;font-weight:650}.prioridad-respuesta__opciones input:focus-visible+span{outline:3px solid #3169db;outline-offset:2px}
 .aviso {
   display: flex;
   align-items: flex-start;

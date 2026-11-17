@@ -7,7 +7,7 @@ import {
   errorFormulario,
 } from "./interfaz.js";
 import { base } from "./compartidos.js";
-import { camposDomicilio } from "./pagina-solicitudes.js";
+import { camposDomicilio, opcionesPrioridad } from "./pagina-solicitudes.js";
 import { actualizarBorrador, claveBorradores } from "./borradores-solicitud.js";
 import { motivo, motivos } from "./operaciones-formularios.js";
 import { edadesDeReglas, fechaNacimientoAdmitida, rangoFechasNacimiento } from "./reglas-edad.js";
@@ -373,7 +373,7 @@ export async function atenderAccion(elemento, ctx) {
       titulo: "Editar datos del aspirante",
       descripcion: "La corrección quedará registrada en el historial.",
       formulario: "editar-aspirante",
-      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true, atributos: atributosNacimiento })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "", sugerencias: ["DNI", "Pasaporte", "Otro documento"] })}${campo({ nombre: "sexo", etiqueta: "Sexo (opcional)", valor: aspirante.sexo ?? "" })}</div><p class="formulario__nota">La fecha debe corresponder a las edades admitidas al ${e(fechaCorteSolicitud ?? "la fecha de corte del ciclo")}. Al guardar se recalculan la edad y la sala y se registra el cambio en el historial.</p>`,
+      contenido: `<div class="formulario__rejilla">${campo({ nombre: "nombre", etiqueta: "Nombre", valor: aspirante.nombre, obligatorio: true })}${campo({ nombre: "apellido", etiqueta: "Apellido", valor: aspirante.apellido, obligatorio: true })}${campo({ nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento", tipo: "date", valor: aspirante.fechaNacimiento, obligatorio: true, atributos: atributosNacimiento })}${campo({ nombre: "dni", etiqueta: "DNI (opcional)", valor: aspirante.dni ?? "" })}${campo({ nombre: "tipoDocumento", etiqueta: "Tipo de documento (opcional)", valor: aspirante.tipoDocumento ?? "", sugerencias: ["DNI", "Pasaporte", "Otro documento"] })}${opcionesPrioridad("sexo", "Sexo", [["Masculino", "Masculino"], ["Femenino", "Femenino"]], aspirante.sexo ?? "", false)}</div><p class="formulario__nota">La fecha debe corresponder a las edades admitidas al ${e(fechaCorteSolicitud ?? "la fecha de corte del ciclo")}. Al guardar se recalculan la edad y la sala y se registra el cambio en el historial.</p>`,
     });
     ctx.operacion.edadesAdmitidas = edadesSolicitud;
     ctx.operacion.fechaCorte = fechaCorteSolicitud;
@@ -612,6 +612,10 @@ export async function atenderFormulario(formulario, ctx) {
           referenciaConsentimiento: datos.referenciaConsentimiento || null,
           articulacionPedagogica: datos.articulacionPedagogica,
           institucionProcedencia: datos.institucionProcedencia || null,
+          hermanosGrupoConviviente: datos.hermanosGrupoConviviente,
+          detalleHermanoGrupo: datos.detalleHermanoGrupo || null,
+          hijoPersonal: datos.hijoPersonal,
+          detalleHijoPersonal: datos.detalleHijoPersonal || null,
         },
       );
       actualizarBorrador(clave, aspiranteId, false);

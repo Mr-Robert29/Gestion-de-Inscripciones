@@ -53,7 +53,11 @@ public sealed class SolicitudInscripcion
         Guid usuarioRegistroId,
         string? referenciaConsentimiento = null,
         string? articulacionPedagogica = "No",
-        string? institucionProcedencia = null)
+        string? institucionProcedencia = null,
+        string? hermanosGrupoConviviente = "No",
+        string? detalleHermanoGrupo = null,
+        string? hijoPersonal = "No",
+        string? detalleHijoPersonal = null)
     {
         ArgumentNullException.ThrowIfNull(aspirante);
         ArgumentNullException.ThrowIfNull(domicilio);
@@ -112,6 +116,42 @@ public sealed class SolicitudInscripcion
                 "La familia responde que no hay una articulación formal conocida con este jardín.",
                 "Respuesta de la familia al registrar la solicitud.",
                 usuarioRegistroId));
+
+        RegistrarDeclaracion(
+            hermanosGrupoConviviente,
+            detalleHermanoGrupo,
+            "HermanosYGruposConvivientes",
+            "DeclaracionHermanosNegativa",
+            "La familia declara que el aspirante tiene un hermano o integrante de su grupo conviviente en el jardín.",
+            "La familia declara que el aspirante no tiene un hermano o integrante de su grupo conviviente en el jardín.");
+        RegistrarDeclaracion(
+            hijoPersonal,
+            detalleHijoPersonal,
+            "HijosDelPersonal",
+            "DeclaracionHijosPersonalNegativa",
+            "La familia declara que el aspirante es hijo/a de personal del jardín o de una institución que articula con él.",
+            "La familia declara que el aspirante no es hijo/a de personal del jardín ni de una institución articulada.");
+
+        void RegistrarDeclaracion(
+            string? respuesta,
+            string? detalle,
+            string tipoAfirmativo,
+            string tipoNegativo,
+            string afirmacion,
+            string negacion)
+        {
+            var valor = string.IsNullOrWhiteSpace(respuesta) ? "No" : respuesta.Trim();
+            if (valor is not ("Si" or "No"))
+                throw new ArgumentException("La respuesta de prioridad debe ser Sí o No.");
+            if (valor == "Si" && string.IsNullOrWhiteSpace(detalle))
+                throw new ArgumentException("Completá el dato solicitado para revisar la prioridad declarada.");
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                valor == "Si" ? tipoAfirmativo : tipoNegativo,
+                valor == "Si" ? afirmacion : negacion,
+                valor == "Si" ? detalle!.Trim() : "Respuesta de la familia al registrar la solicitud.",
+                usuarioRegistroId));
+        }
     }
     // Corrige datos de esta solicitud sin cambiar la persona, recepción ni versiones históricas.
     public bool CorregirDatos(

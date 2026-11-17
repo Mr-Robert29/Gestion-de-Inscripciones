@@ -654,6 +654,27 @@ document.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   await atenderFormulario(evento.target, contexto);
 });
+document.addEventListener("change", (evento) => {
+  const selecciones = {
+    articulacionPedagogica: "articulacion",
+    hermanosGrupoConviviente: "hermanos",
+    hijoPersonal: "personal",
+  };
+  const grupo = selecciones[evento.target.name];
+  if (!grupo) return;
+  const formulario = evento.target.closest('[data-formulario="solicitud"]');
+  const detalle = formulario?.querySelector(`[data-prioridad-detalle="${grupo}"]`);
+  if (!detalle) return;
+  const mostrar = grupo === "articulacion"
+    ? ["Si", "NoEstoySeguro"].includes(evento.target.value)
+    : evento.target.value === "Si";
+  detalle.hidden = !mostrar;
+  const entrada = detalle.querySelector("input");
+  if (entrada) {
+    entrada.required = mostrar;
+    if (!mostrar) entrada.value = "";
+  }
+});
 document.addEventListener("input", (evento) => {
   if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
     actualizarIndicadoresClave(evento.target.form);

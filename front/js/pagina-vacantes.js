@@ -81,22 +81,25 @@ export async function vacantes(ruta, ctx) {
     return (
       cabecera +
       resumen(
-        "Articulaciones por revisar",
-        `<p>Las respuestas de la familia no asignan prioridad por sí solas. Confirmá la articulación formal para aplicarla. Si al cierre no se acredita, registrá esa decisión; se conservará la respuesta original.</p>` +
-          tabla(
-            ["Aspirante", "Institución informada", "Respuesta declarada", "Estado", "Acción"],
-            articulaciones
-              .filter((x) => ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion))
-              .map((x) => [
+        "Prioridades por revisar",
+        `<p>Las respuestas afirmativas requieren verificación institucional antes de aplicar una prioridad. Las decisiones quedan registradas en el historial de la solicitud.</p>` +
+          [
+            ["Articulaciones por revisar", ["ArticulacionPedagogica", "ConsultaArticulacionPedagogica"], "Institución declarada"],
+            ["Hermanos o grupos convivientes por verificar", ["HermanosYGruposConvivientes"], "Dato declarado"],
+            ["Hijos del personal por verificar", ["HijosDelPersonal"], "Dato declarado"],
+          ].map(([titulo, tipos, columna]) => {
+            const pendientes = articulaciones.filter((x) => tipos.includes(x.condicion.tipo) && ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion));
+            return `<section class="prioridades__grupo"><h3>${e(titulo)}</h3>${tabla(
+              ["Aspirante", columna, "Respuesta", "Estado", "Acción"],
+              pendientes.map((x) => [
                 enlaceSolicitud(ctx, x.solicitudId),
-                e(institucionDeclarada(x.condicion)),
+                e(x.condicion.tipo === "ArticulacionPedagogica" || x.condicion.tipo === "ConsultaArticulacionPedagogica" ? institucionDeclarada(x.condicion) : x.condicion.evidenciaReferencia ?? "Sin detalle"),
                 e(x.condicion.valorDeclarado),
                 etiqueta(x.condicion.estadoVerificacion),
-                ctx.puedeResolver()
-                  ? boton("org-revisar-articulacion", "Revisar", x.condicion.id)
-                  : "Requiere Directivo",
+                ctx.puedeResolver() ? boton("org-revisar-articulacion", "Revisar", x.condicion.id) : "Requiere Directivo",
               ]),
-          ) +
+            )}</section>`;
+          }).join("") +
           (ctx.estado.periodo.estado !== "RecepcionCerrada"
             ? '<p class="formulario__nota">Podés confirmar las declaraciones durante la recepción. La decisión “No acreditada al cierre” solo estará disponible después de cerrar el período.</p>'
             : ""),

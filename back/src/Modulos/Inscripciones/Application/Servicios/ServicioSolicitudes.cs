@@ -84,7 +84,11 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     autor,
                     peticion.ReferenciaConsentimiento,
                     peticion.ArticulacionPedagogica,
-                    peticion.InstitucionProcedencia);
+                    peticion.InstitucionProcedencia,
+                    peticion.HermanosGrupoConviviente,
+                    peticion.DetalleHermanoGrupo,
+                    peticion.HijoPersonal,
+                    peticion.DetalleHijoPersonal);
                 var cambio = new CambioInscripciones(
                     institucionId,
                     autor,

@@ -30,7 +30,9 @@ public sealed class RepositorioAntecedentesSolicitud : IRepositorioAntecedentesS
             where solicitud.InstitucionId == institucionId &&
                   solicitud.PeriodoId == periodoId &&
                   (condicion.Tipo == "ArticulacionPedagogica" ||
-                   condicion.Tipo == "ConsultaArticulacionPedagogica")
+                   condicion.Tipo == "ConsultaArticulacionPedagogica" ||
+                   condicion.Tipo == "HermanosYGruposConvivientes" ||
+                   condicion.Tipo == "HijosDelPersonal")
             orderby condicion.FechaRegistro
             select new { Condicion = condicion, solicitud.RevisionDatos })
             .ToArrayAsync(tokenCancelacion);
