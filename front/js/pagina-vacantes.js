@@ -58,8 +58,8 @@ export async function vacantes(ruta, ctx) {
   await cargarNombres(ctx);
   const p = rutaPeriodo(ctx);
   if (paso === "prioridades") {
-    const [prioridades, sorteos, casos, articulaciones, propuestas] = await Promise.all([
-      ctx.api(`${p}/prioridades`),
+    const [estadoProcesamiento, sorteos, casos, articulaciones, propuestas] = await Promise.all([
+      ctx.api(`${p}/prioridades/estado`),
       ctx.api(`${p}/sorteos`),
       ctx.api(`${p}/casos-revision`).catch((error) => {
         if (error.estado !== 404) throw error;
@@ -71,8 +71,12 @@ export async function vacantes(ruta, ctx) {
     const propuestaVigente = propuestas
       .filter((x) => x.entradasVigentes && x.estado !== "Desactualizada")
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0] ?? null;
+    const prioridades = estadoProcesamiento.vigente ? estadoProcesamiento.resultados : [];
+    const pendientesRevision = estadoProcesamiento.pendientesRevision ?? articulaciones.filter((x) => ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion)).length;
+    const puedeProcesar = ctx.puedeResolver() && estadoProcesamiento.recepcionCerrada && pendientesRevision === 0 && !estadoProcesamiento.vigente;
     ctx.organizacion = {
       prioridades,
+      estadoProcesamiento,
       sorteos,
       casos: Array.isArray(casos) ? casos : [],
       articulaciones,
@@ -84,12 +88,16 @@ export async function vacantes(ruta, ctx) {
         "Prioridades por revisar",
         `<p>Las respuestas afirmativas requieren verificación institucional antes de aplicar una prioridad. Las decisiones quedan registradas en el historial de la solicitud.</p>` +
           [
-            ["Articulaciones por revisar", ["ArticulacionPedagogica", "ConsultaArticulacionPedagogica"], "Institución declarada"],
-            ["Hermanos o grupos convivientes por verificar", ["HermanosYGruposConvivientes"], "Dato declarado"],
-            ["Hijos del personal por verificar", ["HijosDelPersonal"], "Dato declarado"],
-          ].map(([titulo, tipos, columna]) => {
+            ["articulacion", "Articulaciones por revisar", ["ArticulacionPedagogica", "ConsultaArticulacionPedagogica"], "Institución declarada"],
+            ["hermanos", "Hermanos o grupos convivientes por verificar", ["HermanosYGruposConvivientes"], "Dato declarado"],
+            ["personal", "Hijos del personal por verificar", ["HijosDelPersonal"], "Dato declarado"],
+          ].map(([grupo, titulo, tipos, columna]) => {
             const pendientes = articulaciones.filter((x) => tipos.includes(x.condicion.tipo) && ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion));
-            return `<section class="prioridades__grupo"><h3>${e(titulo)}</h3>${tabla(
+            const paraConfirmar = pendientes.filter((x) => x.condicion.estadoVerificacion === "PendienteRevision");
+            const botonConfirmar = ctx.puedeResolver()
+              ? `<button class="boton boton--secundario boton--pequeno" data-accion="org-confirmar-prioridades-lote" data-id="${e(grupo)}" ${paraConfirmar.length ? "" : "disabled"}>Confirmar todos (${paraConfirmar.length})</button>`
+              : "";
+            return `<section class="prioridades__grupo"><div class="prioridades__grupo-cabecera"><h3>${e(titulo)}</h3>${botonConfirmar}</div>${tabla(
               ["Aspirante", columna, "Respuesta", "Estado", "Acción"],
               pendientes.map((x) => [
                 enlaceSolicitud(ctx, x.solicitudId),
@@ -98,7 +106,7 @@ export async function vacantes(ruta, ctx) {
                 etiqueta(x.condicion.estadoVerificacion),
                 ctx.puedeResolver() ? boton("org-revisar-articulacion", "Revisar", x.condicion.id) : "Requiere Directivo",
               ]),
-            )}</section>`;
+            )}${pendientes.some((x) => x.condicion.estadoVerificacion === "Observada") ? '<p class="formulario__nota">Los casos observados requieren revisión individual y no se incluyen en la confirmación rápida.</p>' : ""}</section>`;
           }).join("") +
           (ctx.estado.periodo.estado !== "RecepcionCerrada"
             ? '<p class="formulario__nota">Podés confirmar las declaraciones durante la recepción. La decisión “No acreditada al cierre” solo estará disponible después de cerrar el período.</p>'
@@ -106,14 +114,29 @@ export async function vacantes(ruta, ctx) {
       ) +
       resumen(
         "Etapas de prioridad",
-        `<p>Revisá los criterios en este orden. Cada etapa muestra las solicitudes con prioridad verificada y las que no la tienen acreditada para ese criterio. Esto es una evaluación de prioridad; la propuesta de vacantes determina después quién obtiene una vacante.</p>` +
+        `<p>Primero se procesa la lista con los criterios en orden. Después, en <strong>Propuestas</strong>, se genera una propuesta de ingreso para revisar. El procesamiento ordena; no confirma vacantes.</p>` +
+          (!estadoProcesamiento.recepcionCerrada
+            ? '<div class="aviso aviso--aviso"><p>Cerrá la recepción para preparar y procesar la lista de aspirantes.</p></div>'
+            : pendientesRevision > 0
+              ? `<div class="aviso aviso--aviso"><p>La lista todavía no está lista: quedan <strong>${pendientesRevision}</strong> prioridades por revisar. Resolvé esos casos antes de procesarla.</p></div>`
+              : estadoProcesamiento.vigente
+                ? `<div class="aviso"><p>Lista procesada: ${estadoProcesamiento.cantidadSolicitudes} solicitudes. Si se modifica una prioridad, un domicilio o una regla, vas a tener que procesarla nuevamente.</p></div>`
+                : estadoProcesamiento.procesado
+                  ? `<div class="aviso aviso--aviso"><p>El último procesamiento quedó desactualizado. Volvé a procesar la lista para generar una propuesta con los datos actuales.</p></div>`
+                  : '<div class="aviso"><p>La lista todavía no fue procesada. Las etapas aparecerán cuando el Directivo inicie el procesamiento.</p></div>') +
+          (puedeProcesar
+            ? boton("org-procesar-prioridades", estadoProcesamiento.procesado ? "Procesar lista nuevamente" : "Procesar lista de aspirantes")
+            : "") +
           `<div class="prioridades__etapas">${criterios.map(([clave, titulo], indice) => {
             const conPrioridad = prioridades.filter((x) => cumpleCriterio(x, clave));
             const propuestasEtapa = propuestaVigente?.resultados.filter((x) => x.estado === "IngresoPropuesto" && etapaDe(prioridades.find((r) => r.solicitudId === x.solicitudId) ?? {}) === clave).length ?? 0;
-            return `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="${e(clave)}"><span class="prioridades__numero">${indice + 1}</span><span class="prioridades__texto"><strong>${e(titulo)}</strong><small>${conPrioridad.length} con prioridad verificada · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "sin propuesta vigente"}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`;
+            const detalle = estadoProcesamiento.vigente
+              ? `${conPrioridad.length} con prioridad verificada · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "propuesta pendiente"}`
+              : "Pendiente de procesamiento";
+            return `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="${e(clave)}" ${estadoProcesamiento.vigente ? "" : "disabled"}><span class="prioridades__numero">${indice + 1}</span><span class="prioridades__texto"><strong>${e(titulo)}</strong><small>${detalle}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`;
           }).join("")}</div>` +
-          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="SorteoUltimaInstancia"><span class="prioridades__numero">5</span><span class="prioridades__texto"><strong>Sorteo, última instancia</strong><small>${sorteos.length} sorteos registrados</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>` +
-          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="FueraDeTermino"><span class="prioridades__numero">6</span><span class="prioridades__texto"><strong>Inscripciones fuera de término</strong><small>${prioridades.filter((x) => x.explicacion?.includes("Solicitud fuera de término.")).length} solicitudes</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`,
+          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="SorteoUltimaInstancia" ${estadoProcesamiento.vigente ? "" : "disabled"}><span class="prioridades__numero">5</span><span class="prioridades__texto"><strong>Sorteo, última instancia</strong><small>${estadoProcesamiento.vigente ? `${sorteos.length} sorteos registrados` : "Pendiente de procesamiento"}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>` +
+          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="FueraDeTermino" ${estadoProcesamiento.vigente ? "" : "disabled"}><span class="prioridades__numero">6</span><span class="prioridades__texto"><strong>Inscripciones fuera de término</strong><small>${estadoProcesamiento.vigente ? `${prioridades.filter((x) => x.explicacion?.includes("Solicitud fuera de término.")).length} solicitudes` : "Pendiente de procesamiento"}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`,
       ) +
       resumen(
         "Sorteos registrados",
@@ -318,8 +341,12 @@ export async function vacantes(ruta, ctx) {
       )
     );
   }
-  const propuestas = await ctx.api(`${p}/propuestas-ingresos`);
-  ctx.organizacion = { propuestas };
+  const [propuestas, estadoProcesamiento] = await Promise.all([
+    ctx.api(`${p}/propuestas-ingresos`),
+    ctx.api(`${p}/prioridades/estado`),
+  ]);
+  ctx.organizacion = { propuestas, estadoProcesamiento };
+  const puedeGenerar = ctx.puedeResolver() && estadoProcesamiento.recepcionCerrada && estadoProcesamiento.procesado && estadoProcesamiento.vigente && estadoProcesamiento.pendientesRevision === 0;
   return (
     cabecera +
     resumen(
@@ -334,8 +361,8 @@ export async function vacantes(ruta, ctx) {
           `<a class="boton boton--secundario boton--pequeno" href="#vacantes/propuesta/${encodeURIComponent(x.id)}">Revisar propuesta</a>`,
         ]),
       ),
-      boton("org-generar-propuesta", "Generar propuesta"),
+      boton("org-generar-propuesta", "Generar propuesta", "", !puedeGenerar),
     ) +
-    '<p class="formulario__nota">Cerrá la recepción y revisá documentación, distancias y casos pendientes antes de generar. Los conflictos relevantes no se resuelven automáticamente.</p>'
+    `<p class="formulario__nota">${puedeGenerar ? "La lista ya fue procesada. Generá la propuesta para revisarla antes de confirmarla." : estadoProcesamiento.pendientesRevision > 0 ? `Resolvé las ${estadoProcesamiento.pendientesRevision} prioridades pendientes y procesá la lista antes de generar una propuesta.` : !estadoProcesamiento.recepcionCerrada ? "Cerrá la recepción antes de procesar la lista de aspirantes." : "Procesá la lista desde la pestaña Prioridades antes de generar una propuesta."} Los conflictos relevantes no se resuelven automáticamente.</p>`
   );
 }

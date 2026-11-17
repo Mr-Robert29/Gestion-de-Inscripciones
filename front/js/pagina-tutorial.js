@@ -176,14 +176,15 @@ export function tutorial(ctx) {
           ["periodos", "Períodos", 0],
           ["vacantes/prioridades", "Prioridades", 1],
           ["vacantes/prioridades", "Prioridades", 2],
-          ["vacantes", "Propuestas", 3],
+          ["vacantes/prioridades", "Prioridades", 3],
+          ["vacantes", "Propuestas", 4],
         ],
         [
           "En <strong>Períodos</strong>, buscá el ciclo correcto y elegí <strong>Cerrar recepción</strong>. Hacelo cuando la inscripción haya terminado: después del cierre ya no se pueden corregir los datos de aspirantes ni de solicitudes.",
-          "En <strong>Vacantes y admisión → Prioridades</strong>, recorré los criterios en orden, revisá las solicitudes con prioridad verificada y las que todavía no la tienen acreditada. El resultado de prioridad no confirma por sí solo un ingreso; luego revisá la propuesta de vacantes.",
           "En <strong>Articulaciones por revisar</strong>, confirmá las declaraciones que correspondan. Si una familia respondió “No estoy seguro/a” y al cierre no se pudo acreditar la articulación, registrala como <strong>No acreditada al cierre</strong>. La respuesta original queda conservada y no se usa ese criterio para darle prioridad.",
-          "Registrá un sorteo solo para los grupos que lo requieran. Si aparece un caso de revisión manual, asigná una posición distinta a cada participante y escribí el motivo de la decisión.",
-          "Cuando los casos estén resueltos, entrá en <strong>Propuestas</strong> para preparar los posibles ingresos.",
+          "Cuando no queden prioridades pendientes, en <strong>Vacantes y admisión → Prioridades</strong> elegí <strong>Procesar lista de aspirantes</strong>. El sistema calcula el orden según las reglas del período; procesar no confirma vacantes.",
+          "Registrá los sorteos que correspondan y resolvé los casos manuales. Si cambia una prioridad o un dato que afecta el orden, la evaluación queda desactualizada y hay que procesarla nuevamente.",
+          "Cuando el procesamiento esté vigente, entrá en <strong>Propuestas</strong> y elegí <strong>Generar propuesta</strong>. Revisá el resultado y confirmá los ingresos solo cuando esté correcto.",
         ],
       )}${paso(
         6,
@@ -196,7 +197,7 @@ export function tutorial(ctx) {
           ["vacantes", "Propuestas", 3],
         ],
         [
-          "En <strong>Vacantes y admisión → Propuestas</strong>, elegí <strong>Generar propuesta</strong> e indicá el motivo. El resultado todavía es una propuesta: no reserva ni confirma por sí sola una vacante.",
+          "La propuesta se genera después de procesar la lista y resolver las prioridades pendientes. Si el sistema la deshabilita, revisá el estado en la pestaña <strong>Prioridades</strong>.",
           "Abrí la propuesta y revisá cada aspirante, sala, turno y explicación. Con <strong>Revisar resultado</strong> podés proponer un ingreso —seleccionando la oferta disponible— o mantener a la persona en espera; registrá el motivo.",
           "Si el ingreso depende de un turno alternativo, registrá primero la aceptación de la familia y su constancia. Volvé a consultar la propuesta si el sistema avisa que los datos cambiaron.",
           "Cuando todo esté correcto y vigente, elegí <strong>Confirmar ingresos</strong>. Esta confirmación crea los ingresos definitivos; luego podés verlos en <strong>Ingresos y bajas</strong>.",

@@ -468,8 +468,39 @@
   justify-content: flex-end;
   margin-top: 0.6rem;
 }
+.prioridades__grupo-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+.prioridades__grupo-cabecera h3 {
+  margin: 0;
+}
+.prioridades__lote-lista {
+  display: grid;
+  gap: 0.7rem;
+  max-height: min(40vh, 24rem);
+  overflow: auto;
+  margin: 1rem 0;
+  padding: 0 0.5rem 0 1.5rem;
+}
+.prioridades__lote-lista li {
+  padding: 0.7rem;
+  border: 1px solid var(--borde, #dce4da);
+  border-radius: 0.6rem;
+  line-height: 1.45;
+}
+.prioridades__lote-lista small {
+  color: var(--texto-secundario, #65766b);
+}
 @media (max-width: 760px) {
   .prioridades-ficha {
     grid-template-columns: 1fr;
+  }
+  .prioridades__grupo-cabecera {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

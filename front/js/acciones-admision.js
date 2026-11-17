@@ -25,7 +25,21 @@ export async function atenderAdmision(elemento, ctx) {
   const id = elemento.dataset.id;
   const p = ctx.estado.periodo ? rutaPeriodo(ctx) : null;
   const datos = ctx.organizacion ?? {};
-  if (accion === "org-generar-propuesta")
+  if (accion === "org-procesar-prioridades")
+    formulario(
+      ctx,
+      "Procesar lista de aspirantes",
+      '<p>El sistema aplicará las prioridades en el orden configurado. Este paso calcula el orden; todavía no asigna ni confirma vacantes.</p><label class="casilla"><input type="checkbox" required>Confirmo que revisé las prioridades pendientes y que la lista está lista para procesarse.</label>',
+      async () => {
+        await enviar(ctx, `${p}/prioridades/procesamiento`, {});
+        return {
+          destino: "vacantes",
+          mensaje: "La lista se procesó. Ya podés generar y revisar la propuesta de ingreso.",
+        };
+      },
+      { textoConfirmar: "Procesar lista" },
+    );
+  else if (accion === "org-generar-propuesta")
     formulario(ctx, "Generar propuesta de ingresos", motivo(motivos.propuestaAdmision), async (d) => {
       const x = await enviar(ctx, `${p}/propuestas-ingresos`, d);
       return {
@@ -87,6 +101,80 @@ export async function atenderAdmision(elemento, ctx) {
           },
           "PUT",
         );
+      },
+    );
+  } else if (accion === "org-confirmar-prioridades-lote") {
+    const grupos = {
+      articulacion: {
+        titulo: "articulaciones pedagógicas",
+        tituloSingular: "articulación pedagógica",
+        tipos: ["ArticulacionPedagogica", "ConsultaArticulacionPedagogica"],
+        motivo: "Se verificó la articulación pedagógica declarada",
+      },
+      hermanos: {
+        titulo: "hermanos o grupos convivientes",
+        tituloSingular: "hermano o grupo conviviente",
+        tipos: ["HermanosYGruposConvivientes"],
+        motivo: "Se verificó el vínculo de hermano o grupo conviviente declarado",
+      },
+      personal: {
+        titulo: "hijos del personal",
+        tituloSingular: "hijo/a del personal",
+        tipos: ["HijosDelPersonal"],
+        motivo: "Se verificó la relación laboral declarada",
+      },
+    };
+    const grupo = grupos[id];
+    if (!grupo) throw new Error("No se reconoció el grupo de prioridades.");
+    const candidatos = datos.articulaciones?.filter(
+      (x) => grupo.tipos.includes(x.condicion.tipo) && x.condicion.estadoVerificacion === "PendienteRevision",
+    ) ?? [];
+    if (!candidatos.length) throw new Error("No hay casos pendientes para confirmar en este grupo.");
+    const listado = candidatos.map((x) =>
+      `<li><strong>${e(nombreSolicitud(ctx, x.solicitudId))}</strong><br><span>${e(x.condicion.valorDeclarado)}</span><br><small>${e(x.condicion.evidenciaReferencia ?? "Sin detalle informado")}</small></li>`,
+    ).join("");
+    formulario(
+      ctx,
+      candidatos.length === 1
+        ? `Confirmar 1 caso de ${grupo.tituloSingular}`
+        : `Confirmar ${candidatos.length} casos de ${grupo.tituloSingular}`,
+      `<p>La acción marcará todos los casos pendientes de esta lista como verificados. Cada decisión quedará registrada en el historial individual de la solicitud.</p><ul class="prioridades__lote-lista">${listado}</ul><label class="casilla"><input type="checkbox" name="confirmarTodos" required>Revisé los datos de todos los casos listados y confirmo que corresponde aplicar esta prioridad.</label>${motivo([grupo.motivo, "Se verificó la información declarada por la familia", "Se revisó la documentación institucional disponible"], { etiqueta: "Motivo de la confirmación" })}`,
+      async (d) => {
+        if (!d.confirmarTodos) throw new Error("Confirmá que revisaste todos los casos de la lista.");
+        let confirmadas = 0;
+        let omitidas = 0;
+        const fallidas = [];
+        for (const candidato of candidatos) {
+          const rutaSolicitud = `/instituciones/${encodeURIComponent(ctx.estado.institucion.id)}/solicitudes/${encodeURIComponent(candidato.solicitudId)}`;
+          try {
+            const antecedentes = await ctx.api(`${rutaSolicitud}/antecedentes`);
+            const condicionActual = antecedentes.condiciones?.find((x) => x.id === candidato.condicion.id);
+            if (!condicionActual || !grupo.tipos.includes(condicionActual.tipo) || condicionActual.estadoVerificacion !== "PendienteRevision") {
+              omitidas++;
+              continue;
+            }
+            await enviar(
+              ctx,
+              `${rutaSolicitud}/condiciones/${encodeURIComponent(condicionActual.id)}`,
+              {
+                estado: "Verificada",
+                revisionSolicitud: antecedentes.revisionSolicitud,
+                motivo: d.motivo,
+                evidenciaReferencia: null,
+                observacion: null,
+              },
+              "PUT",
+            );
+            confirmadas++;
+          } catch (error) {
+            fallidas.push(nombreSolicitud(ctx, candidato.solicitudId));
+            if (error.estado !== 409) break;
+          }
+        }
+        let mensaje = `Se confirmaron ${confirmadas} de ${candidatos.length} casos de ${grupo.titulo}.`;
+        if (omitidas) mensaje += ` ${omitidas} ya habían cambiado y se omitieron.`;
+        if (fallidas.length) mensaje += ` No se pudieron revisar ${fallidas.length}; actualizá la lista y continuá individualmente.`;
+        return { mensaje };
       },
     );
   } else if (accion === "org-ver-etapa") {

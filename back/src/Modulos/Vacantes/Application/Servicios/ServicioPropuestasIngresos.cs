@@ -17,19 +17,22 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
     private readonly IRepositorioPropuestasIngresos _propuestas;
     private readonly IRepositorioSorteos _sorteos;
     private readonly IRepositorioCasosRevision _casos;
+    private readonly IModuloPrioridades _prioridades;
 
     public ServicioPropuestasIngresos(
         IAutorizacionPropuestasIngresos autorizacion,
         IContextoPropuestaIngresos contexto,
         IRepositorioPropuestasIngresos propuestas,
         IRepositorioSorteos sorteos,
-        IRepositorioCasosRevision casos)
+        IRepositorioCasosRevision casos,
+        IModuloPrioridades prioridades)
     {
         _autorizacion = autorizacion;
         _contexto = contexto;
         _propuestas = propuestas;
         _sorteos = sorteos;
         _casos = casos;
+        _prioridades = prioridades;
     }
 
     // Implementa IModuloPropuestasIngresos.GenerarAsync: coordina una nueva propuesta, sin confirmar ingresos.
@@ -50,6 +53,11 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
                     throw new InvalidOperationException("Cerrá la recepción antes de generar una propuesta.");
                 if (datos.Entradas.InstitucionId != autor.InstitucionId)
                     throw new UnauthorizedAccessException();
+                var procesamiento = await _prioridades.ConsultarEstadoAsync(periodoId, token);
+                if (procesamiento.PendientesRevision > 0)
+                    throw new InvalidOperationException($"Quedan {procesamiento.PendientesRevision} prioridades por revisar antes de generar la propuesta.");
+                if (!procesamiento.Procesado || !procesamiento.Vigente)
+                    throw new InvalidOperationException("Primero procesá la lista de aspirantes. Si cambió algún dato, volvé a procesarla antes de generar la propuesta.");
                 var resultados = PlanificadorPropuestaIngresos.Generar(
                     datos.Entradas,
                     datos.Sorteos,
