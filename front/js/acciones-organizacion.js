@@ -19,6 +19,7 @@ for (const nombre of [
   "org-resolver",
   "org-sorteo",
   "org-ver-etapa",
+  "org-ver-resultado-propuesta",
 ])
   operaciones.set(nombre, atenderAdmision);
 for (const nombre of [

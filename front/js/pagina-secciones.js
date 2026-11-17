@@ -4,10 +4,12 @@ import {
   rutaPeriodo,
   nombreTurno,
   nombreAula,
+  enlaceSolicitud,
   boton,
   tabla,
   pestanas,
   resumen,
+  cargarNombres,
   vistaPreviaOrganizacion,
 } from "./organizacion-comun.js";
 
@@ -55,6 +57,7 @@ export async function secciones(ruta, ctx) {
         )
       );
     }
+    await cargarNombres(ctx);
     const distribucion = await ctx.api(
       `/propuestas-distribucion/${encodeURIComponent(distribucionId)}`,
     );
@@ -62,15 +65,31 @@ export async function secciones(ruta, ctx) {
       throw new Error("La distribución pertenece a otro período.");
     ctx.organizacion.distribucion = distribucion;
     const editable = distribucion.estado === "Borrador" && ctx.puedeResolver();
+    const asignadas = distribucion.asignaciones.filter((x) => x.seccionId !== null);
+    const sinSeccion = distribucion.asignaciones.filter((x) => x.seccionId === null);
+    const metricas = `<div class="distribucion__metricas"><article><span>Ingresos incluidos en esta propuesta</span><strong>${distribucion.asignaciones.length}</strong></article><article><span>Con sección asignada</span><strong>${asignadas.length}</strong></article><article><span>Sin sección asignada</span><strong>${sinSeccion.length}</strong></article></div>`;
+    const ocupacionSecciones = tabla(
+      ["Sección", "Capacidad total", "Asignaciones sugeridas"],
+      secciones.map((seccion) => {
+        const cantidad = asignadas.filter((x) => x.seccionId === seccion.id).length;
+        return [
+          e(seccion.nombre),
+          e(seccion.capacidad),
+          e(cantidad),
+        ];
+      }),
+    );
     return (
       cabecera +
       resumen(
         `Distribución ${distribucion.version}`,
-        `<p>${etiqueta(distribucion.estado)}</p>` +
+        `<p>${etiqueta(distribucion.estado)} · Generada el ${e(fecha(distribucion.fechaCreacion))}</p><p>Esta versión organiza ingresos confirmados y activos del período que todavía no tienen una sección asignada. Los borradores de propuesta no se incluyen.</p>${metricas}<h3>Asignaciones sugeridas por sección</h3>${ocupacionSecciones}<p class="formulario__nota">La capacidad disponible ya considera las asignaciones confirmadas previamente. Esta tabla cuenta las nuevas asignaciones sugeridas en esta versión.</p><h3>Detalle de aspirantes</h3>` +
           tabla(
-            ["Ingreso", "Edad", "Turno", "Sección", "Motivo", "Acción"],
+            ["Aspirante", "Edad al ingreso", "Turno", "Sección asignada", "Motivo / observación", "Acción"],
             distribucion.asignaciones.map((x) => [
-              e(`Ingreso ${x.ingresoId.slice(0, 8)}`),
+              x.solicitudId
+                ? enlaceSolicitud(ctx, x.solicitudId)
+                : e(`Ingreso ${x.ingresoId.slice(0, 8)}`),
               e(x.edad),
               e(nombreTurno(ctx, x.turnoId)),
               e(

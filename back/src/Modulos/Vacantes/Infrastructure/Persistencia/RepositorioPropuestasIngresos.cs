@@ -46,6 +46,12 @@ public sealed class RepositorioPropuestasIngresos : IRepositorioPropuestasIngres
             x => x.PropuestaId == propuestaId && x.SolicitudId == solicitudId && x.TurnoId == turnoId,
             tokenCancelacion);
 
+    public async Task<IReadOnlyList<AceptacionTurnoFamiliar>> ListarAceptacionesAsync(Guid propuestaId, CancellationToken tokenCancelacion = default)
+        => await _contexto.AceptacionesTurno.AsNoTracking()
+            .Where(x => x.PropuestaId == propuestaId)
+            .OrderBy(x => x.Fecha)
+            .ToArrayAsync(tokenCancelacion);
+
     public async Task GuardarAceptacionAsync(AceptacionTurnoFamiliar aceptacion, CancellationToken tokenCancelacion = default)
     {
         _contexto.AceptacionesTurno.Add(aceptacion);

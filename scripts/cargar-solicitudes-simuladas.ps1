@@ -201,11 +201,17 @@ try {
     $nombresAspirantes = @(
         "Sofía", "Mateo", "Valentina", "Benjamín", "Martina", "Thiago", "Camila", "Joaquín", "Emilia", "Santiago",
         "Lucía", "Tomás", "Catalina", "Bautista", "Julieta", "Felipe", "Mía", "Lautaro", "Delfina", "Bruno",
-        "Emma", "Franco", "Olivia", "Lorenzo", "Abril"
+        "Emma", "Franco", "Olivia", "Lorenzo", "Abril", "Isabella", "Benicio", "Renata", "Valentín", "Alma",
+        "Dante", "Josefina", "Máximo", "Malena", "Ciro", "Juana", "Pedro", "Antonella", "Facundo", "Morena",
+        "Simón", "Pilar", "Agustín", "Bianca", "Felicia", "Ramiro", "Lola", "Salvador", "Aitana", "Ezequiel"
     )
     $apellidos = @(
         "García", "González", "Rodríguez", "Fernández", "López", "Martínez", "Pérez", "Gómez", "Sánchez", "Romero",
-        "Díaz", "Álvarez", "Torres", "Ruiz", "Ramírez", "Flores", "Acosta", "Benítez", "Medina", "Herrera"
+        "Díaz", "Álvarez", "Torres", "Ruiz", "Ramírez", "Flores", "Acosta", "Benítez", "Medina", "Herrera",
+        "Suárez", "Aguirre", "Gutiérrez", "Molina", "Sosa", "Castro", "Ortiz", "Silva", "Núñez", "Luna",
+        "Rojas", "Cabrera", "Ibarra", "Vega", "Correa", "Méndez", "Ponce", "Quiroga", "Peralta", "Domínguez",
+        "Vázquez", "Figueroa", "Carrizo", "Córdoba", "Bravo", "Mansilla", "Escobar", "Ríos", "Ojeda", "Cáceres",
+        "Navarro", "Leiva", "Paz", "Arias", "Godoy", "Farías", "Miranda", "Vera", "Maldonado", "Agüero"
     )
     $callesSimuladas = @(
         "Los Aromos", "Las Acacias", "Los Ceibos", "Los Tilos", "El Ombú", "Las Tipas", "Los Lapachos", "La Arboleda",

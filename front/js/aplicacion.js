@@ -688,6 +688,18 @@ document.addEventListener("input", (evento) => {
   }
 });
 document.addEventListener("change", (evento) => {
+  if (evento.target.matches("[data-filtro-aceptacion-turno]")) {
+    const filtro = evento.target.value;
+    const filas = [...document.querySelectorAll(".propuesta__tabla tr[data-estado-cuenta]")];
+    for (const fila of filas)
+      fila.hidden = filtro !== "todas" && fila.dataset.estadoCuenta !== filtro;
+    const visibles = filas.filter((fila) => !fila.hidden).length;
+    const resumen = document.querySelector("[data-resumen-aceptacion-turno]");
+    if (resumen)
+      resumen.textContent = filtro === "todas"
+        ? `${filas.filter((fila) => fila.dataset.estadoCuenta === "pendiente").length} pendientes de registrar`
+        : `${visibles} aspirantes visibles`;
+  }
   if (evento.target.matches("[data-motivo-seleccion]")) {
     const form = evento.target.form;
     const esOtro = evento.target.value === "__otro__";

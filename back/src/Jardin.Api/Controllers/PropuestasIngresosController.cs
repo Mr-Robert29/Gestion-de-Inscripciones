@@ -35,6 +35,10 @@ public sealed class PropuestasIngresosController : ControllerBase
             return propuesta is null ? NotFound() : Ok(propuesta);
         });
 
+    [HttpGet("api/v1/propuestas-ingresos/{propuestaId:guid}/aceptaciones-turno")]
+    public Task<IActionResult> ConsultarAceptacionesTurno(Guid propuestaId, CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.ConsultarAceptacionesTurnoAsync(propuestaId, tokenCancelacion)));
+
     [HttpPatch("api/v1/propuestas-ingresos/{propuestaId:guid}")]
     public Task<IActionResult> Modificar(
         Guid propuestaId,

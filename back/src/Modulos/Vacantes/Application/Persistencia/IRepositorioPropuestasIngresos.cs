@@ -10,6 +10,7 @@ public interface IRepositorioPropuestasIngresos
     Task ActualizarEstadoAsync(Guid propuestaId, EstadoPropuestaIngreso estado, int revisionEsperada, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<OcupacionPlaza>> ListarOcupacionesAsync(Guid periodoId, CancellationToken tokenCancelacion = default);
     Task<AceptacionTurnoFamiliar?> ObtenerAceptacionAsync(Guid propuestaId, Guid solicitudId, Guid turnoId, CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<AceptacionTurnoFamiliar>> ListarAceptacionesAsync(Guid propuestaId, CancellationToken tokenCancelacion = default);
     Task GuardarAceptacionAsync(AceptacionTurnoFamiliar aceptacion, CancellationToken tokenCancelacion = default);
     Task<IngresoConfirmado?> ObtenerIngresoAsync(Guid periodoId, Guid aspiranteId, CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<IngresoConfirmado>> ListarIngresosActivosAsync(Guid periodoId, CancellationToken tokenCancelacion = default);

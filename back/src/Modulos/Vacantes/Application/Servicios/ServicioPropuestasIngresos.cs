@@ -186,6 +186,18 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         return Mapear(aceptacion);
     }
 
+    public async Task<IReadOnlyList<DatosAceptacionTurno>> ConsultarAceptacionesTurnoAsync(
+        Guid propuestaId,
+        CancellationToken tokenCancelacion = default)
+    {
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        await _autorizacion.AutorizarPropuestaAsync(propuesta.PeriodoId, tokenCancelacion);
+        return (await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion))
+            .Select(Mapear)
+            .ToArray();
+    }
+
     public async Task<IReadOnlyList<DatosConfirmacionIngreso>> ConfirmarAsync(
         Guid propuestaId,
         ConfirmarPropuestaIngresosPeticion peticion,

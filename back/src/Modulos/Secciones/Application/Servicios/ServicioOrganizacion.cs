@@ -87,7 +87,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         CancellationToken cancellationToken = default)
     {
         await _autorizacion.AutorizarConsultaHistorialAsync(periodoId, cancellationToken);
-        return (await _repositorioDistribuciones.ListarPorPeriodoAsync(periodoId, cancellationToken)).Select(Mapear).ToArray();
+        return (await _repositorioDistribuciones.ListarPorPeriodoAsync(periodoId, cancellationToken)).Select(x => Mapear(x)).ToArray();
     }
 
     // Implementa IModuloSecciones.CambiarComposicionSeccionAsync mediante la operación protegida de HU-26.
@@ -168,7 +168,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         }
 
         await _repositorioDistribuciones.AgregarAsync(propuesta, cancellationToken);
-        return Mapear(propuesta);
+        return await MapearConSolicitudesAsync(propuesta, cancellationToken);
     }
 
     public async Task<DatosPropuestaDistribucion?> ObtenerPropuestaDistribucionAsync(
@@ -178,7 +178,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         var propuesta = await _repositorioDistribuciones.ObtenerPorIdAsync(propuestaId, cancellationToken);
         if (propuesta is null) return null;
         await _autorizacion.AutorizarConsultaHistorialAsync(propuesta.PeriodoId, cancellationToken);
-        return Mapear(propuesta);
+        return await MapearConSolicitudesAsync(propuesta, cancellationToken);
     }
 
     public async Task<DatosPropuestaDistribucion> ModificarAsignacionAsync(
@@ -227,7 +227,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
             peticion.Motivo);
 
         await _repositorioDistribuciones.ActualizarAsync(propuesta, cancellationToken);
-        return Mapear(propuesta);
+        return await MapearConSolicitudesAsync(propuesta, cancellationToken);
     }
 
     public Task<DatosPropuestaDistribucion?> ConfirmarDistribucionAsync(
@@ -293,7 +293,7 @@ public sealed class ServicioOrganizacion : IModuloSecciones
 
         propuesta.Confirmar(usuarioId, DateTimeOffset.UtcNow);
         await _repositorioDistribuciones.ConfirmarAsync(propuesta, asignaciones, cancellationToken);
-        return Mapear(propuesta);
+        return await MapearConSolicitudesAsync(propuesta, cancellationToken);
     }
 
     private static DatosSeccion Mapear(Seccion seccion) => new(
@@ -308,7 +308,18 @@ public sealed class ServicioOrganizacion : IModuloSecciones
         seccion.Revision,
         seccion.Activa);
 
-    private static DatosPropuestaDistribucion Mapear(PropuestaDistribucion propuesta) => new(
+    private async Task<DatosPropuestaDistribucion> MapearConSolicitudesAsync(
+        PropuestaDistribucion propuesta,
+        CancellationToken cancellationToken)
+    {
+        var solicitudesPorIngreso = (await _vacantes.ListarIngresosAsync(propuesta.PeriodoId, cancellationToken))
+            .ToDictionary(x => x.Id, x => x.SolicitudId);
+        return Mapear(propuesta, solicitudesPorIngreso);
+    }
+
+    private static DatosPropuestaDistribucion Mapear(
+        PropuestaDistribucion propuesta,
+        IReadOnlyDictionary<Guid, Guid>? solicitudesPorIngreso = null) => new(
         propuesta.Id,
         propuesta.PeriodoId,
         propuesta.Version,
@@ -328,5 +339,6 @@ public sealed class ServicioOrganizacion : IModuloSecciones
             x.MotivoSinSeccion,
             x.ModificadaPor,
             x.ModificadaEn,
-            x.MotivoModificacion)).ToList());
+            x.MotivoModificacion,
+            solicitudesPorIngreso?.GetValueOrDefault(x.IngresoId))).ToList());
 }

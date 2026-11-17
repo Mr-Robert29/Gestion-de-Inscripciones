@@ -1,5 +1,6 @@
 import { escapar as e, etiqueta, fecha, seleccion } from "./interfaz.js";
 import { encabezado } from "./compartidos.js";
+import { candidatosDeEtapa, cohortePrioridad, cumpleCriterio } from "./prioridades-etapas.js";
 import {
   rutaPeriodo,
   rutaInstitucional,
@@ -36,14 +37,26 @@ const criterios = [
   ["Cercania", "3. Cercanía al jardín"],
   ["HijosDelPersonal", "4. Hijos del personal"],
 ];
-const cumpleCriterio = (resultado, clave) =>
-  resultado.explicacion?.some((texto) =>
-    texto === `Criterio verificado: ${clave}.` ||
-    (clave === "Cercania" && texto.startsWith("Cercanía:")),
-  ) ?? false;
-const etapaDe = (resultado) =>
-  criterios.find(([clave]) => cumpleCriterio(resultado, clave))?.[0] ??
-  (resultado.explicacion?.includes("Solicitud fuera de término.") ? "FueraDeTermino" : null);
+const etapaDe = (resultado) => resultado.explicacion?.includes("Solicitud fuera de término.")
+  ? "FueraDeTermino"
+  : cohortePrioridad(resultado);
+const nombreEtapa = (prioridad) => {
+  if (!prioridad) return "Sin evaluación vinculada";
+  if (prioridad.explicacion?.includes("Solicitud fuera de término.")) return "Fuera de término";
+  if (cumpleCriterio(prioridad, "ArticulacionPedagogica")) return "Articulación pedagógica";
+  if (cumpleCriterio(prioridad, "HermanosYGruposConvivientes")) return "Hermanos o grupo conviviente";
+  const cercania = prioridad.explicacion?.find((texto) => texto.startsWith("Cercanía:"));
+  if (cercania) return cercania.replace("Cercanía:", "Cercanía ·").replace(" metros.", " m");
+  if (cumpleCriterio(prioridad, "HijosDelPersonal")) return "Hijos del personal";
+  if (prioridad.requiereRevision) return "Requiere revisión";
+  return "Sin prioridad acreditada";
+};
+const estadoPropuestaLegible = (estado) => ({
+  IngresoPropuesto: "Ingreso propuesto",
+  EsperaPropuesta: "En lista de espera",
+  PendienteRevision: "Requiere revisión",
+  YaOcupaPlaza: "Ya tiene un ingreso",
+})[estado] ?? estado;
 export async function vacantes(ruta, ctx) {
   const paso = ruta.split("/")[1] ?? "";
   const activa = ["propuesta"].includes(paso)
@@ -128,10 +141,25 @@ export async function vacantes(ruta, ctx) {
             ? boton("org-procesar-prioridades", estadoProcesamiento.procesado ? "Procesar lista nuevamente" : "Procesar lista de aspirantes")
             : "") +
           `<div class="prioridades__etapas">${criterios.map(([clave, titulo], indice) => {
-            const conPrioridad = prioridades.filter((x) => cumpleCriterio(x, clave));
-            const propuestasEtapa = propuestaVigente?.resultados.filter((x) => x.estado === "IngresoPropuesto" && etapaDe(prioridades.find((r) => r.solicitudId === x.solicitudId) ?? {}) === clave).length ?? 0;
+            const candidatos = candidatosDeEtapa(prioridades, clave);
+            const conPrioridad = clave === "Cercania"
+              ? candidatos
+              : candidatos.filter((x) => cumpleCriterio(x, clave));
+            const siguen = clave === "ArticulacionPedagogica" || clave === "HermanosYGruposConvivientes"
+              ? candidatos.length - conPrioridad.length
+              : null;
+            const propuestasEtapa = propuestaVigente?.resultados.filter((x) => {
+              if (x.estado !== "IngresoPropuesto") return false;
+              const prioridad = prioridades.find((r) => r.solicitudId === x.solicitudId);
+              if (!prioridad) return false;
+              return clave === "HijosDelPersonal"
+                ? etapaDe(prioridad) === "Cercania" && cumpleCriterio(prioridad, clave)
+                : etapaDe(prioridad) === clave;
+            }).length ?? 0;
             const detalle = estadoProcesamiento.vigente
-              ? `${conPrioridad.length} con prioridad verificada · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "propuesta pendiente"}`
+              ? clave === "Cercania"
+                ? `${candidatos.length} en orden por cercanía · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "propuesta pendiente"}`
+                : `${conPrioridad.length} con prioridad verificada${siguen !== null ? ` · ${siguen} continúan` : " · criterio de desempate dentro del grupo restante"} · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "propuesta pendiente"}`
               : "Pendiente de procesamiento";
             return `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="${e(clave)}" ${estadoProcesamiento.vigente ? "" : "disabled"}><span class="prioridades__numero">${indice + 1}</span><span class="prioridades__texto"><strong>${e(titulo)}</strong><small>${detalle}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`;
           }).join("")}</div>` +
@@ -210,47 +238,117 @@ export async function vacantes(ruta, ctx) {
       throw new Error(
         "La propuesta pertenece a otro período. Seleccioná su contexto.",
       );
-    ctx.organizacion = { propuesta };
+    const evaluaciones = await ctx.api(`${p}/prioridades/historial`).catch(() => []);
+    const evaluacionPropuesta = evaluaciones
+      .filter((x) => x.versionReglasId === propuesta.versionReglasId && new Date(x.fecha) <= new Date(propuesta.fecha))
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0] ?? null;
+    const aceptacionesTurno = await ctx.api(`/propuestas-ingresos/${encodeURIComponent(propuesta.id)}/aceptaciones-turno`);
+    const solicitudesConAceptacion = new Set(aceptacionesTurno.map((x) => x.solicitudId));
+    const prioridades = evaluacionPropuesta?.resultados ?? [];
+    const prioridadPorSolicitud = new Map(prioridades.map((x) => [x.solicitudId, x]));
+    const ofertas = ctx.estado.ofertasPublicadas ?? [];
+    const ofertaPorId = new Map(ofertas.map((x) => [x.id, x]));
+    const propuestos = propuesta.resultados.filter((x) => x.estado === "IngresoPropuesto");
+    const enEspera = propuesta.resultados.filter((x) => x.estado === "EsperaPropuesta");
+    const pendientes = propuesta.resultados.filter((x) => x.estado === "PendienteRevision");
+    const capacidadTotal = ofertas.reduce((total, x) => total + Number(x.capacidadNetaInicial ?? x.capacidad ?? 0), 0);
+    const cuposRestantes = Math.max(0, capacidadTotal - propuestos.length);
+    const metricas = `<div class="propuesta__metricas"><article><span>Solicitudes evaluadas</span><strong>${propuesta.resultados.length}</strong></article><article><span>Ingresos propuestos</span><strong>${propuestos.length}</strong></article><article><span>En lista de espera</span><strong>${enEspera.length}</strong></article><article><span>Requieren revisión</span><strong>${pendientes.length}</strong></article><article><span>Cupos restantes</span><strong>${cuposRestantes}</strong></article></div>`;
+    const etapasResumen = [
+      ["ArticulacionPedagogica", "Articulación pedagógica", (p) => cumpleCriterio(p, "ArticulacionPedagogica")],
+      ["HermanosYGruposConvivientes", "Hermanos o grupo conviviente", (p) => etapaDe(p) === "HermanosYGruposConvivientes"],
+      ["Cercania", "Cercanía", (p) => etapaDe(p) === "Cercania"],
+      ["HijosDelPersonal", "Hijos del personal · desempate", (p) => etapaDe(p) === "Cercania" && cumpleCriterio(p, "HijosDelPersonal")],
+      ["FueraDeTermino", "Fuera de término", (p) => etapaDe(p) === "FueraDeTermino"],
+    ];
+    const resumenEtapas = tabla(
+      ["Prioridad considerada", "Ingresos propuestos", "En espera", "Requieren revisión"],
+      etapasResumen.map(([clave, titulo, coincide]) => {
+        const ids = new Set(prioridades.filter(coincide).map((x) => x.solicitudId));
+        return [
+          e(titulo),
+          propuestos.filter((x) => ids.has(x.solicitudId)).length,
+          enEspera.filter((x) => ids.has(x.solicitudId)).length,
+          pendientes.filter((x) => ids.has(x.solicitudId)).length,
+        ];
+      }),
+    ) + `<p class="formulario__nota">Hijos del personal se muestra como desempate dentro del grupo de cercanía; sus cantidades pueden estar incluidas también en esa etapa.${evaluacionPropuesta ? "" : " No se encontró una evaluación de prioridades vinculada a esta propuesta, por eso no se puede reconstruir esa distribución."}</p>`;
+    const cuposPorOferta = tabla(
+      ["Oferta propuesta", "Cupos publicados", "Propuestas", "Restantes"],
+      ofertas.map((oferta) => {
+        const asignados = propuestos.filter((x) => x.ofertaId === oferta.id).length;
+        return [
+          e(`${nombreAula(ctx, oferta.aulaId)} · ${nombreTurno(ctx, oferta.turnoId)}`),
+          e(Number(oferta.capacidadNetaInicial ?? oferta.capacidad ?? 0)),
+          e(asignados),
+          e(Math.max(0, Number(oferta.capacidadNetaInicial ?? oferta.capacidad ?? 0) - asignados)),
+        ];
+      }),
+    );
+    ctx.organizacion = { propuesta, prioridades };
     return (
       cabecera +
       resumen(
-        `Propuesta · ${fecha(propuesta.fecha)}`,
-        `<p>${etiqueta(propuesta.estado)} · ${propuesta.entradasVigentes ? "Datos vigentes" : "Requiere revisión"}</p><p>${e(propuesta.motivo)}</p><div class="formulario__acciones">${boton("org-confirmar-propuesta", "Confirmar ingresos", propuesta.id, !ctx.puedeResolver() || propuesta.estado === "Confirmada" || !propuesta.entradasVigentes)}</div>` +
-          tabla(
-            [
-              "Aspirante",
-              "Sala",
-              "Resultado",
-              "Turno",
-              "Explicación",
-              "Acciones",
-            ],
-            propuesta.resultados.map((x) => [
-              enlaceSolicitud(ctx, x.solicitudId),
-              e(x.sala ?? "Pendiente"),
-              etiqueta(x.estado),
-              e(nombreTurno(ctx, x.turnoId)),
-              e(x.explicacion),
-              (ctx.puedeResolver() && propuesta.estado !== "Confirmada"
-                ? boton(
-                    "org-modificar-propuesta",
-                    "Revisar resultado",
-                    x.solicitudId,
-                  )
-                : "") +
-                (x.esTurnoAlternativo &&
-                x.estado === "IngresoPropuesto" &&
-                propuesta.estado !== "Confirmada"
-                  ? boton(
-                      "org-aceptacion",
-                      "Registrar aceptación familiar",
-                      x.solicitudId,
-                    )
-                  : ""),
-            ]),
-          ),
+        `Propuesta de ingresos · Ciclo ${e(ctx.estado.periodo.ciclo)}`,
+        `<div class="propuesta__cabecera"><div><p>${etiqueta(propuesta.estado)} · ${propuesta.entradasVigentes ? "Datos vigentes" : "Requiere revisión"} · Generada el ${e(fecha(propuesta.fecha))}</p><p>${e(propuesta.motivo)}</p></div></div><div class="aviso aviso--aviso"><p>Esta es una propuesta preliminar. Revisá los resultados antes de confirmar; los ingresos se registran definitivamente al confirmar.</p></div>${metricas}`,
+        boton("org-confirmar-propuesta", "Confirmar ingresos", propuesta.id, !ctx.puedeResolver() || propuesta.estado === "Confirmada" || !propuesta.entradasVigentes || propuestos.length === 0),
       ) +
-      '<p class="formulario__nota">Generar o revisar no confirma ingresos. Cada alternativa de turno exige aceptación familiar registrada.</p>'
+      resumen(
+        "Distribución de la propuesta por prioridad",
+        resumenEtapas,
+      ) +
+      resumen(
+        "Cupos por oferta de aula y turno",
+        cuposPorOferta + '<p class="formulario__nota">La columna “restantes” descuenta los ingresos propuestos de la capacidad neta publicada. Una propuesta todavía no ocupa definitivamente esos cupos.</p>',
+      ) +
+      resumen(
+        "Resultado por aspirante",
+        `<div class="propuesta__filtro"><label for="filtro-aceptacion-turno">Filtrar aceptación familiar</label><select id="filtro-aceptacion-turno" class="campo__control" data-filtro-aceptacion-turno><option value="todas">Todos los aspirantes</option><option value="pendiente">Requieren aceptación (${propuesta.resultados.filter((x) => x.estado === "IngresoPropuesto" && x.esTurnoAlternativo && !solicitudesConAceptacion.has(x.solicitudId)).length})</option><option value="registrada">Aceptación registrada</option></select><span data-resumen-aceptacion-turno aria-live="polite">${propuesta.resultados.filter((x) => x.estado === "IngresoPropuesto" && x.esTurnoAlternativo && !solicitudesConAceptacion.has(x.solicitudId)).length} pendientes de registrar</span></div><div class="propuesta__tabla">${tabla(
+          [
+            "Aspirante",
+            "Grupo etario",
+            "Oferta propuesta",
+            "Prioridad considerada",
+            "Resultado",
+            "Acciones",
+          ],
+          propuesta.resultados.map((x) => {
+            const estadoAceptacion = x.estado !== "IngresoPropuesto" || !x.esTurnoAlternativo
+              ? "no-aplica"
+              : solicitudesConAceptacion.has(x.solicitudId)
+                ? "registrada"
+                : "pendiente";
+            const prioridad = prioridadPorSolicitud.get(x.solicitudId);
+            const oferta = ofertaPorId.get(x.ofertaId);
+            const etapa = nombreEtapa(prioridad);
+            const personalComoDesempate = prioridad && etapa.startsWith("Cercanía") && cumpleCriterio(prioridad, "HijosDelPersonal");
+            const ofertaTexto = oferta
+              ? `${nombreAula(ctx, oferta.aulaId)} · ${nombreTurno(ctx, oferta.turnoId)}${x.esTurnoAlternativo ? " · turno alternativo" : ""}`
+              : "Sin oferta asignada";
+            const accionesFila = boton("org-ver-resultado-propuesta", "Ver detalle", x.solicitudId) +
+              (ctx.puedeResolver() && propuesta.estado !== "Confirmada"
+                ? boton("org-modificar-propuesta", "Revisar", x.solicitudId)
+                : "") +
+              (x.esTurnoAlternativo && x.estado === "IngresoPropuesto" && propuesta.estado !== "Confirmada"
+                ? estadoAceptacion === "registrada"
+                  ? '<span class="propuesta__aceptacion propuesta__aceptacion--registrada">Aceptación registrada</span>'
+                  : boton("org-aceptacion", "Registrar aceptación", x.solicitudId)
+                : "");
+            const fila = [
+              enlaceSolicitud(ctx, x.solicitudId),
+              e(x.sala ? `Sala de ${x.sala} años` : "Pendiente"),
+              e(ofertaTexto),
+              `<span>${e(etapa)}${personalComoDesempate ? '<small class="propuesta__nota-etapa">Hijo/a del personal verificado · criterio de desempate</small>' : ""}</span>`,
+              `<span class="propuesta__estado propuesta__estado--${e(x.estado.toLowerCase())}">${e(estadoPropuestaLegible(x.estado))}</span>`,
+              accionesFila,
+            ];
+            fila.aceptacion = estadoAceptacion;
+            return fila;
+          }),
+          { estadoFila: (fila) => fila.aceptacion },
+        )}</div>`,
+      ) +
+      `<p class="formulario__nota">Los turnos alternativos requieren aceptación familiar. La propuesta no confirma ingresos hasta que el Directivo la confirme.</p>`
     );
   }
   if (paso === "espera") {
