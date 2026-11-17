@@ -16,6 +16,10 @@ public interface IModuloPropuestasIngresos
         Guid propuestaId,
         RegistrarAceptacionTurnoPeticion peticion,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<DatosAceptacionTurno>> RegistrarAceptacionesTurnoLoteAsync(
+        Guid propuestaId,
+        RegistrarAceptacionesTurnoLotePeticion peticion,
+        CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<DatosAceptacionTurno>> ConsultarAceptacionesTurnoAsync(
         Guid propuestaId,
         CancellationToken tokenCancelacion = default);

@@ -518,6 +518,18 @@
   color: #204d3e;
   font-size: 1.45rem;
 }
+.distribucion__filtros {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(170px, 1fr)) auto;
+  align-items: end;
+  gap: 0.8rem;
+  margin: 0.9rem 0;
+}
+.distribucion__filtro-resumen {
+  padding: 0.7rem 0;
+  color: var(--color-texto-suave);
+  white-space: nowrap;
+}
 .propuesta__cabecera {
   display: flex;
   align-items: flex-start;
@@ -532,6 +544,72 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.7rem;
   margin-top: 1.1rem;
+}
+
+.ingresos__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ingresos__total,
+.ingresos__sala {
+  padding: 16px;
+  border: 1px solid #dce4da;
+  border-radius: 12px;
+  background: #f8faf7;
+}
+.ingresos__total {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.ingresos__total span,
+.ingresos__sala li span {
+  color: #65766b;
+}
+.ingresos__total strong,
+.ingresos__sala header strong {
+  color: #234b3b;
+  font-size: 1.5rem;
+}
+.ingresos__sala header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ingresos__sala h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.ingresos__sala ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ingresos__sala li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e9e1;
+}
+.ingresos__filtros {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) minmax(200px, 1fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+  margin: 0.9rem 0;
+}
+.ingresos__filtro-resumen {
+  padding: 0.7rem 0;
+  color: var(--color-texto-suave);
+  white-space: nowrap;
 }
 .propuesta__metricas article {
   display: grid;
@@ -672,6 +750,12 @@
     width: 100%;
   }
   .distribucion__metricas {
+    grid-template-columns: 1fr;
+  }
+  .distribucion__filtros {
+    grid-template-columns: 1fr;
+  }
+  .ingresos__filtros {
     grid-template-columns: 1fr;
   }
 }

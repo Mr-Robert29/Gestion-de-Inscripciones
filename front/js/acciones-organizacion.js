@@ -1,5 +1,5 @@
 export { atenderFormularioOrganizacion } from "./operaciones-formularios.js";
-import { atenderAdmision } from "./acciones-admision.js";
+import { atenderAdmision } from "./acciones-admision.js?v=20261117-aceptaciones-lote-v2";
 import { atenderEspera } from "./acciones-espera.js";
 import { atenderSecciones } from "./acciones-secciones.js";
 import { atenderAdministracion } from "./acciones-administracion.js";
@@ -7,6 +7,7 @@ import { atenderAdministracion } from "./acciones-administracion.js";
 const operaciones = new Map();
 for (const nombre of [
   "org-aceptacion",
+  "org-aceptaciones-turno-lote",
   "org-caso-historial",
   "org-confirmar-propuesta",
   "org-confirmar-prioridades-lote",

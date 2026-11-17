@@ -199,6 +199,57 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos, IPro
         return Mapear(aceptacion);
     }
 
+    public async Task<IReadOnlyList<DatosAceptacionTurno>> RegistrarAceptacionesTurnoLoteAsync(
+        Guid propuestaId,
+        RegistrarAceptacionesTurnoLotePeticion peticion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        var referencia = peticion.ReferenciaComun?.Trim();
+        if (string.IsNullOrWhiteSpace(referencia) || referencia.Length > 250)
+            throw new ArgumentException("Indicá una referencia común válida para las aceptaciones.");
+        if (!peticion.ConfirmaAceptacionesFamiliares)
+            throw new ArgumentException("Confirmá que las familias aceptaron el turno alternativo.");
+        var solicitudIds = peticion.SolicitudIds?.Where(x => x != Guid.Empty).Distinct().ToArray()
+            ?? throw new ArgumentException("Seleccioná al menos una solicitud.");
+        if (solicitudIds.Length == 0)
+            throw new ArgumentException("Seleccioná al menos una solicitud.");
+
+        var propuesta = await _propuestas.ObtenerAsync(propuestaId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró la propuesta.");
+        var autor = await _autorizacion.AutorizarAceptacionTurnoAsync(propuesta.PeriodoId, tokenCancelacion);
+        if (!await EstaVigenteAsync(propuesta, tokenCancelacion))
+            throw new InvalidOperationException("La propuesta está desactualizada.");
+
+        var resultados = DeserializarResultados(propuesta)
+            .Where(x => solicitudIds.Contains(x.SolicitudId))
+            .ToDictionary(x => x.SolicitudId);
+        if (resultados.Count != solicitudIds.Length || solicitudIds.Any(id =>
+                resultados[id].Estado != "IngresoPropuesto" || !resultados[id].EsTurnoAlternativo || resultados[id].TurnoId is null))
+            throw new ArgumentException("Todas las solicitudes deben tener un ingreso propuesto en turno alternativo.");
+
+        var existentes = await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion);
+        var clavesExistentes = existentes.Select(x => (x.SolicitudId, x.TurnoId)).ToHashSet();
+        var nuevas = solicitudIds
+            .Select(id => resultados[id])
+            .Where(x => !clavesExistentes.Contains((x.SolicitudId, x.TurnoId!.Value)))
+            .Select(x => new AceptacionTurnoFamiliar(
+                propuesta.PeriodoId,
+                propuesta.Id,
+                x.SolicitudId,
+                x.TurnoId!.Value,
+                autor.UsuarioId,
+                referencia))
+            .ToArray();
+        await _propuestas.GuardarAceptacionesAsync(nuevas, tokenCancelacion);
+
+        var guardadas = await _propuestas.ListarAceptacionesAsync(propuestaId, tokenCancelacion);
+        return solicitudIds
+            .Select(id => guardadas.Single(x => x.SolicitudId == id && x.TurnoId == resultados[id].TurnoId))
+            .Select(Mapear)
+            .ToArray();
+    }
+
     public async Task<IReadOnlyList<DatosAceptacionTurno>> ConsultarAceptacionesTurnoAsync(
         Guid propuestaId,
         CancellationToken tokenCancelacion = default)

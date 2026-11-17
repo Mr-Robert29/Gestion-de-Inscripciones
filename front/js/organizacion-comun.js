@@ -20,8 +20,9 @@ export function tabla(columnas, filas, opciones = {}) {
     ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr>${columnas.map((x) => `<th scope="col">${e(x)}</th>`).join("")}</tr></thead><tbody>${filas.map((f, indice) => {
         const estado = opciones.estadoFila?.(f, indice);
         const atributoEstado = estado ? ` data-estado-cuenta="${e(estado)}"` : "";
+        const atributosFila = opciones.atributosFila?.(f, indice) ?? "";
         const ocultar = opciones.estadoInicial && estado !== opciones.estadoInicial;
-        return `<tr${atributoEstado}${ocultar ? " hidden" : ""}>${f.map((c) => `<td>${c ?? "—"}</td>`).join("")}</tr>`;
+        return `<tr${atributoEstado}${atributosFila}${ocultar ? " hidden" : ""}>${f.map((c) => `<td>${c ?? "—"}</td>`).join("")}</tr>`;
       }).join("")}</tbody></table></div>`
     : '<p class="tarjeta__cuerpo">No hay registros para esta consulta.</p>';
 }
@@ -59,6 +60,7 @@ export async function cargarNombres(ctx) {
   if (ctx.estado.previa) return;
   const clave = `${ctx.estado.institucion.id}/${ctx.estado.periodo.id}`;
   const nombres = new Map();
+  const solicitudesPorId = new Map();
   for (let pagina = 1; ; pagina++) {
     const datos = await ctx.api(
       `/instituciones/${ctx.estado.institucion.id}/solicitudes/buscar`,
@@ -67,12 +69,16 @@ export async function cargarNombres(ctx) {
         datos: { periodoId: ctx.estado.periodo.id, pagina, tamanoPagina: 100 },
       },
     );
-    for (const x of datos.resultados)
+    for (const x of datos.resultados) {
       nombres.set(x.id, `${x.nombre} ${x.apellido}`);
+      solicitudesPorId.set(x.id, x);
+    }
     if (!datos.hayMas) break;
   }
-  if (`${ctx.estado.institucion?.id}/${ctx.estado.periodo?.id}` === clave)
+  if (`${ctx.estado.institucion?.id}/${ctx.estado.periodo?.id}` === clave) {
     ctx.nombresSolicitudes = nombres;
+    ctx.solicitudesPorId = solicitudesPorId;
+  }
 }
 export function vistaPreviaOrganizacion() {
   return resumen(

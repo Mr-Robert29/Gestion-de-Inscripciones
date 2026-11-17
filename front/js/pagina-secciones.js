@@ -5,13 +5,14 @@ import {
   nombreTurno,
   nombreAula,
   enlaceSolicitud,
+  nombreSolicitud,
   boton,
   tabla,
   pestanas,
   resumen,
   cargarNombres,
   vistaPreviaOrganizacion,
-} from "./organizacion-comun.js";
+} from "./organizacion-comun.js?v=20261117-distribucion-filtros-v1";
 
 export async function secciones(ruta, ctx) {
   const distribucionId = ruta.split("/")[2];
@@ -67,6 +68,32 @@ export async function secciones(ruta, ctx) {
     const editable = distribucion.estado === "Borrador" && ctx.puedeResolver();
     const asignadas = distribucion.asignaciones.filter((x) => x.seccionId !== null);
     const sinSeccion = distribucion.asignaciones.filter((x) => x.seccionId === null);
+    const ordenSeccion = new Map(secciones.map((seccion, indice) => [seccion.id, indice]));
+    const nombreAsignacion = (x) => x.solicitudId
+      ? nombreSolicitud(ctx, x.solicitudId)
+      : `Ingreso ${x.ingresoId.slice(0, 8)}`;
+    const asignacionesOrdenadas = [...distribucion.asignaciones].sort((a, b) => {
+      const ordenA = a.seccionId === null ? secciones.length + 1 : ordenSeccion.get(a.seccionId) ?? secciones.length;
+      const ordenB = b.seccionId === null ? secciones.length + 1 : ordenSeccion.get(b.seccionId) ?? secciones.length;
+      return ordenA - ordenB || nombreAsignacion(a).localeCompare(nombreAsignacion(b), "es", { sensitivity: "base" });
+    });
+    const turnosDistribucion = [...new Map([
+      ...(ctx.estado.turnos ?? []),
+      ...distribucion.asignaciones.map((x) => ({ id: x.turnoId, nombre: nombreTurno(ctx, x.turnoId) })),
+    ].map((turno) => [turno.id, turno])).values()];
+    const opcionesSeccion = secciones.map((seccion) => `<option value="${e(seccion.id)}">${e(seccion.nombre)}</option>`).join("");
+    const opcionesTurno = turnosDistribucion.map((turno) => `<option value="${e(turno.id)}">${e(turno.nombre)}</option>`).join("");
+    const filasDetalle = asignacionesOrdenadas.map((x) => {
+      const nombre = nombreAsignacion(x);
+      const dni = ctx.solicitudesPorId?.get(x.solicitudId)?.dni ?? "";
+      const dniNormalizado = String(dni).replace(/\D/g, "");
+      const seccion = secciones.find((s) => s.id === x.seccionId)?.nombre ?? "Sin sección";
+      return `<tr data-distribucion-fila data-nombre="${e(nombre)}" data-dni="${e(dniNormalizado)}" data-seccion="${e(x.seccionId ?? "sin-seccion")}" data-turno="${e(x.turnoId)}"><td>${x.solicitudId ? enlaceSolicitud(ctx, x.solicitudId) : e(nombre)}</td><td>${e(x.edad)}</td><td>${e(nombreTurno(ctx, x.turnoId))}</td><td>${e(seccion)}</td><td>${e(x.motivoModificacion ?? x.motivoSinSeccion ?? "—")}</td><td>${editable ? boton("org-asignar", "Revisar asignación", x.ingresoId) : ""}</td></tr>`;
+    }).join("");
+    const filtroDetalle = `<div class="distribucion__filtros" data-distribucion-filtros><label class="campo"><span class="campo__etiqueta">Buscar por nombre o DNI</span><input class="campo__control" type="search" data-buscar-distribucion placeholder="Escribí un nombre o DNI" autocomplete="off"></label><label class="campo"><span class="campo__etiqueta">Sección asignada</span><select class="campo__control" data-filtro-distribucion-seccion><option value="todas">Todas las secciones</option>${opcionesSeccion}<option value="sin-seccion">Sin sección</option></select></label><label class="campo"><span class="campo__etiqueta">Turno</span><select class="campo__control" data-filtro-distribucion-turno><option value="todos">Todos los turnos</option>${opcionesTurno}</select></label><span class="distribucion__filtro-resumen" data-resumen-distribucion>${distribucion.asignaciones.length} aspirantes</span></div>`;
+    const tablaDetalle = filasDetalle
+      ? `<div class="tabla__contenedor"><table class="tabla"><thead><tr>${["Aspirante", "Edad al ingreso", "Turno", "Sección asignada", "Motivo / observación", "Acción"].map((x) => `<th scope="col">${e(x)}</th>`).join("")}</tr></thead><tbody>${filasDetalle}</tbody></table></div>`
+      : tabla(["Aspirante", "Edad al ingreso", "Turno", "Sección asignada", "Motivo / observación", "Acción"], []);
     const metricas = `<div class="distribucion__metricas"><article><span>Ingresos incluidos en esta propuesta</span><strong>${distribucion.asignaciones.length}</strong></article><article><span>Con sección asignada</span><strong>${asignadas.length}</strong></article><article><span>Sin sección asignada</span><strong>${sinSeccion.length}</strong></article></div>`;
     const ocupacionSecciones = tabla(
       ["Sección", "Capacidad total", "Asignaciones sugeridas"],
@@ -83,25 +110,7 @@ export async function secciones(ruta, ctx) {
       cabecera +
       resumen(
         `Distribución ${distribucion.version}`,
-        `<p>${etiqueta(distribucion.estado)} · Generada el ${e(fecha(distribucion.fechaCreacion))}</p><p>Esta versión organiza ingresos confirmados y activos del período que todavía no tienen una sección asignada. Los borradores de propuesta no se incluyen.</p>${metricas}<h3>Asignaciones sugeridas por sección</h3>${ocupacionSecciones}<p class="formulario__nota">La capacidad disponible ya considera las asignaciones confirmadas previamente. Esta tabla cuenta las nuevas asignaciones sugeridas en esta versión.</p><h3>Detalle de aspirantes</h3>` +
-          tabla(
-            ["Aspirante", "Edad al ingreso", "Turno", "Sección asignada", "Motivo / observación", "Acción"],
-            distribucion.asignaciones.map((x) => [
-              x.solicitudId
-                ? enlaceSolicitud(ctx, x.solicitudId)
-                : e(`Ingreso ${x.ingresoId.slice(0, 8)}`),
-              e(x.edad),
-              e(nombreTurno(ctx, x.turnoId)),
-              e(
-                secciones.find((s) => s.id === x.seccionId)?.nombre ??
-                  "Sin sección",
-              ),
-              e(x.motivoModificacion ?? x.motivoSinSeccion ?? "—"),
-              editable
-                ? boton("org-asignar", "Revisar asignación", x.ingresoId)
-                : "",
-            ]),
-          ),
+        `<p>${etiqueta(distribucion.estado)} · Generada el ${e(fecha(distribucion.fechaCreacion))}</p><p>Esta versión organiza ingresos confirmados y activos del período que todavía no tienen una sección asignada. Los borradores de propuesta no se incluyen.</p>${metricas}<h3>Asignaciones sugeridas por sección</h3>${ocupacionSecciones}<p class="formulario__nota">La capacidad disponible ya considera las asignaciones confirmadas previamente. Esta tabla cuenta las nuevas asignaciones sugeridas en esta versión.</p><h3>Detalle de aspirantes</h3>${filtroDetalle}${tablaDetalle}`,
         editable
           ? boton(
               "org-confirmar-distribucion",

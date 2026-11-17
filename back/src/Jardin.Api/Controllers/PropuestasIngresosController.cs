@@ -53,6 +53,13 @@ public sealed class PropuestasIngresosController : ControllerBase
         CancellationToken tokenCancelacion)
         => EjecutarAsync(async () => Ok(await _propuestas.RegistrarAceptacionTurnoAsync(propuestaId, peticion, tokenCancelacion)));
 
+    [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/aceptaciones-turno/lote")]
+    public Task<IActionResult> AceptarTurnosLote(
+        Guid propuestaId,
+        RegistrarAceptacionesTurnoLotePeticion peticion,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _propuestas.RegistrarAceptacionesTurnoLoteAsync(propuestaId, peticion, tokenCancelacion)));
+
     [HttpPost("api/v1/propuestas-ingresos/{propuestaId:guid}/confirmacion")]
     public Task<IActionResult> Confirmar(
         Guid propuestaId,

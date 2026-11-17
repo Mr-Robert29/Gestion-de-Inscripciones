@@ -1,4 +1,5 @@
-import { atenderAccionOrganizacion, atenderFormularioOrganizacion } from "./acciones-organizacion.js";
+import { atenderAccionOrganizacion, atenderFormularioOrganizacion } from "./acciones-organizacion.js?v=20261117-aceptaciones";
+import { atenderAdmision } from "./acciones-admision.js?v=20261117-aceptaciones-lote-v2";
 import {
   escapar as e,
   campo,
@@ -68,6 +69,8 @@ async function publicarOfertaDelCiclo(ctx, operacion, motivoCambio) {
 }
 
 export async function atenderAccion(elemento, ctx) {
+  if (elemento.dataset.accion === "org-aceptaciones-turno-lote")
+    return atenderAdmision(elemento, ctx);
   if (await atenderAccionOrganizacion(elemento, ctx)) return;
   const accion = elemento.dataset.accion;
   const { estado } = ctx;

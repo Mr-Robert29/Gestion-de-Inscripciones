@@ -15,7 +15,7 @@ import {
   cargarNombres,
   vistaPreviaOrganizacion,
   historial,
-} from "./organizacion-comun.js";
+} from "./organizacion-comun.js?v=20261117-ingresos-filtros-v1";
 
 const etapas = [
   ["vacantes", "Propuestas"],
@@ -57,6 +57,10 @@ const estadoPropuestaLegible = (estado) => ({
   PendienteRevision: "Requiere revisión",
   YaOcupaPlaza: "Ya tiene un ingreso",
 })[estado] ?? estado;
+const puedeRegistrarAceptacionesEnLote = (ctx) =>
+  ctx.estado.usuario?.roles?.includes("AdministradorDelSistema") ||
+  ctx.estado.usuario?.accesos?.find((acceso) => acceso.institucionId === ctx.estado.institucion?.id)?.rol === "Administrativo";
+const esRoot = (ctx) => ctx.estado.usuario?.roles?.includes("AdministradorDelSistema") ?? false;
 export async function vacantes(ruta, ctx) {
   const paso = ruta.split("/")[1] ?? "";
   const activa = ["propuesta"].includes(paso)
@@ -107,7 +111,7 @@ export async function vacantes(ruta, ctx) {
           ].map(([grupo, titulo, tipos, columna]) => {
             const pendientes = articulaciones.filter((x) => tipos.includes(x.condicion.tipo) && ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion));
             const paraConfirmar = pendientes.filter((x) => x.condicion.estadoVerificacion === "PendienteRevision");
-            const botonConfirmar = ctx.puedeResolver()
+            const botonConfirmar = esRoot(ctx)
               ? `<button class="boton boton--secundario boton--pequeno" data-accion="org-confirmar-prioridades-lote" data-id="${e(grupo)}" ${paraConfirmar.length ? "" : "disabled"}>Confirmar todos (${paraConfirmar.length})</button>`
               : "";
             return `<section class="prioridades__grupo"><div class="prioridades__grupo-cabecera"><h3>${e(titulo)}</h3>${botonConfirmar}</div>${tabla(
@@ -251,6 +255,7 @@ export async function vacantes(ruta, ctx) {
     const propuestos = propuesta.resultados.filter((x) => x.estado === "IngresoPropuesto");
     const enEspera = propuesta.resultados.filter((x) => x.estado === "EsperaPropuesta");
     const pendientes = propuesta.resultados.filter((x) => x.estado === "PendienteRevision");
+    const aceptacionesPendientes = propuestos.filter((x) => x.esTurnoAlternativo && !solicitudesConAceptacion.has(x.solicitudId));
     const capacidadTotal = ofertas.reduce((total, x) => total + Number(x.capacidadNetaInicial ?? x.capacidad ?? 0), 0);
     const cuposRestantes = Math.max(0, capacidadTotal - propuestos.length);
     const metricas = `<div class="propuesta__metricas"><article><span>Solicitudes evaluadas</span><strong>${propuesta.resultados.length}</strong></article><article><span>Ingresos propuestos</span><strong>${propuestos.length}</strong></article><article><span>En lista de espera</span><strong>${enEspera.length}</strong></article><article><span>Requieren revisión</span><strong>${pendientes.length}</strong></article><article><span>Cupos restantes</span><strong>${cuposRestantes}</strong></article></div>`;
@@ -285,7 +290,7 @@ export async function vacantes(ruta, ctx) {
         ];
       }),
     );
-    ctx.organizacion = { propuesta, prioridades };
+    ctx.organizacion = { propuesta, prioridades, aceptacionesPendientes };
     return (
       cabecera +
       resumen(
@@ -347,6 +352,9 @@ export async function vacantes(ruta, ctx) {
           }),
           { estadoFila: (fila) => fila.aceptacion },
         )}</div>`,
+        puedeRegistrarAceptacionesEnLote(ctx) && propuesta.estado !== "Confirmada" && aceptacionesPendientes.length
+          ? `<button type="button" class="boton boton--secundario" data-accion="org-aceptaciones-turno-lote" data-id="${e(propuesta.id)}">Registrar todas las aceptaciones pendientes (${aceptacionesPendientes.length})</button>`
+          : "",
       ) +
       `<p class="formulario__nota">Los turnos alternativos requieren aceptación familiar. La propuesta no confirma ingresos hasta que el Directivo la confirme.</p>`
     );
@@ -412,29 +420,57 @@ export async function vacantes(ruta, ctx) {
   }
   if (paso === "ingresos") {
     const reporte = await ctx.api(`${rutaInstitucional(ctx)}/reportes`);
+    const ingresosActivos = reporte.ingresos.filter((x) => x.activo && !x.bajaEnProceso);
+    const turnosDisponibles = [...new Map([
+      ...(ctx.estado.turnos ?? []),
+      ...reporte.ingresos.map((x) => ({ id: x.turnoId, nombre: nombreTurno(ctx, x.turnoId) })),
+    ].map((x) => [x.id, x])).values()];
+    const metricasPorSala = [3, 4, 5].map((sala) => {
+      const porTurno = turnosDisponibles.map((turno) => {
+        const cantidad = ingresosActivos.filter((x) => Number(x.sala) === sala && x.turnoId === turno.id).length;
+        return `<li><span>${e(turno.nombre)}</span><strong>${cantidad}</strong></li>`;
+      }).join("");
+      const totalSala = ingresosActivos.filter((x) => Number(x.sala) === sala).length;
+      return `<article class="ingresos__sala"><header><h3>Sala de ${sala} años</h3><strong>${totalSala}</strong></header><ul>${porTurno || '<li><span>Sin turnos configurados</span><strong>—</strong></li>'}</ul></article>`;
+    }).join("");
+    const resumenIngresos = `<section class="ingresos__resumen"><article class="ingresos__total"><span>Ingresos activos</span><strong>${ingresosActivos.length}</strong></article>${metricasPorSala}</section><p class="formulario__nota">El resumen cuenta ingresos activos que no tienen una baja pendiente. El historial completo se muestra debajo.</p>`;
+    const filasIngreso = reporte.ingresos.map((x) => {
+      const aspirante = ctx.solicitudesPorId?.get(x.solicitudId);
+      const estadoFiltro = x.bajaEnProceso ? "pendiente" : x.activo ? "activo" : "baja";
+      const fila = [
+        enlaceSolicitud(ctx, x.solicitudId),
+        e(x.sala),
+        e(nombreTurno(ctx, x.turnoId)),
+        etiqueta(
+          x.bajaEnProceso ? "Baja pendiente" : x.activo ? "Activo" : "Baja",
+        ),
+        boton("org-baja-historial", "Consultar baja", x.id) +
+          (x.activo && ctx.puedeResolver()
+            ? boton(
+                "org-baja",
+                x.bajaEnProceso ? "Reintentar baja" : "Registrar baja",
+                x.id,
+              )
+            : ""),
+      ];
+      fila.filtrosIngreso = {
+        nombre: `${aspirante?.nombre ?? ""} ${aspirante?.apellido ?? nombreSolicitud(ctx, x.solicitudId)}`,
+        dni: String(aspirante?.dni ?? "").replace(/\D/g, ""),
+        estado: estadoFiltro,
+      };
+      return fila;
+    });
+    const filtrosIngreso = `<div class="ingresos__filtros" data-filtros-ingresos><label class="campo"><span class="campo__etiqueta">Buscar por nombre o DNI</span><input class="campo__control" type="search" data-buscar-ingreso placeholder="Escribí un nombre o DNI" autocomplete="off"></label><label class="campo"><span class="campo__etiqueta">Filtrar por estado</span><select class="campo__control" data-filtro-ingreso-estado><option value="todos">Todos los ingresos</option><option value="activo">Activos</option><option value="pendiente">Bajas pendientes</option><option value="baja">Bajas completadas</option></select></label><span class="ingresos__filtro-resumen" data-resumen-ingresos>${filasIngreso.length} registros</span></div>`;
     ctx.organizacion = { ingresos: reporte.ingresos };
     return (
       cabecera +
+      resumen("Ingresos activos por sala y turno", resumenIngresos) +
       resumen(
         "Ingresos confirmados e históricos",
-        tabla(
+        filtrosIngreso + tabla(
           ["Aspirante", "Sala", "Turno", "Estado", "Acciones"],
-          reporte.ingresos.map((x) => [
-            enlaceSolicitud(ctx, x.solicitudId),
-            e(x.sala),
-            e(nombreTurno(ctx, x.turnoId)),
-            etiqueta(
-              x.bajaEnProceso ? "Baja pendiente" : x.activo ? "Activo" : "Baja",
-            ),
-            boton("org-baja-historial", "Consultar baja", x.id) +
-              (x.activo && ctx.puedeResolver()
-                ? boton(
-                    "org-baja",
-                    x.bajaEnProceso ? "Reintentar baja" : "Registrar baja",
-                    x.id,
-                  )
-                : ""),
-          ]),
+          filasIngreso,
+          { atributosFila: (fila) => ` data-ingreso-historico data-nombre="${e(fila.filtrosIngreso.nombre)}" data-dni="${e(fila.filtrosIngreso.dni)}" data-estado-ingreso="${e(fila.filtrosIngreso.estado)}"` },
         ),
       )
     );

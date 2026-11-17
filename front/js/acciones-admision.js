@@ -407,6 +407,41 @@ export async function atenderAdmision(elemento, ctx) {
           { solicitudId: id, turnoId: x.turnoId, referencia: d.referencia },
         ),
     );
+  } else if (accion === "org-aceptaciones-turno-lote") {
+    const propuesta = datos.propuesta;
+    const pendientes = datos.aceptacionesPendientes ?? [];
+    if (!propuesta || propuesta.id !== id || pendientes.length === 0)
+      throw new Error("No hay aceptaciones pendientes para registrar.");
+    const nombres = pendientes.map((x) => `<li>${e(nombreSolicitud(ctx, x.solicitudId))} · ${e(nombreTurno(ctx, x.turnoId))}</li>`).join("");
+    formulario(
+      ctx,
+      `Registrar ${pendientes.length} aceptaciones familiares`,
+      `<p>Se registrará una constancia individual para cada aspirante de esta lista. Usá esta acción solo si todas las familias aceptaron su turno alternativo.</p><ul class="prioridades__lote-lista">${nombres}</ul>` +
+        campo({
+          nombre: "referenciaComun",
+          etiqueta: "Referencia común de las constancias",
+          obligatorio: true,
+          ayuda: "Indicá el registro, acta o lote de constancias que respalda todas las aceptaciones.",
+          atributos: 'placeholder="Ej.: Acta de aceptación de turnos alternativos, 17/11/2026" maxlength="250"',
+        }) +
+        '<label class="casilla"><input type="checkbox" name="confirmaAceptacionesFamiliares" required>Confirmo que cada familia incluida aceptó el turno alternativo y que la referencia indicada respalda todas estas aceptaciones.</label>',
+      async (d) => {
+        await enviar(
+          ctx,
+          `/propuestas-ingresos/${encodeURIComponent(propuesta.id)}/aceptaciones-turno/lote`,
+          {
+            solicitudIds: pendientes.map((x) => x.solicitudId),
+            referenciaComun: d.referenciaComun,
+            confirmaAceptacionesFamiliares: Boolean(d.confirmaAceptacionesFamiliares),
+          },
+        );
+        return {
+          destino: `vacantes/propuesta/${propuesta.id}`,
+          mensaje: `Se registraron las aceptaciones de ${pendientes.length} familias.`,
+        };
+      },
+      { textoConfirmar: "Registrar aceptaciones" },
+    );
   } else if (accion === "org-sorteo")
     formulario(
       ctx,

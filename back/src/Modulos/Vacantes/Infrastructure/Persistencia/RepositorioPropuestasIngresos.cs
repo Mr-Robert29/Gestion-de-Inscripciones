@@ -58,6 +58,15 @@ public sealed class RepositorioPropuestasIngresos : IRepositorioPropuestasIngres
         await _contexto.SaveChangesAsync(tokenCancelacion);
     }
 
+    public async Task GuardarAceptacionesAsync(IReadOnlyList<AceptacionTurnoFamiliar> aceptaciones, CancellationToken tokenCancelacion = default)
+    {
+        if (aceptaciones.Count == 0) return;
+        await using var transaccion = await _contexto.Database.BeginTransactionAsync(tokenCancelacion);
+        _contexto.AceptacionesTurno.AddRange(aceptaciones);
+        await _contexto.SaveChangesAsync(tokenCancelacion);
+        await transaccion.CommitAsync(tokenCancelacion);
+    }
+
     public Task<IngresoConfirmado?> ObtenerIngresoAsync(Guid periodoId, Guid aspiranteId, CancellationToken tokenCancelacion = default)
         => _contexto.IngresosConfirmados.AsNoTracking().SingleOrDefaultAsync(
             x => x.PeriodoId == periodoId && x.AspiranteId == aspiranteId,

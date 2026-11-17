@@ -1,5 +1,5 @@
-import { vacantes } from "./pagina-vacantes.js";
-import { secciones } from "./pagina-secciones.js";
+import { vacantes } from "./pagina-vacantes.js?v=20261117-ingresos-filtros-v1";
+import { secciones } from "./pagina-secciones.js?v=20261117-distribucion-filtros-v1";
 import { reportes } from "./pagina-reportes.js";
 import { usuarios } from "./pagina-usuarios.js";
 import { escapar as e, icono, etiqueta, vacio } from "./interfaz.js";

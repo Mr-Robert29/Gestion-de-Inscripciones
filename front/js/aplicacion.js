@@ -22,8 +22,8 @@ import {
   turnosEjemplo,
   ofertasEjemplo,
 } from "./datos-previa.js";
-import { presentarPagina, titulos } from "./paginas.js";
-import { atenderAccion, atenderFormulario } from "./acciones.js";
+import { presentarPagina, titulos } from "./paginas.js?v=20261117-ingresos-filtros-v1";
+import { atenderAccion, atenderFormulario } from "./acciones.js?v=20261117-aceptaciones-lote-v2";
 import { actualizarIndicadoresClave } from "./validacion-clave.js";
 import { validarClave } from "./validacion-clave.js";
 import { edadesDeReglas } from "./reglas-edad.js";
@@ -56,7 +56,7 @@ const contexto = {
   estado,
   api: solicitar,
   navegar,
-  actualizar: () => cargarVista(),
+  actualizar: () => actualizarVista(),
   notificar,
   abrirDialogo,
   cerrarDialogo,
@@ -84,7 +84,7 @@ function puedeResolver() {
   return puedeEditar();
 }
 function navegar(destino) {
-  if (location.hash === `#${destino}`) cargarVista();
+  if (location.hash === `#${destino}`) actualizarVista();
   else location.hash = destino;
 }
 function cerrarDialogo() {
@@ -141,6 +141,56 @@ function actualizarFiltroCuentas() {
           ? "No hay cuentas inactivas para mostrar con este filtro."
           : "No hay cuentas para mostrar.";
   }
+}
+
+function normalizarTextoBusqueda(valor) {
+  return String(valor ?? "")
+    .trim()
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function actualizarFiltroDistribucion() {
+  const panel = document.querySelector("[data-distribucion-filtros]");
+  if (!panel) return;
+  const texto = normalizarTextoBusqueda(panel.querySelector("[data-buscar-distribucion]")?.value);
+  const dni = texto.replace(/\D/g, "");
+  const seccion = panel.querySelector("[data-filtro-distribucion-seccion]")?.value ?? "todas";
+  const turno = panel.querySelector("[data-filtro-distribucion-turno]")?.value ?? "todos";
+  const filas = [...document.querySelectorAll("tr[data-distribucion-fila]")];
+  for (const fila of filas) {
+    const nombre = normalizarTextoBusqueda(fila.dataset.nombre);
+    const coincideBusqueda = !texto || nombre.includes(texto) || (dni.length > 0 && fila.dataset.dni.includes(dni));
+    const coincideSeccion = seccion === "todas" || fila.dataset.seccion === seccion;
+    const coincideTurno = turno === "todos" || fila.dataset.turno === turno;
+    fila.hidden = !(coincideBusqueda && coincideSeccion && coincideTurno);
+  }
+  const resumen = panel.querySelector("[data-resumen-distribucion]");
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  if (resumen) resumen.textContent = visibles === 0
+    ? `No hay coincidencias · 0 de ${filas.length}`
+    : `${visibles} de ${filas.length} aspirantes`;
+}
+
+function actualizarFiltroIngresos() {
+  const panel = document.querySelector("[data-filtros-ingresos]");
+  if (!panel) return;
+  const texto = normalizarTextoBusqueda(panel.querySelector("[data-buscar-ingreso]")?.value);
+  const dni = texto.replace(/\D/g, "");
+  const estado = panel.querySelector("[data-filtro-ingreso-estado]")?.value ?? "todos";
+  const filas = [...document.querySelectorAll("tr[data-ingreso-historico]")];
+  for (const fila of filas) {
+    const nombre = normalizarTextoBusqueda(fila.dataset.nombre);
+    const coincideBusqueda = !texto || nombre.includes(texto) || (dni.length > 0 && fila.dataset.dni.includes(dni));
+    const coincideEstado = estado === "todos" || fila.dataset.estadoIngreso === estado;
+    fila.hidden = !(coincideBusqueda && coincideEstado);
+  }
+  const visibles = filas.filter((fila) => !fila.hidden).length;
+  const resumen = panel.querySelector("[data-resumen-ingresos]");
+  if (resumen) resumen.textContent = visibles === 0
+    ? `No hay coincidencias · 0 de ${filas.length}`
+    : `${visibles} de ${filas.length} registros`;
 }
 
 function salir(mensaje = "") {
@@ -508,6 +558,45 @@ async function cargarVista() {
   }
 }
 
+async function actualizarVista() {
+  if (!estado.usuario) {
+    presentarAcceso();
+    return;
+  }
+  const vista = document.getElementById("vista");
+  if (!vista || !document.querySelector(".sistema")) {
+    await cargarVista();
+    return;
+  }
+  const ruta = location.hash.slice(1) || "inicio";
+  if (ruta === "acceso") {
+    salir();
+    return;
+  }
+  const intento = ++versionVista;
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+  try {
+    const html = await presentarPagina(ruta, contexto);
+    if (intento !== versionVista) return;
+    const vistaActual = document.getElementById("vista");
+    if (!vistaActual) return;
+    vistaActual.innerHTML = html;
+    window.scrollTo(scrollX, scrollY);
+  } catch (error) {
+    if (intento !== versionVista) return;
+    const vistaActual = document.getElementById("vista");
+    if (!vistaActual) return;
+    vistaActual.innerHTML = vacio({
+      titulo: "No pudimos actualizar esta página",
+      descripcion: error.message,
+      accion: '<button class="boton" data-accion="recargar">Intentar nuevamente</button>',
+      dibujo: "alerta",
+    });
+    window.scrollTo(scrollX, scrollY);
+  }
+}
+
 async function cambiarContexto(tipo, id) {
   if (
     estado.borrador &&
@@ -682,6 +771,8 @@ document.addEventListener("input", (evento) => {
   if (evento.target.matches("[data-clave-inicial], [data-clave-confirmacion]"))
     actualizarIndicadoresClave(evento.target.form);
   if (evento.target.matches("[data-buscar-cuentas]")) actualizarFiltroCuentas();
+  if (evento.target.matches("[data-buscar-distribucion]")) actualizarFiltroDistribucion();
+  if (evento.target.matches("[data-buscar-ingreso]")) actualizarFiltroIngresos();
   if (evento.target.matches("[data-motivo-otro]")) {
     const valorFinal = evento.target.form?.querySelector("[data-motivo-final]");
     if (valorFinal) valorFinal.value = evento.target.value.trim();
@@ -730,6 +821,14 @@ document.addEventListener("change", (evento) => {
   }
   if (evento.target.matches("[data-filtro-cuentas]")) {
     actualizarFiltroCuentas();
+    return;
+  }
+  if (evento.target.matches("[data-filtro-distribucion-seccion], [data-filtro-distribucion-turno]")) {
+    actualizarFiltroDistribucion();
+    return;
+  }
+  if (evento.target.matches("[data-filtro-ingreso-estado]")) {
+    actualizarFiltroIngresos();
     return;
   }
   if (evento.target.id === "institucion-activa")
