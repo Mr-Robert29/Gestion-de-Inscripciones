@@ -22,6 +22,19 @@ public sealed class RepositorioPersonasInscripciones : IRepositorioPersonasInscr
                 .Any(r => r.InstitucionId == institucionId && r.ResponsableId == v.ResponsableId)))
             .ThenInclude(v => v.Responsable).SingleOrDefaultAsync(tokenCancelacion);
 
+    public async Task<IReadOnlyList<Aspirante>> ListarAspirantesAsync(
+        Guid institucionId,
+        IReadOnlyCollection<Guid> aspiranteIds,
+        CancellationToken tokenCancelacion = default)
+    {
+        if (aspiranteIds.Count == 0) return [];
+        var ids = aspiranteIds.Distinct().ToArray();
+        return await _contexto.Aspirantes.AsNoTracking()
+            .Where(a => ids.Contains(a.Id) && _contexto.AspirantesInstituciones
+                .Any(r => r.InstitucionId == institucionId && r.AspiranteId == a.Id))
+            .ToArrayAsync(tokenCancelacion);
+    }
+
     // Implementa IRepositorioPersonasInscripciones.ObtenerAspiranteParaActualizarAsync con seguimiento de EF Core.
     public Task<Aspirante?> ObtenerAspiranteParaActualizarAsync(
         Guid institucionId,

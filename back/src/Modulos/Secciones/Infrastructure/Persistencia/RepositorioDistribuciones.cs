@@ -22,6 +22,15 @@ public sealed class RepositorioDistribuciones : IRepositorioDistribuciones
             .Select(x => new { SeccionId = x.Key, Cantidad = x.Count() })
             .ToDictionaryAsync(x => x.SeccionId, x => x.Cantidad, cancellationToken);
 
+    public async Task<IReadOnlyList<AsignacionSeccion>> ListarAsignacionesActivasAsync(
+        Guid periodoId,
+        CancellationToken cancellationToken = default)
+        => await _contexto.AsignacionesSeccion
+            .AsNoTracking()
+            .Where(x => x.Estado == Domain.EstadoAsignacionSeccion.Activa &&
+                _contexto.Secciones.Any(s => s.Id == x.SeccionId && s.PeriodoId == periodoId))
+            .ToArrayAsync(cancellationToken);
+
     public Task<int> ObtenerUltimaVersionAsync(Guid periodoId, CancellationToken cancellationToken = default) =>
         _contexto.PropuestasDistribucion
             .Where(x => x.PeriodoId == periodoId)

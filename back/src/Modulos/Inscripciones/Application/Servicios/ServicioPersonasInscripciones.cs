@@ -96,6 +96,17 @@ public sealed class ServicioPersonasInscripciones : IModuloPersonasInscripciones
         return aspirante is null ? null : Mapear(aspirante);
     }
 
+    public async Task<IReadOnlyList<DatosAspiranteLista>> ListarDatosAspirantesAsync(
+        Guid institucionId,
+        IReadOnlyCollection<Guid> aspiranteIds,
+        CancellationToken tokenCancelacion = default)
+    {
+        await _acceso.AutorizarAsync(institucionId, false, tokenCancelacion);
+        return (await _personas.ListarAspirantesAsync(institucionId, aspiranteIds, tokenCancelacion))
+            .Select(x => new DatosAspiranteLista(x.Id, x.Nombre, x.Apellido, x.Dni))
+            .ToArray();
+    }
+
     // Implementa IModuloPersonasInscripciones.ActualizarAspiranteAsync y conserva anterior/nuevo en historial.
     public async Task<ConsultarAspiranteRespuesta> ActualizarAspiranteAsync(
         Guid institucionId,

@@ -212,26 +212,37 @@ export async function vacantes(ruta, ctx) {
     );
   }
   if (paso === "candidatos") {
-    const ofertaId = ruta.split("/")[2];
-    const lista = await ctx.api(
-      `${p}/ofertas/${encodeURIComponent(ofertaId)}/candidatos`,
-    );
-    ctx.candidatosOferta = { ...lista, operacionId: crypto.randomUUID() };
+    const lista = await ctx.api(`${p}/candidatos`, { tiempoEspera: 120000 });
+    ctx.candidatosOferta = lista;
     return (
       cabecera +
       resumen(
-        "Candidatos compatibles",
+        `Vacantes disponibles · ${lista.ofertasDisponibles.reduce((total, oferta) => total + oferta.cuposDisponibles, 0)} cupos`,
         tabla(
-          ["Aspirante", "Sala", "Posición en espera", "Acción"],
-          lista.candidatos.map((x) => [
-            enlaceSolicitud(ctx, x.solicitudId),
-            e(x.sala),
-            e(x.posicionEspera),
-            boton("org-ofrecer", "Ofrecer plaza", x.solicitudId),
+          ["Aula", "Turno", "Sección", "Edades admitidas", "Cupos disponibles"],
+          lista.ofertasDisponibles.map((oferta) => [
+            e(nombreAula(ctx, oferta.aulaId)),
+            e(nombreTurno(ctx, oferta.turnoId)),
+            e(oferta.nombreSeccion ?? "Sin sección configurada"),
+            e(oferta.edadesAdmitidas?.length ? `${oferta.edadesAdmitidas.join(" y ")} años` : "Sin composición de sección"),
+            e(oferta.cuposDisponibles),
           ]),
         ),
       ) +
-      '<p class="formulario__nota">Se conserva el orden general. Elegir un candidato requiere motivo y el servidor vuelve a comprobar la disponibilidad.</p>'
+      resumen(
+        `Candidatos compatibles · ${lista.candidatos.length}`,
+        tabla(
+          ["Aspirante", "Sala", "Posición en espera", "Vacantes compatibles: aula, turno y sección", "Acción"],
+          lista.candidatos.map(({ candidato, ofertasCompatibles }) => [
+            enlaceSolicitud(ctx, candidato.solicitudId),
+            e(candidato.sala),
+            e(candidato.posicionEspera),
+            e(ofertasCompatibles.map((oferta) => `${nombreAula(ctx, oferta.aulaId)} · ${nombreTurno(ctx, oferta.turnoId)} · ${oferta.nombreSeccion ?? "Sin sección"} (${oferta.edadesAdmitidas?.length ? `admite ${oferta.edadesAdmitidas.join(" y ")} años` : "sin composición"})`).join("; ")),
+            boton("org-ofrecer", "Ofrecer plaza", candidato.solicitudId),
+          ]),
+        ),
+      ) +
+      `<p class="formulario__nota">La baja completada libera el cupo. En la primera tabla ves qué sección corresponde a cada vacante y qué edades admite. Si hay cupos sin candidatos compatibles, verificá que la sección de esa misma aula y turno admita la edad; podés ampliarla a multiedad en Secciones si la combinación está habilitada. Después volvé a consultar candidatos para actualizar la lista. La ampliación no agrega capacidad.</p>`
     );
   }
   if (paso === "propuesta") {
@@ -361,8 +372,13 @@ export async function vacantes(ruta, ctx) {
   }
   if (paso === "espera") {
     const pagina = ctx.estado.pagina;
+    const filtrosEspera = ctx.estado.filtrosEspera ?? {};
+    const parametrosEspera = new URLSearchParams({ pagina: String(pagina), tamanoPagina: "20" });
+    if (filtrosEspera.busqueda) parametrosEspera.set("busqueda", filtrosEspera.busqueda);
+    if (filtrosEspera.sala) parametrosEspera.set("sala", filtrosEspera.sala);
+    if (filtrosEspera.turnoPreferidoId) parametrosEspera.set("turnoPreferidoId", filtrosEspera.turnoPreferidoId);
     const lista = await ctx.api(
-      `${rutaInstitucional(ctx)}/lista-espera?pagina=${pagina}&tamanoPagina=20`,
+      `${rutaInstitucional(ctx)}/lista-espera?${parametrosEspera}`,
     );
     ctx.organizacion = { lista };
     const filas = (xs) =>
@@ -376,11 +392,25 @@ export async function vacantes(ruta, ctx) {
           e(x.motivo),
         ]),
       );
+    const resumenPreferencias = tabla(
+      ["Sala", "Turno preferido", "En espera", "Con reserva", "Pendientes de revisión"],
+      lista.resumenPreferencias.map((x) => [
+        x.sala ? `Sala ${e(x.sala)}` : "Edad pendiente",
+        e(nombreTurno(ctx, x.turnoPreferidoId)),
+        e(x.enEspera),
+        e(x.conReserva),
+        e(x.pendientes),
+      ]),
+    );
+    const opcionesTurnos = ctx.estado.turnos.map((x) =>
+      `<option value="${e(x.id)}" ${filtrosEspera.turnoPreferidoId === x.id ? "selected" : ""}>${e(x.nombre)}</option>`,
+    ).join("");
     return (
       cabecera +
+      resumen("Aspirantes por sala y turno preferido", resumenPreferencias) +
       resumen(
         "Lista de espera",
-        `<p>${e(lista.estadoProceso)} · ${lista.totalEnEspera} en espera · ${lista.totalPendientes} pendientes</p>${(lista.avisos ?? []).map((x) => `<p>${e(x)}</p>`).join("")}` +
+        `<p>${e(lista.estadoProceso)} · ${lista.totalEnEspera} en espera · ${lista.totalPendientes} pendientes</p>${(lista.avisos ?? []).map((x) => `<p>${e(x)}</p>`).join("")}<form class="propuesta__filtro" data-formulario="buscar-lista-espera"><label for="buscar-lista-espera">Buscar por nombre o DNI<input id="buscar-lista-espera" name="busqueda" class="campo__control" type="search" value="${e(filtrosEspera.busqueda ?? "")}" placeholder="Nombre, apellido o DNI" autocomplete="off" /></label><label for="filtro-sala-espera">Sala<select id="filtro-sala-espera" name="sala" class="campo__control"><option value="">Todas las salas</option>${[5, 4, 3].map((sala) => `<option value="${sala}" ${String(filtrosEspera.sala ?? "") === String(sala) ? "selected" : ""}>Sala ${sala}</option>`).join("")}</select></label><label for="filtro-turno-espera">Turno preferido<select id="filtro-turno-espera" name="turnoPreferidoId" class="campo__control"><option value="">Todos los turnos</option>${opcionesTurnos}</select></label><button class="boton boton--secundario" type="submit">Aplicar filtros</button><button class="boton boton--texto" type="button" data-accion="org-limpiar-filtros-espera">Limpiar</button></form>` +
           filas(lista.enEspera.resultados),
       ) +
       resumen("Casos pendientes", filas(lista.pendientes.resultados)) +
@@ -394,7 +424,7 @@ export async function vacantes(ruta, ctx) {
       cabecera +
       resumen(
         "Cubrir una vacante",
-        "<p>Consultá los candidatos compatibles antes de ofrecer. La reserva evita ocupar dos veces una plaza; rechazar un turno alternativo conserva la espera.</p>",
+        "<p>Consultá la lista general de espera. Vas a ver quién es compatible con alguna vacante libre y elegir el aula y turno al preparar el ofrecimiento.</p><p>La reserva evita ocupar dos veces una plaza; rechazar un turno alternativo conserva la espera.</p>",
         boton("org-candidatos", "Consultar candidatos"),
       ) +
       resumen(
@@ -419,7 +449,11 @@ export async function vacantes(ruta, ctx) {
     );
   }
   if (paso === "ingresos") {
-    const reporte = await ctx.api(`${rutaInstitucional(ctx)}/reportes`);
+    const [reporte, asignacionesActivas] = await Promise.all([
+      ctx.api(`${rutaInstitucional(ctx)}/reportes`),
+      ctx.api(`${rutaPeriodo(ctx)}/secciones/asignaciones-activas`),
+    ]);
+    const asignacionPorIngreso = new Map(asignacionesActivas.map((x) => [x.ingresoId, x]));
     const ingresosActivos = reporte.ingresos.filter((x) => x.activo && !x.bajaEnProceso);
     const turnosDisponibles = [...new Map([
       ...(ctx.estado.turnos ?? []),
@@ -441,6 +475,7 @@ export async function vacantes(ruta, ctx) {
         enlaceSolicitud(ctx, x.solicitudId),
         e(x.sala),
         e(nombreTurno(ctx, x.turnoId)),
+        e(asignacionPorIngreso.get(x.id)?.nombreSeccion ?? "Sin sección asignada"),
         etiqueta(
           x.bajaEnProceso ? "Baja pendiente" : x.activo ? "Activo" : "Baja",
         ),
@@ -468,7 +503,7 @@ export async function vacantes(ruta, ctx) {
       resumen(
         "Ingresos confirmados e históricos",
         filtrosIngreso + tabla(
-          ["Aspirante", "Sala", "Turno", "Estado", "Acciones"],
+          ["Aspirante", "Sala", "Turno", "Sección asignada", "Estado", "Acciones"],
           filasIngreso,
           { atributosFila: (fila) => ` data-ingreso-historico data-nombre="${e(fila.filtrosIngreso.nombre)}" data-dni="${e(fila.filtrosIngreso.dni)}" data-estado-ingreso="${e(fila.filtrosIngreso.estado)}"` },
         ),

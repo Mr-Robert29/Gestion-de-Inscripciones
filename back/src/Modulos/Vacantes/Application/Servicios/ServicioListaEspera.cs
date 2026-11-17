@@ -89,11 +89,30 @@ public sealed class ServicioListaEspera : IModuloListaEspera
             reservas,
             cambianEntradas,
             nuevas);
-        var filtrados = registros.Where(x => Coincide(x, peticion)).ToArray();
+        var aspirantes = await _personas.ListarDatosAspirantesAsync(
+            institucionId,
+            registros.Select(x => x.Solicitud.AspiranteId).Distinct().ToArray(),
+            tokenCancelacion);
+        var aspirantesPorId = aspirantes.ToDictionary(x => x.Id);
+        var resumenPreferencias = registros
+            .GroupBy(x => (x.Solicitud.Sala, x.Solicitud.TurnoPreferidoId))
+            .OrderByDescending(x => x.Key.Sala)
+            .ThenBy(x => x.Key.TurnoPreferidoId)
+            .Select(x => new DatosResumenListaEspera(
+                x.Key.Sala,
+                x.Key.TurnoPreferidoId,
+                x.Count(y => y.Estado == "EnEspera"),
+                x.Count(y => y.Estado == "ConReserva"),
+                x.Count(y => y.Estado == "PendienteRevision")))
+            .ToArray();
+        var filtrados = registros.Where(x => Coincide(
+            x,
+            peticion,
+            aspirantesPorId.GetValueOrDefault(x.Solicitud.AspiranteId))).ToArray();
         var espera = filtrados.Where(x => x.Estado != "PendienteRevision").ToArray();
         var pendientes = filtrados.Where(x => x.Estado == "PendienteRevision").ToArray();
-        var paginaEspera = await PaginarAsync(espera, fuente, actuales, peticion, tokenCancelacion);
-        var paginaPendientes = await PaginarAsync(pendientes, fuente, actuales, peticion, tokenCancelacion);
+        var paginaEspera = Paginar(espera, fuente, actuales, aspirantesPorId, peticion);
+        var paginaPendientes = Paginar(pendientes, fuente, actuales, aspirantesPorId, peticion);
         return new ConsultarListaEsperaRespuesta(
             institucionId,
             periodoId,
@@ -109,6 +128,7 @@ public sealed class ServicioListaEspera : IModuloListaEspera
             fuente.Entradas.OrdenProcedimiento,
             registros.Count(x => x.Estado != "PendienteRevision"),
             registros.Count(x => x.Estado == "PendienteRevision"),
+            resumenPreferencias,
             paginaEspera,
             paginaPendientes);
     }
@@ -152,12 +172,12 @@ public sealed class ServicioListaEspera : IModuloListaEspera
         => historicas.Select(x => (Id: x.GetProperty("Id").GetGuid(), Revision: x.GetProperty(propiedad).GetInt32())).OrderBy(x => x.Id)
             .SequenceEqual(actuales.OrderBy(x => x.Id));
 
-    private async Task<DatosPaginaListaEspera> PaginarAsync(
+    private static DatosPaginaListaEspera Paginar(
         IReadOnlyList<RegistroListaEspera> registros,
         FuenteListaEspera fuente,
         EntradasPropuestaIngresos? actuales,
-        ConsultarListaEsperaPeticion peticion,
-        CancellationToken tokenCancelacion)
+        IReadOnlyDictionary<Guid, DatosAspiranteLista> aspirantesPorId,
+        ConsultarListaEsperaPeticion peticion)
     {
         var resultados = new List<DatosIntegranteListaEspera>();
         var omitidos = ((long)peticion.Pagina - 1) * peticion.TamanoPagina;
@@ -165,7 +185,7 @@ public sealed class ServicioListaEspera : IModuloListaEspera
         foreach (var registro in pagina)
         {
             var solicitud = registro.Solicitud;
-            var persona = await _personas.ConsultarAspiranteAsync(fuente.Entradas.InstitucionId, solicitud.AspiranteId, tokenCancelacion);
+            var persona = aspirantesPorId.GetValueOrDefault(solicitud.AspiranteId);
             var actual = actuales?.Solicitudes.SingleOrDefault(x => x.Id == solicitud.Id);
             var incluidaEnResultado = fuente.Entradas.Solicitudes.Any(x => x.Id == solicitud.Id);
             resultados.Add(new DatosIntegranteListaEspera(
@@ -173,7 +193,7 @@ public sealed class ServicioListaEspera : IModuloListaEspera
                 solicitud.AspiranteId,
                 persona?.Nombre ?? "Identidad no disponible",
                 persona?.Apellido ?? "",
-                solicitud.Dni,
+                solicitud.Dni ?? persona?.Dni,
                 solicitud.Sala,
                 solicitud.Edad,
                 registro.PosicionGeneral,
@@ -193,19 +213,41 @@ public sealed class ServicioListaEspera : IModuloListaEspera
         return new DatosPaginaListaEspera(resultados, registros.Count, peticion.Pagina, peticion.TamanoPagina, omitidos + resultados.Count < registros.Count);
     }
 
-    private static bool Coincide(RegistroListaEspera registro, ConsultarListaEsperaPeticion peticion)
-        => (peticion.Sala is null || registro.Solicitud.Sala == peticion.Sala) &&
-            (peticion.TurnoId is null || registro.Solicitud.TurnoPreferidoId == peticion.TurnoId || registro.Solicitud.Alternativas.Contains(peticion.TurnoId.Value)) &&
-            (peticion.Estado is null || registro.Estado == peticion.Estado);
+    private static bool Coincide(
+        RegistroListaEspera registro,
+        ConsultarListaEsperaPeticion peticion,
+        DatosAspiranteLista? aspirante)
+    {
+        if (peticion.Sala is not null && registro.Solicitud.Sala != peticion.Sala) return false;
+        if (peticion.TurnoPreferidoId is Guid turnoPreferidoId && registro.Solicitud.TurnoPreferidoId != turnoPreferidoId) return false;
+        if (peticion.TurnoId is Guid turnoId && registro.Solicitud.TurnoPreferidoId != turnoId &&
+            !registro.Solicitud.Alternativas.Contains(turnoId)) return false;
+        if (peticion.Estado is not null && registro.Estado != peticion.Estado) return false;
+        if (string.IsNullOrWhiteSpace(peticion.Busqueda)) return true;
+
+        var busqueda = peticion.Busqueda.Trim();
+        var nombre = $"{aspirante?.Nombre} {aspirante?.Apellido}";
+        if (nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+            (aspirante?.Dni?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (registro.Solicitud.Dni?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false)) return true;
+        var digitosBuscados = new string(busqueda.Where(char.IsDigit).ToArray());
+        if (digitosBuscados.Length == 0) return false;
+        var dniAspirante = new string((aspirante?.Dni ?? "").Where(char.IsDigit).ToArray());
+        var dniSolicitud = new string((registro.Solicitud.Dni ?? "").Where(char.IsDigit).ToArray());
+        return dniAspirante.Contains(digitosBuscados, StringComparison.Ordinal) ||
+            dniSolicitud.Contains(digitosBuscados, StringComparison.Ordinal);
+    }
 
     private static void ValidarFiltros(ConsultarListaEsperaPeticion peticion)
     {
         if (peticion.Sala is < 3 or > 5) throw new ArgumentException("La sala debe ser 3, 4 o 5.");
         if (peticion.TurnoId == Guid.Empty) throw new ArgumentException("El identificador de turno no es válido.");
+        if (peticion.TurnoPreferidoId == Guid.Empty) throw new ArgumentException("El identificador del turno preferido no es válido.");
         if (peticion.Estado is not (null or "EnEspera" or "ConReserva" or "PendienteRevision"))
             throw new ArgumentException("El estado debe ser EnEspera, ConReserva o PendienteRevision.");
         if (peticion.Pagina < 1 || peticion.TamanoPagina is < 1 or > 100)
             throw new ArgumentException("La página debe ser positiva y el tamaño debe estar entre 1 y 100.");
+        if (peticion.Busqueda?.Length > 100) throw new ArgumentException("La búsqueda no puede superar los 100 caracteres.");
     }
 
     private static ConsultarListaEsperaRespuesta RespuestaVacia(
@@ -219,6 +261,6 @@ public sealed class ServicioListaEspera : IModuloListaEspera
             institucionId, periodoId, DateTimeOffset.UtcNow, null, null, null, null, null,
             "SinResultadosConfirmados", hayIngresos,
             hayIngresos ? ["Existen ingresos sin una propuesta confirmada aplicable. Revisá la consistencia del proceso."] : [],
-            [], 0, 0, pagina, pagina);
+            [], 0, 0, [], pagina, pagina);
     }
 }

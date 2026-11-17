@@ -22,8 +22,8 @@ import {
   turnosEjemplo,
   ofertasEjemplo,
 } from "./datos-previa.js";
-import { presentarPagina, titulos } from "./paginas.js?v=20261117-ingresos-filtros-v1";
-import { atenderAccion, atenderFormulario } from "./acciones.js?v=20261117-aceptaciones-lote-v2";
+import { presentarPagina, titulos } from "./paginas.js?v=20261117-lista-espera-filtros-v2";
+import { atenderAccion, atenderFormulario } from "./acciones.js?v=20261117-lista-espera-filtros-v2";
 import { actualizarIndicadoresClave } from "./validacion-clave.js";
 import { validarClave } from "./validacion-clave.js";
 import { edadesDeReglas } from "./reglas-edad.js";

@@ -1,4 +1,4 @@
-import { atenderAccionOrganizacion, atenderFormularioOrganizacion } from "./acciones-organizacion.js?v=20261117-aceptaciones";
+import { atenderAccionOrganizacion, atenderFormularioOrganizacion } from "./acciones-organizacion.js?v=20261117-lista-espera-filtros-v2";
 import { atenderAdmision } from "./acciones-admision.js?v=20261117-aceptaciones-lote-v2";
 import {
   escapar as e,
@@ -553,6 +553,13 @@ export async function atenderFormulario(formulario, ctx) {
     ctx.estado.filtros = Object.fromEntries(
       Object.entries(datos).filter(([, valor]) => valor.trim()),
     );
+    ctx.estado.pagina = 1;
+    await ctx.actualizar();
+    return;
+  }
+  if (nombre === "buscar-lista-espera") {
+    const { busqueda, sala, turnoPreferidoId } = datos;
+    ctx.estado.filtrosEspera = { busqueda: busqueda.trim(), sala, turnoPreferidoId };
     ctx.estado.pagina = 1;
     await ctx.actualizar();
     return;

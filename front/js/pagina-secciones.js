@@ -96,11 +96,21 @@ export async function secciones(ruta, ctx) {
       : tabla(["Aspirante", "Edad al ingreso", "Turno", "Sección asignada", "Motivo / observación", "Acción"], []);
     const metricas = `<div class="distribucion__metricas"><article><span>Ingresos incluidos en esta propuesta</span><strong>${distribucion.asignaciones.length}</strong></article><article><span>Con sección asignada</span><strong>${asignadas.length}</strong></article><article><span>Sin sección asignada</span><strong>${sinSeccion.length}</strong></article></div>`;
     const ocupacionSecciones = tabla(
-      ["Sección", "Capacidad total", "Asignaciones sugeridas"],
+      ["Sección", "Tipo / edades admitidas", "Capacidad total", "Asignaciones sugeridas"],
       secciones.map((seccion) => {
         const cantidad = asignadas.filter((x) => x.seccionId === seccion.id).length;
+        const edades = [...(seccion.edadesAdmitidas ?? [])].sort((a, b) => a - b);
+        const esMultiedad = seccion.tipo === "Multiedad" || edades.length > 1;
+        const tipo = esMultiedad ? "Multiedad" : "Pura";
+        const detalleEdades = edades.length > 1
+          ? `Salas de ${edades.slice(0, -1).join(", ")} y ${edades.at(-1)} años`
+          : edades.length === 1
+            ? `Sala de ${edades[0]} años`
+            : "";
+        const composicion = detalleEdades ? `${tipo} · ${detalleEdades}` : tipo;
         return [
           e(seccion.nombre),
+          e(composicion),
           e(seccion.capacidad),
           e(cantidad),
         ];

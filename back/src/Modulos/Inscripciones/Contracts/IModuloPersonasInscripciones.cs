@@ -10,6 +10,10 @@ public interface IModuloPersonasInscripciones
         Guid institucionId,
         Guid aspiranteId,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<DatosAspiranteLista>> ListarDatosAspirantesAsync(
+        Guid institucionId,
+        IReadOnlyCollection<Guid> aspiranteIds,
+        CancellationToken tokenCancelacion = default);
     Task<ConsultarAspiranteRespuesta> ActualizarAspiranteAsync(
         Guid institucionId,
         Guid aspiranteId,
@@ -34,3 +38,5 @@ public interface IModuloPersonasInscripciones
         CancellationToken tokenCancelacion = default);
     Task<IReadOnlyList<DatosCambioInscripciones>> ConsultarHistorialAsync(Guid institucionId, CancellationToken tokenCancelacion = default);
 }
+
+public sealed record DatosAspiranteLista(Guid Id, string Nombre, string Apellido, string? Dni);

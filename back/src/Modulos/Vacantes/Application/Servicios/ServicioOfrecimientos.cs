@@ -37,6 +37,75 @@ public sealed class ServicioOfrecimientos : IModuloOfrecimientos
         _ejecucion = ejecucion;
     }
 
+    public async Task<ConsultarCandidatosGeneralesRespuesta> ConsultarCandidatosGeneralesAsync(
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default)
+    {
+        await _consulta.AutorizarConsultaEsperaAsync(periodoId, tokenCancelacion);
+        var datosIniciales = await _contexto.LeerAsync(periodoId, tokenCancelacion);
+        if (datosIniciales.EstadoPeriodo != "RecepcionCerrada")
+            throw new InvalidOperationException("La recepción debe estar cerrada.");
+        var (propuestaId, integrantes) = await LeerEsperaAsync(datosIniciales.InstitucionId, periodoId, tokenCancelacion);
+        var candidatos = integrantes
+            .Where(x => x.Estado == "EnEspera" && x.DatosCoincidenConResultado)
+            .ToArray();
+        var ofertasPorSolicitud = candidatos.ToDictionary(x => x.SolicitudId, _ => new List<DatosOfertaCandidata>());
+        // El contexto y las ocupaciones no cambian por oferta. Leerlos una sola vez evita
+        // reconstruir el período completo mientras se calcula la compatibilidad.
+        var ocupaciones = await _propuestas.ListarOcupacionesAsync(periodoId, tokenCancelacion);
+        var solicitudes = datosIniciales.Solicitudes.ToDictionary(x => x.Id);
+        var ofertasDisponibles = new List<DatosOfertaDisponible>();
+        foreach (var oferta in datosIniciales.Ofertas.Where(x => x.Disponible))
+        {
+            await _secciones.ConOfertaProtegidaAsync(
+                periodoId,
+                oferta.AulaId,
+                oferta.TurnoId,
+                (secciones, token) =>
+                {
+                    if (secciones.Count > 1)
+                        throw new InvalidOperationException("Hay varias secciones para la misma aula y turno; revisá su organización antes de ofrecer.");
+                    var ocupacionesActivas = ocupaciones.Count(x => x.Activa && x.OfertaId == oferta.Id);
+                    var capacidad = secciones.Count == 0 ? oferta.Capacidad : Math.Min(oferta.Capacidad, secciones[0].Capacidad);
+                    var ocupacionInicial = oferta.CantidadOcupacionInicial ?? oferta.EdadesOcupacionesIniciales.Count;
+                    var cuposDisponibles = Math.Max(0, capacidad - ocupacionInicial - ocupacionesActivas);
+                    var seccion = secciones.SingleOrDefault();
+                    var edadesAdmitidas = seccion?.Edades ?? [];
+                    if (cuposDisponibles > 0)
+                        ofertasDisponibles.Add(new DatosOfertaDisponible(
+                            oferta.Id,
+                            oferta.AulaId,
+                            oferta.TurnoId,
+                            seccion?.Nombre,
+                            edadesAdmitidas,
+                            cuposDisponibles));
+                    foreach (var candidato in candidatos)
+                    {
+                        if (!solicitudes.TryGetValue(candidato.SolicitudId, out var solicitud) ||
+                            !CompatibilidadVacante.EsCompatible(datosIniciales, oferta, solicitud, ocupaciones, secciones))
+                            continue;
+                        ofertasPorSolicitud[candidato.SolicitudId].Add(new DatosOfertaCandidata(
+                            oferta.Id,
+                            oferta.AulaId,
+                            oferta.TurnoId,
+                            seccion?.Nombre,
+                            edadesAdmitidas));
+                    }
+                    return Task.FromResult(true);
+                },
+                tokenCancelacion);
+        }
+
+        return new ConsultarCandidatosGeneralesRespuesta(
+            periodoId,
+            propuestaId,
+            candidatos
+                .Where(x => ofertasPorSolicitud[x.SolicitudId].Count > 0)
+                .Select(x => new DatosCandidatoGeneral(x, ofertasPorSolicitud[x.SolicitudId]))
+                .ToArray(),
+            ofertasDisponibles);
+    }
+
     // Implementa IModuloOfrecimientos.ConsultarCandidatosAsync: muestra compatibles en el orden de la lista global.
     public async Task<ConsultarCandidatosVacanteRespuesta> ConsultarCandidatosAsync(
         Guid periodoId,

@@ -70,7 +70,7 @@ export async function atenderSecciones(elemento, ctx) {
       formulario(
         ctx,
         "Ampliar sección a multiedad",
-        `<p>${e(x.nombre)} · ${e(x.edadesAdmitidas.join(", "))} años. Se comprobarán capacidad y compatibilidad.</p>` +
+        `<p>${e(x.nombre)} · ${e(x.edadesAdmitidas.join(", "))} años. Ampliar las edades admitidas no agrega cupos. Se comprobará que los alumnos asignados sigan siendo compatibles y que la ocupación no supere la capacidad publicada.</p>` +
           selector(
             "edades",
             "Nueva composición",

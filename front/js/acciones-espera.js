@@ -25,41 +25,36 @@ export async function atenderEspera(elemento, ctx) {
   const id = elemento.dataset.id;
   const p = ctx.estado.periodo ? rutaPeriodo(ctx) : null;
   const datos = ctx.organizacion ?? {};
-  if (accion === "org-candidatos") {
-    const opciones = ctx.estado.ofertas
-      .filter((x) => x.disponible)
-      .map((x) => ({
-        id: x.id,
-        nombre: `${nombreAula(ctx, x.aulaId)} · ${nombreTurno(ctx, x.turnoId)}`,
-      }));
-    formulario(
-      ctx,
-      "Consultar candidatos compatibles",
-      selector("ofertaId", "Aula y turno", opciones),
-      async (d) => {
-        const lista = await ctx.api(`${p}/ofertas/${d.ofertaId}/candidatos`);
-        // Este paso solo consulta; el ofrecimiento se confirma en un formulario posterior.
-        ctx.candidatosOferta = { ...lista, operacionId: crypto.randomUUID() };
-        return {
-          destino: `vacantes/candidatos/${d.ofertaId}`,
-          mensaje: "Candidatos consultados.",
-        };
-      },
-    );
+  if (accion === "org-limpiar-filtros-espera") {
+    ctx.estado.filtrosEspera = { busqueda: "", sala: "", turnoPreferidoId: "" };
+    ctx.estado.pagina = 1;
+    await ctx.actualizar();
+  } else if (accion === "org-candidatos") {
+    // La página de destino realiza la consulta. Evita disparar el mismo GET aquí y al navegar.
+    ctx.navegar("vacantes/candidatos");
   } else if (accion === "org-ofrecer") {
     const lista = ctx.candidatosOferta;
     if (!lista || lista.periodoId !== ctx.estado.periodo.id)
       throw new Error("Consultá los candidatos nuevamente.");
+    const candidato = lista.candidatos.find((x) => x.candidato.solicitudId === id);
+    if (!candidato || !lista.propuestaListaId)
+      throw new Error("El candidato ya no está disponible. Volvé a consultar la lista.");
+    const ofertasCompatibles = candidato.ofertasCompatibles.map((oferta) => ({
+      id: oferta.ofertaId,
+      nombre: `${nombreAula(ctx, oferta.aulaId)} · ${nombreTurno(ctx, oferta.turnoId)} · ${oferta.nombreSeccion ?? "Sin sección"} (${oferta.edadesAdmitidas?.length ? `admite ${oferta.edadesAdmitidas.join(" y ")} años` : "sin composición"})`,
+    }));
+    const operacionId = crypto.randomUUID();
     formulario(
       ctx,
       `Ofrecer plaza a ${nombreSolicitud(ctx, id)}`,
       "<p>El ofrecimiento reserva la plaza; todavía no confirma el ingreso.</p>" +
+        selector("ofertaId", "Aula, turno y sección compatibles", ofertasCompatibles) +
         motivo(motivos.ofrecerVacante),
       (d) =>
         enviar(ctx, `${p}/ofrecimientos`, {
-          operacionId: lista.operacionId,
+          operacionId,
           solicitudId: id,
-          ofertaId: lista.ofertaId,
+          ofertaId: d.ofertaId,
           propuestaListaId: lista.propuestaListaId,
           motivo: d.motivo,
         }).then(() => ({ destino: "vacantes/ofrecimientos" })),

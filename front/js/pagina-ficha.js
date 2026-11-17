@@ -73,6 +73,14 @@ export async function ficha(ruta, ctx) {
     : await ctx.api(
         `${base(ctx.estado)}/aspirantes/${encodeURIComponent(s.aspiranteId)}`,
       );
+  const asignacionesSeccion = ctx.estado.previa || pestana !== "solicitud"
+    ? []
+    : await ctx.api(
+        `/periodos/${encodeURIComponent(s.periodoId)}/secciones/asignaciones-activas`,
+      );
+  const asignacionSeccion = asignacionesSeccion.find(
+    (asignacion) => asignacion.solicitudId === s.id,
+  );
   const periodoFicha = ctx.estado.periodos.find((p) => p.id === s.periodoId);
   const recepcionAbierta =
     ctx.estado.previa || periodoFicha?.estado === "RecepcionAbierta";
@@ -214,7 +222,10 @@ export async function ficha(ruta, ctx) {
     const ayudaEdicion = recepcionAbierta
       ? "Mientras la recepción esté abierta, podés corregir estos datos. Si cambiás la fecha de nacimiento, la edad y la sala de las solicitudes de este aspirante en el período se recalculan con la fecha de corte indicada."
       : "La recepción está cerrada. Los datos del aspirante y de la inscripción ya no se pueden corregir.";
-    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Datos del aspirante", accion: puedeCorregirDatos ? '<button class="boton boton--secundario boton--pequeno" data-accion="editar-aspirante">Editar aspirante</button>' : '<button class="boton boton--secundario boton--pequeno" disabled aria-label="Editar aspirante: disponible cuando la recepción esté abierta">Editar aspirante</button>', cuerpo: `<dl class="datos"><div><dt>Nombre</dt><dd>${e(persona.nombre)}</dd></div><div><dt>Apellido</dt><dd>${e(persona.apellido)}</dd></div><div><dt>Fecha de nacimiento</dt><dd>${fecha(persona.fechaNacimiento ?? s.fechaNacimientoUtilizada)}</dd></div><div><dt>DNI</dt><dd>${e(persona.dni || "Sin DNI declarado")}</dd></div><div><dt>Tipo de documento</dt><dd>${e(persona.tipoDocumento || "No informado")}</dd></div><div><dt>Sexo</dt><dd>${e(persona.sexo || "No informado")}</dd></div><div><dt>Grupo etario</dt><dd>${s.sala ? `Sala de ${e(s.sala)} años` : "Pendiente de revisión de edad"}</dd></div><div><dt>Fecha de corte utilizada</dt><dd>${fecha(s.fechaCorteUtilizada)}</dd></div></dl><p class="formulario__nota">${ayudaEdicion}</p>` })}${tarjeta({ titulo: "Datos de inscripción", cuerpo: `<dl class="datos"><div><dt>Recepción</dt><dd>${etiqueta(s.estadoRecepcion)}</dd></div><div><dt>Turno preferido</dt><dd>${e(ctx.estado.turnos.find((t) => t.id === s.turnoPreferidoId)?.nombre ?? "Turno registrado")}</dd></div><div class="campo--completo"><dt>Domicilio</dt><dd>${e(direccionTexto(s.domicilio))}</dd></div><div><dt>Fecha de registro</dt><dd>${fecha(s.fechaRegistro)}</dd></div><div><dt>Referencia de consentimiento</dt><dd>${e(s.referenciaConsentimiento ?? "No informada")}</dd></div></dl>${puedeCorregirDatos ? '<div class="formulario__acciones"><button class="boton boton--secundario" data-accion="corregir-solicitud">Corregir datos de solicitud</button></div>' : ""}` })}</div>`;
+    const asignacionActual = asignacionSeccion
+      ? `<div class="campo--completo"><dt>Asignación actual</dt><dd>Sala ${e(asignacionSeccion.sala)} · ${e(ctx.estado.turnos.find((t) => t.id === asignacionSeccion.turnoId)?.nombre ?? "Turno registrado")} · Sección ${e(asignacionSeccion.nombreSeccion)}</dd></div>`
+      : "";
+    contenido = `<div class="rejilla rejilla--dos">${tarjeta({ titulo: "Datos del aspirante", accion: puedeCorregirDatos ? '<button class="boton boton--secundario boton--pequeno" data-accion="editar-aspirante">Editar aspirante</button>' : '<button class="boton boton--secundario boton--pequeno" disabled aria-label="Editar aspirante: disponible cuando la recepción esté abierta">Editar aspirante</button>', cuerpo: `<dl class="datos"><div><dt>Nombre</dt><dd>${e(persona.nombre)}</dd></div><div><dt>Apellido</dt><dd>${e(persona.apellido)}</dd></div><div><dt>Fecha de nacimiento</dt><dd>${fecha(persona.fechaNacimiento ?? s.fechaNacimientoUtilizada)}</dd></div><div><dt>DNI</dt><dd>${e(persona.dni || "Sin DNI declarado")}</dd></div><div><dt>Tipo de documento</dt><dd>${e(persona.tipoDocumento || "No informado")}</dd></div><div><dt>Sexo</dt><dd>${e(persona.sexo || "No informado")}</dd></div><div><dt>Grupo etario</dt><dd>${s.sala ? `Sala de ${e(s.sala)} años` : "Pendiente de revisión de edad"}</dd></div><div><dt>Fecha de corte utilizada</dt><dd>${fecha(s.fechaCorteUtilizada)}</dd></div></dl><p class="formulario__nota">${ayudaEdicion}</p>` })}${tarjeta({ titulo: "Datos de inscripción", cuerpo: `<dl class="datos"><div><dt>Recepción</dt><dd>${etiqueta(s.estadoRecepcion)}</dd></div><div><dt>Turno preferido</dt><dd>${e(ctx.estado.turnos.find((t) => t.id === s.turnoPreferidoId)?.nombre ?? "Turno registrado")}</dd></div>${asignacionActual}<div class="campo--completo"><dt>Domicilio</dt><dd>${e(direccionTexto(s.domicilio))}</dd></div><div><dt>Fecha de registro</dt><dd>${fecha(s.fechaRegistro)}</dd></div><div><dt>Referencia de consentimiento</dt><dd>${e(s.referenciaConsentimiento ?? "No informada")}</dd></div></dl>${puedeCorregirDatos ? '<div class="formulario__acciones"><button class="boton boton--secundario" data-accion="corregir-solicitud">Corregir datos de solicitud</button></div>' : ""}` })}</div>`;
   }
   return cabecera + pestanas + contenido;
 }

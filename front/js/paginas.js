@@ -1,4 +1,4 @@
-import { vacantes } from "./pagina-vacantes.js?v=20261117-ingresos-filtros-v1";
+import { vacantes } from "./pagina-vacantes.js?v=20261117-ofrecimientos-seccion-v3";
 import { secciones } from "./pagina-secciones.js?v=20261117-distribucion-filtros-v1";
 import { reportes } from "./pagina-reportes.js";
 import { usuarios } from "./pagina-usuarios.js";
@@ -14,7 +14,7 @@ import {
   oferta,
 } from "./pagina-configuracion.js";
 import { ficha } from "./pagina-ficha.js";
-import { tutorial } from "./pagina-tutorial.js";
+import { tutorial } from "./pagina-tutorial.js?v=20261117-lista-espera-filtros-v2";
 import { personalInstitucion } from "./pagina-personal.js";
 export const titulos = {
   inicio: "Inicio",

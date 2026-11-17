@@ -54,6 +54,14 @@ public sealed class SeccionesController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet("asignaciones-activas")]
+    [ProducesResponseType(typeof(IReadOnlyList<DatosAsignacionSeccionActiva>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListarAsignacionesActivas(Guid periodoId, CancellationToken cancellationToken)
+    {
+        var resultado = await _modulo.ListarAsignacionesActivasAsync(periodoId, cancellationToken);
+        return Ok(resultado);
+    }
+
     [HttpGet("{seccionId:guid}")]
     [ProducesResponseType(typeof(DatosSeccion), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

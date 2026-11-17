@@ -2,7 +2,12 @@ using Jardin.Vacantes.Domain.Entidades;
 
 namespace Jardin.Vacantes.Domain.Servicios;
 
-public sealed record ComposicionVacante(Guid SeccionId, IReadOnlyList<int> Edades, int Capacidad, int Revision);
+public sealed record ComposicionVacante(
+    Guid SeccionId,
+    IReadOnlyList<int> Edades,
+    int Capacidad,
+    int Revision,
+    string Nombre = "");
 
 public static class CompatibilidadVacante
 {

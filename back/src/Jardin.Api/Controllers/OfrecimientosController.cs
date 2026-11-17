@@ -16,6 +16,10 @@ public sealed class OfrecimientosController : ControllerBase
         _bajas = bajas;
     }
 
+    [HttpGet("api/v1/periodos/{periodoId:guid}/candidatos")]
+    public Task<IActionResult> CandidatosGenerales(Guid periodoId, CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _ofrecimientos.ConsultarCandidatosGeneralesAsync(periodoId, tokenCancelacion)));
+
     [HttpGet("api/v1/ingresos/{ingresoId:guid}/baja")]
     public Task<IActionResult> ConsultarBaja(Guid ingresoId, CancellationToken tokenCancelacion)
         => EjecutarAsync(async () =>

@@ -1,6 +1,6 @@
 export { atenderFormularioOrganizacion } from "./operaciones-formularios.js";
 import { atenderAdmision } from "./acciones-admision.js?v=20261117-aceptaciones-lote-v2";
-import { atenderEspera } from "./acciones-espera.js";
+import { atenderEspera } from "./acciones-espera.js?v=20261117-ofrecimientos-seccion-v3";
 import { atenderSecciones } from "./acciones-secciones.js";
 import { atenderAdministracion } from "./acciones-administracion.js";
 
@@ -28,6 +28,7 @@ for (const nombre of [
   "org-baja-historial",
   "org-candidatos",
   "org-confirmar-ofrecimiento",
+  "org-limpiar-filtros-espera",
   "org-ofrecer",
   "org-ofrecimiento-historial",
   "org-respuesta",
