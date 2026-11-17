@@ -22,4 +22,9 @@ public interface IModuloPeriodos
         Guid periodoId,
         Func<ConsultarPeriodoRespuesta, CancellationToken, Task<T>> operacion,
         CancellationToken tokenCancelacion = default);
+    Task<T> EjecutarConPeriodoProtegidoComoAsync<T>(
+        Guid periodoId,
+        Guid usuarioId,
+        Func<ConsultarPeriodoRespuesta, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default);
 }

@@ -118,6 +118,25 @@ public sealed class ServicioPeriodos : IModuloPeriodos
             tokenCancelacion);
     }
 
+    public async Task<T> EjecutarConPeriodoProtegidoComoAsync<T>(
+        Guid periodoId,
+        Guid usuarioId,
+        Func<ConsultarPeriodoRespuesta, CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(operacion);
+        var periodo = await _periodos.ObtenerAsync(periodoId, tokenCancelacion)
+            ?? throw new KeyNotFoundException("No se encontró el período.");
+        var usuario = await _usuario.ObtenerAsync(usuarioId, tokenCancelacion)
+            ?? throw new UnauthorizedAccessException("La cuenta que inició el trabajo ya no está activa.");
+        if (!usuario.EsRoot && !usuario.Accesos.ContainsKey(periodo.InstitucionId))
+            throw new UnauthorizedAccessException("La cuenta ya no tiene acceso a esta institución.");
+        return await _periodos.EjecutarConBloqueoAsync(
+            periodoId,
+            (actual, token) => operacion(Mapear(actual), token),
+            tokenCancelacion);
+    }
+
     private async Task<CambiarRecepcionRespuesta> CambiarRecepcionAsync(
         Guid periodoId,
         CambiarRecepcionPeticion peticion,

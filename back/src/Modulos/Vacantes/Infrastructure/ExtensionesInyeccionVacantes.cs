@@ -26,6 +26,7 @@ public static class ExtensionesInyeccionVacantes
         servicios.AddScoped<IRepositorioCasosRevision, RepositorioCasosRevision>();
         servicios.AddScoped<IRepositorioPropuestasIngresos, RepositorioPropuestasIngresos>();
         servicios.AddScoped<IModuloPropuestasIngresos, ServicioPropuestasIngresos>();
+        servicios.AddScoped<IProcesadorPropuestaIngresosEnSegundoPlano, ServicioPropuestasIngresos>();
         servicios.AddScoped<IModuloListaEspera, ServicioListaEspera>();
         servicios.AddScoped<IRepositorioOfrecimientos, RepositorioOfrecimientos>();
         servicios.AddScoped<IModuloOfrecimientos, ServicioOfrecimientos>();  

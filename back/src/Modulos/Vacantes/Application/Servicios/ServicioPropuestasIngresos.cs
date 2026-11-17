@@ -10,7 +10,7 @@ using Jardin.Vacantes.Domain.Servicios;
 
 namespace Jardin.Vacantes.Application.Servicios;
 
-public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
+public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos, IProcesadorPropuestaIngresosEnSegundoPlano
 {
     private readonly IAutorizacionPropuestasIngresos _autorizacion;
     private readonly IContextoPropuestaIngresos _contexto;
@@ -44,8 +44,21 @@ public sealed class ServicioPropuestasIngresos : IModuloPropuestasIngresos
         ArgumentNullException.ThrowIfNull(peticion);
         ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
         var autor = await _autorizacion.AutorizarPropuestaAsync(periodoId, tokenCancelacion);
-        return await _contexto.ConPeriodoProtegidoAsync(
+        return await GenerarAutorizadoAsync(periodoId, peticion, autor, tokenCancelacion);
+    }
+
+    public async Task<ConsultarPropuestaIngresosRespuesta> GenerarAutorizadoAsync(
+        Guid periodoId,
+        GenerarPropuestaIngresosPeticion peticion,
+        AutorizacionVacantes autor,
+        CancellationToken tokenCancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+        ArgumentNullException.ThrowIfNull(autor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(peticion.Motivo);
+        return await _contexto.ConPeriodoProtegidoComoAsync(
             periodoId,
+            autor.UsuarioId,
             async token =>
             {
                 var datos = await LeerAsync(periodoId, token);

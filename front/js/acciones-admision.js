@@ -41,13 +41,34 @@ export async function atenderAdmision(elemento, ctx) {
       { textoConfirmar: "Procesar lista" },
     );
   else if (accion === "org-generar-propuesta")
-    formulario(ctx, "Generar propuesta de ingresos", motivo(motivos.propuestaAdmision), async (d) => {
-      const x = await enviar(ctx, `${p}/propuestas-ingresos`, d);
-      return {
-        destino: `vacantes/propuesta/${x.id}`,
-        mensaje: "Propuesta generada. Revisala antes de confirmar.",
-      };
-    });
+    formulario(
+      ctx,
+      "Generar propuesta de ingresos",
+      `${motivo(motivos.propuestaAdmision)}<div class="progreso-trabajo" data-progreso-propuesta hidden role="status" aria-live="polite"><p class="formulario__nota" data-progreso-mensaje>Preparando el cálculo…</p><div class="progreso-trabajo__pista" role="progressbar" aria-label="Generando propuesta"><span></span></div><p class="formulario__nota">La barra indica que el cálculo sigue activo; no representa un porcentaje de avance. Dejá esta ventana abierta hasta que termine.</p></div>`,
+      async (d) => {
+        const panel = document.querySelector("[data-progreso-propuesta]");
+        const mensaje = panel?.querySelector("[data-progreso-mensaje]");
+        if (panel) panel.hidden = false;
+        if (mensaje) mensaje.textContent = "Enviando el cálculo al servidor…";
+        const trabajo = await ctx.api(`${p}/propuestas-ingresos/trabajos`, { metodo: "POST", datos: d });
+        let x;
+        while (true) {
+          await new Promise((resolver) => setTimeout(resolver, 1500));
+          const estado = await ctx.api(`/propuestas-ingresos/trabajos/${trabajo.id}`);
+          if (mensaje) mensaje.textContent = estado.mensaje;
+          if (estado.estado === "Completado") {
+            x = { id: estado.propuestaId };
+            break;
+          }
+          if (estado.estado === "Error")
+            throw new Error(`${estado.mensaje || "No se pudo generar la propuesta."} Referencia: ${estado.id}.`);
+        }
+        return {
+          destino: `vacantes/propuesta/${x.id}`,
+          mensaje: "Propuesta generada. Revisala antes de confirmar.",
+        };
+      },
+    );
   else if (accion === "org-confirmar-propuesta") {
     const x = datos.propuesta;
     formulario(

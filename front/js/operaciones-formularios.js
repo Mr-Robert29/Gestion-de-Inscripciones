@@ -230,6 +230,8 @@ export async function atenderFormularioOrganizacion(form, ctx) {
     );
   } catch (problema) {
     if (form.isConnected) {
+      const progreso = form.querySelector("[data-progreso-propuesta]");
+      if (progreso) progreso.hidden = true;
       error.textContent =
         problema.message +
         (problema.estado === 409

@@ -1016,3 +1016,7 @@
 .detalle-json { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 60ch; font-size: .8rem; }
 .indicadores { display: flex; flex-wrap: wrap; gap: 1.5rem; }
 .tabla td .boton + .boton { margin: .35rem 0 0 .35rem; }
+.progreso-trabajo { margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--color-borde, #dce4da); border-radius: .75rem; background: var(--color-fondo, #f7f9f6); }
+.progreso-trabajo__pista { height: .55rem; overflow: hidden; border-radius: 999px; background: #e2e9e2; }
+.progreso-trabajo__pista span { display: block; width: 38%; height: 100%; border-radius: inherit; background: var(--color-primario, #245340); animation: progreso-trabajo 1.35s ease-in-out infinite; }
+@keyframes progreso-trabajo { from { transform: translateX(-110%); } to { transform: translateX(275%); } }

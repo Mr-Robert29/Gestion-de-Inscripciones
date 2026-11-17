@@ -4,6 +4,7 @@ namespace Jardin.Configuracion.Application.Seguridad;
 public interface IContextoUsuarioConfiguracion
 {
     Task<UsuarioConfiguracion?> ObtenerAsync(CancellationToken tokenCancelacion = default);
+    Task<UsuarioConfiguracion?> ObtenerAsync(Guid usuarioId, CancellationToken tokenCancelacion = default);
 }
 
 public sealed record UsuarioConfiguracion(

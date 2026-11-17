@@ -48,6 +48,17 @@ public sealed class ContextoPropuestaIngresos : IContextoPropuestaIngresos
             (_, token) => operacion(token),
             tokenCancelacion);
 
+    public Task<T> ConPeriodoProtegidoComoAsync<T>(
+        Guid periodoId,
+        Guid usuarioId,
+        Func<CancellationToken, Task<T>> operacion,
+        CancellationToken tokenCancelacion = default)
+        => _periodos.EjecutarConPeriodoProtegidoComoAsync(
+            periodoId,
+            usuarioId,
+            (_, token) => operacion(token),
+            tokenCancelacion);
+
     // Implementa IContextoPropuestaIngresos.LeerAsync: conserva versiones y revisiones, sin modificar fuentes.
     public async Task<EntradasPropuestaIngresos> LeerAsync(Guid periodoId, CancellationToken tokenCancelacion = default)
     {

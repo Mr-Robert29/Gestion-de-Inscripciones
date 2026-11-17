@@ -24,6 +24,11 @@ public sealed class ContextoUsuarioConfiguracion : IContextoUsuarioConfiguracion
         if (principal?.Identity?.IsAuthenticated != true) return null;
         var identificador = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
         if (!Guid.TryParse(identificador, out var usuarioId)) return null;
+        return await ObtenerAsync(usuarioId, tokenCancelacion);
+    }
+
+    public async Task<UsuarioConfiguracion?> ObtenerAsync(Guid usuarioId, CancellationToken tokenCancelacion = default)
+    {
         var sesion = await _usuarios.ObtenerSesionActualAsync(usuarioId, tokenCancelacion);
         if (sesion is null || !sesion.Activo) return null;
         var esRoot = sesion.Roles.Contains(RolesPersonal.AdministradorDelSistema);
