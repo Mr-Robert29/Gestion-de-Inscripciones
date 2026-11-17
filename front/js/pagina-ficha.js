@@ -12,6 +12,51 @@ const nombreCondicion = (tipo) => ({
   ConsultaArticulacionPedagogica: "Consulta sobre articulación pedagógica",
   DeclaracionArticulacionNegativa: "Respuesta sobre articulación",
 }[tipo] ?? tipo);
+
+const condicionesPrioridad = {
+  articulacion: {
+    afirmativa: "ArticulacionPedagogica",
+    negativa: "DeclaracionArticulacionNegativa",
+    consulta: "ConsultaArticulacionPedagogica",
+  },
+  hermanos: {
+    afirmativa: "HermanosYGruposConvivientes",
+    negativa: "DeclaracionHermanosNegativa",
+  },
+  personal: {
+    afirmativa: "HijosDelPersonal",
+    negativa: "DeclaracionHijosPersonalNegativa",
+  },
+};
+
+function buscarCondicion(condiciones, tipos) {
+  return [...condiciones]
+    .filter((condicion) => tipos.includes(condicion.tipo))
+    .sort((a, b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro))[0];
+}
+
+function estadoPrioridad(condicion, tipos) {
+  if (!condicion) {
+    return { respuesta: "Sin declaración registrada", estado: "NoDeclarada" };
+  }
+  if (condicion.tipo === tipos.afirmativa) {
+    return { respuesta: "Sí", estado: condicion.estadoVerificacion };
+  }
+  if (condicion.tipo === tipos.consulta) {
+    return { respuesta: "No está seguro/a", estado: condicion.estadoVerificacion };
+  }
+  return { respuesta: "No", estado: "NoDeclarada" };
+}
+
+function tarjetaPrioridad({ numero: orden, titulo, condicion, tipos, detalle, extra = "" }) {
+  const estado = estadoPrioridad(condicion, tipos);
+  const detalleDeclarado = condicion?.evidenciaReferencia || condicion?.valorDeclarado;
+  return `<article class="prioridad-ficha">
+    <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">${orden}</span><div><h3>${titulo}</h3><p>Respuesta familiar: <strong>${e(estado.respuesta)}</strong></p></div>${etiqueta(estado.estado)}</div>
+    <div class="prioridad-ficha__detalle">${detalle(condicion, detalleDeclarado)}${condicion?.observacion ? `<p><strong>Observación del jardín:</strong> ${e(condicion.observacion)}</p>` : ""}${extra}</div>
+  </article>`;
+}
+
 export async function ficha(ruta, ctx) {
   const [, id, pestana = "solicitud"] = ruta.split("/");
   if (!id) throw new Error("Elegí una solicitud desde el listado.");
@@ -40,6 +85,7 @@ export async function ficha(ruta, ctx) {
   });
   const pestanas = `<nav class="pestanas" aria-label="Secciones de la ficha">${[
     ["solicitud", "Datos de inscripción"],
+    ["prioridades", "Prioridades"],
     ["documentos", "Documentación y condiciones"],
     ["domicilio", "Domicilio y distancia"],
     ["responsables", "Responsables"],
@@ -51,7 +97,71 @@ export async function ficha(ruta, ctx) {
     .join("")}</nav>`;
   ctx.ficha = { solicitud: s, persona, rutaSolicitud };
   let contenido;
-  if (pestana === "domicilio") {
+  if (pestana === "prioridades") {
+    const [antecedentes, revision, distancias] = ctx.estado.previa
+      ? [{ condiciones: [] }, { estado: "PendienteRevision", historial: [] }, []]
+      : await Promise.all([
+          ctx.api(`${rutaSolicitud}/antecedentes`),
+          ctx.api(`${rutaSolicitud}/revision-domicilio`),
+          ctx.api(`${rutaSolicitud}/distancias`),
+        ]);
+    const condiciones = antecedentes.condiciones ?? [];
+    const articulacion = buscarCondicion(condiciones, [
+      condicionesPrioridad.articulacion.afirmativa,
+      condicionesPrioridad.articulacion.negativa,
+      condicionesPrioridad.articulacion.consulta,
+    ]);
+    const hermanos = buscarCondicion(condiciones, [
+      condicionesPrioridad.hermanos.afirmativa,
+      condicionesPrioridad.hermanos.negativa,
+    ]);
+    const personal = buscarCondicion(condiciones, [
+      condicionesPrioridad.personal.afirmativa,
+      condicionesPrioridad.personal.negativa,
+    ]);
+    const distanciaActual = distancias.find((medicion) => medicion.esVigente);
+    const tarjetaCercania = `<article class="prioridad-ficha">
+      <div class="prioridad-ficha__cabecera"><span class="prioridad-ficha__numero">3</span><div><h3>Cercanía al jardín</h3><p>Se evalúa con el domicilio y una distancia vigente registrada.</p></div>${etiqueta(distanciaActual ? "ManualProvisional" : "PendienteRevision")}</div>
+      <div class="prioridad-ficha__detalle"><p><strong>Domicilio declarado:</strong> ${e(direccionTexto(s.domicilio))}</p>${distanciaActual ? `<p><strong>Distancia registrada:</strong> ${numero(distanciaActual.distanciaMetros)} m</p><p><strong>Referencia de la medición:</strong> ${e(distanciaActual.referencia || "Sin referencia informada")}</p>` : `<p>${distancias.length ? "La última medición quedó desactualizada; hace falta registrar una nueva." : "Todavía no hay una distancia registrada para esta solicitud."}</p>`}<p><strong>Revisión del domicilio:</strong> ${e(revision.estado ?? "Sin revisión")}</p><p class="formulario__nota">La medición manual es provisoria. La distancia aporta información para evaluar esta prioridad; no confirma por sí sola una vacante.</p></div>
+    </article>`;
+    ctx.ficha.prioridades = { condiciones, revision, distancias };
+    contenido = tarjeta({
+      titulo: "Prioridades declaradas y verificadas",
+      descripcion:
+        "Consultá qué informó la familia y qué verificó el jardín para cada criterio. Una declaración afirmativa no concede prioridad hasta que corresponda y quede verificada.",
+      cuerpo: `<div class="prioridades-ficha">${tarjetaPrioridad({
+        numero: 1,
+        titulo: "Articulación pedagógica",
+        condicion: articulacion,
+        tipos: condicionesPrioridad.articulacion,
+        detalle: (condicion, dato) => {
+          if (!condicion) return '<p>No se registró una respuesta sobre articulación.</p>';
+          if (condicion.tipo === condicionesPrioridad.articulacion.negativa) return `<p>${e(condicion.valorDeclarado)}</p>`;
+          const prefijo = "Institución de procedencia informada por la familia: ";
+          const institucion = condicion.evidenciaReferencia?.startsWith(prefijo)
+            ? condicion.evidenciaReferencia.slice(prefijo.length)
+            : condicion.evidenciaReferencia;
+          return institucion ? `<p><strong>Institución de procedencia informada:</strong> ${e(institucion)}</p>` : `<p>${e(dato)}</p>`;
+        },
+      })}${tarjetaPrioridad({
+        numero: 2,
+        titulo: "Hermanos o grupo conviviente",
+        condicion: hermanos,
+        tipos: condicionesPrioridad.hermanos,
+        detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.hermanos.afirmativa
+          ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
+          : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
+      })}${tarjetaCercania}${tarjetaPrioridad({
+        numero: 4,
+        titulo: "Hijo/a del personal",
+        condicion: personal,
+        tipos: condicionesPrioridad.personal,
+        detalle: (condicion, dato) => condicion?.tipo === condicionesPrioridad.personal.afirmativa
+          ? `<p><strong>Dato informado por la familia:</strong> ${e(dato || "Sin detalle informado")}</p>`
+          : `<p>${e(condicion?.valorDeclarado ?? "No hay respuesta registrada.")}</p>`,
+      })}</div>`,
+    });
+  } else if (pestana === "domicilio") {
     const [revision, distancias] = ctx.estado.previa
       ? [
           {

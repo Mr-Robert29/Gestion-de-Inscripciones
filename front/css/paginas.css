@@ -405,3 +405,66 @@
 .pendiente__titulo {
   margin-top: 1.3rem;
 }
+
+.prioridades-ficha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.prioridad-ficha {
+  min-width: 0;
+  padding: 1.15rem;
+  border: 1px solid var(--borde, #dce4da);
+  border-radius: 0.85rem;
+  background: #fff;
+}
+.prioridad-ficha__cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.prioridad-ficha__cabecera > div {
+  flex: 1;
+  min-width: 0;
+}
+.prioridad-ficha__cabecera h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+.prioridad-ficha__cabecera p,
+.prioridad-ficha__detalle p {
+  margin: 0.25rem 0 0;
+  color: var(--texto-secundario, #65766b);
+  line-height: 1.55;
+}
+.prioridad-ficha__cabecera > .etiqueta {
+  flex: 0 0 auto;
+}
+.prioridad-ficha__numero {
+  display: grid;
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf1eb;
+  color: #27533e;
+  font-weight: 700;
+}
+.prioridad-ficha__detalle {
+  display: grid;
+  gap: 0.3rem;
+  margin: 1rem 0 0 3.05rem;
+  font-size: 0.92rem;
+}
+.prioridad-ficha__detalle strong {
+  color: var(--texto, #243b31);
+}
+.prioridad-ficha__detalle .formulario__nota {
+  margin-top: 0.45rem;
+}
+@media (max-width: 760px) {
+  .prioridades-ficha {
+    grid-template-columns: 1fr;
+  }
+}

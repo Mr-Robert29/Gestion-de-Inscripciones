@@ -107,7 +107,8 @@ try {
     $script:ApiBase = $ApiUrl.TrimEnd('/') + "/api/v1"
 
     Write-Host "Cargador de solicitudes ficticias para pruebas locales" -ForegroundColor Green
-    Write-Host "Se crearán hasta $Cantidad aspirantes, solicitudes, responsables y distancias manuales." 
+    Write-Host "Se crearán hasta $Cantidad aspirantes, solicitudes, responsables y distancias manuales."
+    Write-Host "Las respuestas de articulación, hermanos/grupo conviviente e hijos del personal tendrán combinaciones variadas."
     Write-Host "Las distancias serán ficticias/provisorias y podrán influir en prioridades y reportes."
 
     $correo = Read-Host "Correo de una cuenta con acceso a la institución"
@@ -222,6 +223,13 @@ try {
         @{ Nombre = "Silvia"; Vinculo = "Madre" }, @{ Nombre = "Ricardo"; Vinculo = "Padre" },
         @{ Nombre = "Daniela"; Vinculo = "Madre" }, @{ Nombre = "Gustavo"; Vinculo = "Padre" }
     )
+    $institucionesProcedencia = @(
+        "Jardín Municipal N.º 4", "Jardín de Infantes N.º 12", "Jardín Comunitario Los Aromos",
+        "Jardín de Infantes N.º 7", "Escuela Primaria N.º 18", "Jardín Maternal Rayito de Sol",
+        "Jardín de Infantes N.º 21", "Escuela Primaria N.º 6"
+    )
+    $nombresHermanos = @("Lola", "Benicio", "Pilar", "Simón", "Renata", "Valentín", "Alma", "Dante", "Josefina", "Máximo", "Malena", "Ciro", "Juana", "Pedro", "Antonella", "Facundo")
+    $nombresPersonal = @("Mariana", "Verónica", "Gabriela", "Marcelo", "Silvina", "Pablo", "Lorena", "Esteban", "Carolina", "Diego", "Natalia", "Jorge")
     $dnisAspirantesUsados = [System.Collections.Generic.HashSet[string]]::new()
     $documentosResponsablesUsados = [System.Collections.Generic.HashSet[string]]::new()
     $referenciasConsentimientoUsadas = [System.Collections.Generic.HashSet[string]]::new()
@@ -236,8 +244,30 @@ try {
         $nombreCompletoResponsable = "$nombreResponsable $apellidoAspirante"
         $dniAspirante = Nuevo-NumeroUnico 70000000 100000000 $dnisAspirantesUsados
         $dniResponsable = Nuevo-NumeroUnico 20000000 60000000 $documentosResponsablesUsados
+        # Distribución reproducible pero variada: 30% sí, 10% no está seguro/a y 60% no.
+        $respuestaArticulacion = Get-Random -InputObject @("Si", "No", "NoEstoySeguro", "No", "Si", "No", "No", "Si", "No", "No")
+        # Las declaraciones afirmativas requieren datos para que el Directivo pueda verificarlas.
+        $respuestaHermano = "No"
+        if ((Get-Random -Minimum 0 -Maximum 4) -eq 0) { $respuestaHermano = "Si" }
+        $respuestaPersonal = "No"
+        if ((Get-Random -Minimum 0 -Maximum 8) -eq 0) { $respuestaPersonal = "Si" }
+        $procedencia = if ($respuestaArticulacion -in @("Si", "NoEstoySeguro")) { Get-Random -InputObject $institucionesProcedencia } else { $null }
+        $detalleHermano = if ($respuestaHermano -eq "Si") {
+            $nombreHermano = Get-Random -InputObject $nombresHermanos
+            $salaHermano = Get-Random -InputObject @(3, 4, 5)
+            $vinculoHermano = Get-Random -InputObject @("Hermana", "Hermano", "Integrante del grupo conviviente")
+            "Dato ficticio de prueba: $nombreHermano $apellidoAspirante · Sala de $salaHermano años · $vinculoHermano"
+        } else { $null }
+        $detallePersonal = if ($respuestaPersonal -eq "Si") {
+            $nombreEmpleado = Get-Random -InputObject $nombresPersonal
+            $lugarTrabajo = Get-Random -InputObject @("este jardín", "una institución articulada")
+            "Dato ficticio de prueba: $nombreEmpleado $apellidoAspirante · Personal docente · trabaja en $lugarTrabajo"
+        } else { $null }
         $resultado = [ordered]@{
             Lote = $runId; Ciclo = $ciclo; Numero = $i; Aspirante = $nombreCompletoAspirante; DNI = $dniAspirante; Responsable = $nombreCompletoResponsable
+            Articulacion = $respuestaArticulacion; Procedencia = $procedencia
+            HermanoGrupo = $respuestaHermano; DetalleHermanoGrupo = $detalleHermano
+            HijoPersonal = $respuestaPersonal; DetalleHijoPersonal = $detallePersonal
             AspiranteId = ""; SolicitudId = ""; ResponsableId = ""; Estado = "En proceso"; Error = ""
         }
         $script:Resultados.Add([pscustomobject]$resultado)
@@ -264,12 +294,15 @@ try {
             $solicitud = Invoke-JardinApi "/instituciones/$institucionId/periodos/$periodoId/solicitudes" "POST" @{
                 aspiranteId = $aspiranteId; domicilio = $domicilio; turnoPreferidoId = $turnoPreferido
                 turnosAlternativosAceptados = $alternativos; referenciaConsentimiento = ("CONS-{0}-{1}" -f $ciclo, $sufijoConsentimiento)
+                articulacionPedagogica = $respuestaArticulacion; institucionProcedencia = $procedencia
+                hermanosGrupoConviviente = $respuestaHermano; detalleHermanoGrupo = $detalleHermano
+                hijoPersonal = $respuestaPersonal; detalleHijoPersonal = $detallePersonal
             }
             $solicitudId = [string](Get-Propiedad $solicitud "id")
             $script:Resultados[$i - 1].SolicitudId = $solicitudId
 
             $responsable = Invoke-JardinApi "/instituciones/$institucionId/responsables" "POST" @{
-                nombre = $nombreResponsable; apellido = $apellidoAspirante; telefono = ("+54 11 0000-{0:D4}" -f $i)
+                nombre = $nombreResponsable; apellido = $apellidoAspirante; telefono = ("+54 11 4{0:D3}-{1:D4}" -f (($i * 137) % 1000), (($i * 7919) % 10000))
                 documento = $dniResponsable; tipoDocumento = "DNI"
                 correoElectronico = "responsable.$($runId.ToLower()).$sufijo@example.invalid"
             }
@@ -302,6 +335,11 @@ try {
     Write-Progress -Activity "Cargando solicitudes sintéticas" -Completed
     Exportar-Avance
     Write-Host "`nCarga finalizada: $Cantidad solicitudes." -ForegroundColor Green
+    $totalArticulacionSi = @($script:Resultados | Where-Object { $_.Articulacion -eq "Si" }).Count
+    $totalArticulacionDuda = @($script:Resultados | Where-Object { $_.Articulacion -eq "NoEstoySeguro" }).Count
+    $totalHermanos = @($script:Resultados | Where-Object { $_.HermanoGrupo -eq "Si" }).Count
+    $totalPersonal = @($script:Resultados | Where-Object { $_.HijoPersonal -eq "Si" }).Count
+    Write-Host "Respuestas variadas: articulación Sí $totalArticulacionSi · No estoy seguro/a $totalArticulacionDuda · hermanos/grupo conviviente Sí $totalHermanos · hijo/a del personal Sí $totalPersonal."
     Write-Host "El detalle con los identificadores quedó en: $script:ArchivoSalida"
     Write-Host "Las distancias son simuladas y no deben usarse para decisiones reales."
 }
