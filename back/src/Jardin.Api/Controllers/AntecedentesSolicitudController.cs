@@ -23,6 +23,16 @@ public sealed class AntecedentesSolicitudController : ControllerBase
             solicitudId,
             tokenCancelacion)));
 
+    [HttpGet("~/api/v1/instituciones/{institucionId:guid}/periodos/{periodoId:guid}/articulaciones")]
+    public Task<IActionResult> ListarArticulaciones(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion)
+        => EjecutarAsync(async () => Ok(await _antecedentes.ListarArticulacionesAsync(
+            institucionId,
+            periodoId,
+            tokenCancelacion)));
+
     [HttpPost("documentos")]
     public Task<IActionResult> RegistrarDocumento(
         Guid institucionId,

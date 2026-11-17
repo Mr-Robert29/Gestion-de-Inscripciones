@@ -51,7 +51,9 @@ public sealed class SolicitudInscripcion
         int revisionPeriodo,
         bool fueraDeTermino,
         Guid usuarioRegistroId,
-        string? referenciaConsentimiento = null)
+        string? referenciaConsentimiento = null,
+        string? articulacionPedagogica = "No",
+        string? institucionProcedencia = null)
     {
         ArgumentNullException.ThrowIfNull(aspirante);
         ArgumentNullException.ThrowIfNull(domicilio);
@@ -80,6 +82,36 @@ public sealed class SolicitudInscripcion
         FechaRegistro = DateTimeOffset.UtcNow;
         ReferenciaConsentimiento = string.IsNullOrWhiteSpace(referenciaConsentimiento) ? null : referenciaConsentimiento.Trim();
         RevisionDatos = 1;
+
+        var respuestaArticulacion = string.IsNullOrWhiteSpace(articulacionPedagogica)
+            ? "No"
+            : articulacionPedagogica.Trim();
+        var referenciaArticulacion = string.IsNullOrWhiteSpace(institucionProcedencia)
+            ? "Institución de procedencia no informada por la familia."
+            : $"Institución de procedencia informada por la familia: {institucionProcedencia.Trim()}";
+        if (respuestaArticulacion is not ("Si" or "No" or "NoEstoySeguro"))
+            throw new ArgumentException("La respuesta sobre articulación pedagógica no es válida.", nameof(articulacionPedagogica));
+        if (respuestaArticulacion == "Si")
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "ArticulacionPedagogica",
+                "La familia declara que la institución de procedencia articula formalmente con este jardín.",
+                referenciaArticulacion,
+                usuarioRegistroId));
+        else if (respuestaArticulacion == "NoEstoySeguro")
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "ConsultaArticulacionPedagogica",
+                "La familia no sabe si la institución de procedencia articula formalmente con este jardín.",
+                referenciaArticulacion,
+                usuarioRegistroId));
+        else
+            _condiciones.Add(new CondicionPrioridad(
+                Id,
+                "DeclaracionArticulacionNegativa",
+                "La familia responde que no hay una articulación formal conocida con este jardín.",
+                "Respuesta de la familia al registrar la solicitud.",
+                usuarioRegistroId));
     }
     // Corrige datos de esta solicitud sin cambiar la persona, recepción ni versiones históricas.
     public bool CorregirDatos(

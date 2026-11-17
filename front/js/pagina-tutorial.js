@@ -53,11 +53,11 @@ function tutorialAdministrativo() {
       "Colaborá con la preparación de admisiones",
       "Podés preparar información y propuestas; el Directivo conserva las confirmaciones finales.",
       [
-        ["vacantes/prioridades", "Ver prioridades y sorteo", 0],
+        ["vacantes/prioridades", "Ver prioridades", 0],
         ["vacantes", "Ir a Vacantes y admisión", 1],
       ],
       [
-        "En <strong>Prioridades y sorteo</strong>, revisá los casos pendientes y registrá el sorteo cuando corresponda. Si el sistema señala una decisión que no tenés habilitada, coordiná con el Directivo.",
+        "En <strong>Prioridades</strong>, revisá los casos pendientes y registrá el sorteo cuando corresponda. Si el sistema señala una decisión que no tenés habilitada, coordiná con el Directivo.",
         "En <strong>Propuestas</strong>, podés generar la propuesta de ingresos para que sea revisada. La propuesta todavía no confirma ingresos: el Directivo debe revisarla y confirmarla.",
       ],
     )}${paso(
@@ -135,9 +135,9 @@ export function tutorial(ctx) {
         [
           "En <strong>Períodos</strong>, elegí <strong>Crear período</strong> e indicá el ciclo lectivo y sus fechas previstas. El período se crea en estado de preparación; todavía no recibe solicitudes.",
           "En <strong>Aulas, turnos y oferta</strong>, prepará las aulas y los turnos. Creá o reutilizá una combinación del catálogo y agregala al ciclo. En la oferta del ciclo ajustá la capacidad y dejala habilitada si se ofrecerá en esa inscripción.",
-          "Volvé a <strong>Períodos</strong> y elegí <strong>Preparar configuración inicial</strong>. Ingresá la fecha de corte aprobada para ese ciclo: la aplicación publicará las reglas y la oferta actual. <strong>La fecha de corte indica el día exacto en que se calcula la edad para determinar la sala; no usa la edad que tiene el aspirante al momento de inscribirlo.</strong>",
-          "Ejemplo: si para el ciclo 2027 la fecha de corte es <strong>30/06/2027</strong>, quien nació el 30/06/2024 tiene 3 años en esa fecha; quien nació el 01/07/2024 todavía tiene 2. Para las salas de 3 a 5 años, el rango de nacimiento de este ejemplo va del 01/07/2021 al 30/06/2024, inclusive. Fuera de ese rango la sala queda pendiente de revisión. La fecha no se completa sola: verificá el criterio del jardín antes de publicar.",
-          "Después de preparar el ciclo, al guardar una oferta nueva o ajustada se publica automáticamente para ese período, sin volver a pedir la fecha de corte. Si la recepción está abierta, confirmá que el cambio se aplique a las nuevas solicitudes. <strong>Cambiar fecha de corte</strong> sigue siendo una acción aparte. En la fila del ciclo, elegí <strong>Abrir recepción</strong> cuando estés listo; la apertura es manual.",
+          "Volvé a <strong>Períodos</strong> y elegí <strong>Preparar configuración inicial</strong>. Ingresá la fecha de corte aprobada para ese ciclo. Esta acción publica las reglas y la oferta que ya agregaste. <strong>La fecha de corte queda asociada al ciclo</strong> y determina la edad con la que se calcula la sala; no se usa la edad que tiene el aspirante el día de la inscripción.",
+          "Ejemplo: si para el ciclo 2027 la fecha de corte es <strong>30/06/2027</strong> y se admiten salas de 3 a 5 años, solo corresponden fechas de nacimiento entre el <strong>01/07/2021 y el 30/06/2024</strong>, inclusive. El calendario limita ese rango y el sistema también lo valida al guardar. Una fecha fuera del rango —como un nacimiento en 2000— se rechaza; no queda como pendiente de revisión.",
+          "Una vez preparada la configuración inicial, cada oferta nueva que agregues al ciclo o cada ajuste que guardes se aplica automáticamente a ese ciclo. <strong>No tenés que volver a publicar la oferta ni ingresar otra vez la fecha de corte.</strong> Si la recepción está abierta, confirmá que el cambio se aplique a las nuevas solicitudes; las ya registradas conservan sus datos. En la fila del ciclo, elegí <strong>Abrir recepción</strong> cuando estés listo: la apertura sigue siendo manual.",
         ],
       )}${paso(
         3,
@@ -146,8 +146,8 @@ export function tutorial(ctx) {
         [["solicitudes", "Solicitudes", 0]],
         [
           "Comprobá que la institución y el período correctos estén seleccionados y que la recepción esté abierta. En <strong>Solicitudes</strong>, elegí <strong>Nueva solicitud</strong>.",
-          "En la primera parte, escribí nombre, apellido y fecha de nacimiento. El DNI es opcional: dejalo vacío si no lo tenés, no ingreses un número inventado. Si el aspirante ya existe, podés seleccionarlo con su identificador.",
-          "En la segunda parte, completá el domicilio, elegí el turno preferido y marcá como alternativas solo los turnos que la familia aceptó. Luego guardá la solicitud.",
+          "En la primera parte, escribí nombre, apellido y fecha de nacimiento. El calendario limita las fechas según la fecha de corte y las edades admitidas para el ciclo; el sistema vuelve a comprobarlo al guardar. El DNI es opcional: dejalo vacío si no lo tenés, no ingreses un número inventado. Si el aspirante ya existe, podés seleccionarlo con su identificador; también se verificará su fecha antes de registrar la solicitud.",
+          "En la segunda parte, completá el domicilio y los turnos. También preguntá si la institución de procedencia tiene una articulación pedagógica formal con este jardín. La respuesta de la familia queda como declaración: no concede prioridad hasta que el jardín la verifique en la ficha.",
           "La solicitud registrada todavía no significa que el aspirante haya obtenido una vacante. Abrí su ficha para agregar responsables y continuar con las revisiones.",
           "Si la recepción está cerrada, la pantalla avisa que el registro quedará fuera de término y pendiente de autorización. No continúes por esa vía salvo que corresponda.",
         ],
@@ -159,11 +159,11 @@ export function tutorial(ctx) {
           ["solicitudes", "Fichas", 0],
           ["domicilios", "Domicilios y distancias", 2],
           ["duplicados", "Posibles duplicados", 3],
-          ["vacantes/prioridades", "Prioridades y sorteo", 4],
+          ["vacantes/prioridades", "Prioridades", 4],
         ],
         [
           "En <strong>Solicitudes</strong>, buscá por nombre, apellido o DNI y elegí <strong>Ver ficha</strong>. Desde la ficha también podés entrar en <strong>Documentación y condiciones</strong> para revisar los documentos y requisitos. Mientras la recepción esté abierta, podés corregir los datos del aspirante y de la inscripción. <strong>Si corregís la fecha de nacimiento, se recalculan la edad y la sala de las solicitudes de ese aspirante en el período usando la misma fecha de corte publicada para el ciclo.</strong>",
-          "En <strong>Documentación y condiciones</strong>, registrá los antecedentes recibidos y su estado. Marcá las condiciones declaradas y su revisión según la información disponible; declarar una condición no la verifica automáticamente ni otorga prioridad por sí sola.",
+          "En <strong>Documentación y condiciones</strong>, revisá la declaración sobre articulación pedagógica. Confirmá que exista un vínculo formal entre las instituciones y que el aspirante esté comprendido; solo entonces marcala como verificada. Si la familia no estaba segura, la ficha mostrará una consulta, que no concede prioridad.",
           "En <strong>Domicilio y distancia</strong>, comprobá la dirección. Si cargás una distancia, ingresá la medición obtenida manualmente y cómo se obtuvo: se mostrará como provisoria. Una distancia pendiente no equivale a cero.",
           "En <strong>Posibles duplicados</strong>, revisá cada coincidencia. Registrá si corresponde a la misma persona o a personas diferentes y explicá el motivo. El sistema no fusiona ni elimina solicitudes automáticamente.",
           "Cuando las solicitudes estén revisadas, recién entonces cerrá la recepción y pasá al orden de prioridades del paso siguiente.",
@@ -174,13 +174,14 @@ export function tutorial(ctx) {
         "Cuando ya no vayas a recibir ni corregir solicitudes para este ciclo, cerrá la etapa de inscripción y atendé los controles previos a la admisión.",
         [
           ["periodos", "Períodos", 0],
-          ["vacantes/prioridades", "Prioridades y sorteo", 1],
-          ["vacantes/prioridades", "Prioridades y sorteo", 2],
+          ["vacantes/prioridades", "Prioridades", 1],
+          ["vacantes/prioridades", "Prioridades", 2],
           ["vacantes", "Propuestas", 3],
         ],
         [
           "En <strong>Períodos</strong>, buscá el ciclo correcto y elegí <strong>Cerrar recepción</strong>. Hacelo cuando la inscripción haya terminado: después del cierre ya no se pueden corregir los datos de aspirantes ni de solicitudes.",
-          "En <strong>Vacantes y admisión → Prioridades y sorteo</strong>, revisá las salas, el orden, los criterios aplicados y las solicitudes que aparezcan pendientes.",
+          "En <strong>Vacantes y admisión → Prioridades</strong>, recorré los criterios en orden, revisá las solicitudes con prioridad verificada y las que todavía no la tienen acreditada. El resultado de prioridad no confirma por sí solo un ingreso; luego revisá la propuesta de vacantes.",
+          "En <strong>Articulaciones por revisar</strong>, confirmá las declaraciones que correspondan. Si una familia respondió “No estoy seguro/a” y al cierre no se pudo acreditar la articulación, registrala como <strong>No acreditada al cierre</strong>. La respuesta original queda conservada y no se usa ese criterio para darle prioridad.",
           "Registrá un sorteo solo para los grupos que lo requieran. Si aparece un caso de revisión manual, asigná una posición distinta a cada participante y escribí el motivo de la decisión.",
           "Cuando los casos estén resueltos, entrá en <strong>Propuestas</strong> para preparar los posibles ingresos.",
         ],
@@ -213,7 +214,7 @@ export function tutorial(ctx) {
           ["secciones/distribuciones", "Distribuciones", 5],
         ],
         [
-          "Hacé este paso después de confirmar los ingresos. En la pestaña <strong>Secciones</strong>, elegí <strong>Definir sección</strong>. Completá un nombre, seleccioná una <strong>oferta habilitada</strong> (aula y turno) y elegí la composición por edades. La capacidad se toma de la oferta publicada; si no aparece ninguna, primero hay que habilitar y publicar una oferta en <strong>Aulas, turnos y oferta</strong>.",
+          "Hacé este paso después de confirmar los ingresos. En la pestaña <strong>Secciones</strong>, elegí <strong>Definir sección</strong>. Completá un nombre, seleccioná una <strong>oferta habilitada</strong> (aula y turno) y elegí la composición por edades. La capacidad se toma de la oferta aplicada al ciclo. Si no aparece ninguna, agregá una oferta al ciclo o habilitá una existente en <strong>Aulas, turnos y oferta</strong>; al guardar, se aplica automáticamente.",
           "Una sección <strong>pura</strong> recibe una sola edad (3, 4 o 5). Una <strong>multiedad</strong> puede recibir una combinación habilitada, como 3 y 4 o 4 y 5. Usá multiedad solo si esa combinación corresponde a la organización aprobada para el jardín. Si necesitás convertir una sección pura, usá <strong>Ampliar a multiedad</strong>; el sistema comprobará compatibilidad y capacidad.",
           "Antes de generar la distribución, verificá que exista una sección para cada combinación de aula, turno y edad que necesiten los ingresos. Si falta una opción o no alcanza la capacidad, agregá o ajustá las secciones antes de continuar.",
           "Abrí <strong>Distribuciones</strong> y elegí <strong>Generar distribución</strong>. El sistema propone una sección compatible para cada ingreso activo que todavía no tenga asignación. Crear la propuesta no guarda asignaciones definitivas.",

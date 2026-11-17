@@ -45,6 +45,25 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             solicitud.Condiciones.OrderBy(c => c.Id).Select(MapearCondicion).ToArray());
     }
 
+    public async Task<IReadOnlyList<DatosArticulacionSolicitud>> ListarArticulacionesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default)
+    {
+        await _acceso.AutorizarOperacionAsync(
+            institucionId,
+            OperacionInscripciones.Consultar,
+            tokenCancelacion);
+        var articulaciones = await _antecedentes.ListarArticulacionesAsync(
+            institucionId,
+            periodoId,
+            tokenCancelacion);
+        return articulaciones.Select(x => new DatosArticulacionSolicitud(
+            x.Condicion.SolicitudId,
+            MapearCondicion(x.Condicion),
+            x.RevisionSolicitud)).ToArray();
+    }
+
     // Implementa IModuloAntecedentesSolicitud.RegistrarDocumentoAsync.
     public Task<RegistrarDocumentoRespuesta> RegistrarDocumentoAsync(
         Guid institucionId,
@@ -60,6 +79,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             async (
                 solicitud,
                 autor,
+                estado,
                 token) =>
             {
                 ComprobarRevision(
@@ -106,6 +126,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             async (
                 solicitud,
                 autor,
+                estado,
                 token) =>
             {
                 ComprobarRevision(
@@ -150,6 +171,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             async (
                 solicitud,
                 autor,
+                estado,
                 token) =>
             {
                 ComprobarRevision(
@@ -194,18 +216,26 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             async (
                 solicitud,
                 autor,
+                estado,
                 token) =>
             {
                 ComprobarRevision(
                     solicitud,
                     peticion.RevisionSolicitud,
                     peticion.Motivo);
+                var decision = LeerEstado<EstadoVerificacionCondicion>(peticion.Estado);
+                if (decision == EstadoVerificacionCondicion.NoAcreditada &&
+                    estado != "RecepcionCerrada")
+                    throw new InvalidOperationException("La articulación solo puede marcarse como no acreditada después de cerrar la recepción.");
                 var condicion = solicitud.Condiciones.SingleOrDefault(c => c.Id == condicionId)
                     ?? throw new KeyNotFoundException("No se encontró la condición en esta solicitud.");
+                if (decision == EstadoVerificacionCondicion.NoAcreditada &&
+                    condicion.Tipo is not ("ArticulacionPedagogica" or "ConsultaArticulacionPedagogica"))
+                    throw new InvalidOperationException("Solo una declaración de articulación puede marcarse como no acreditada.");
                 var anteriores = MapearCondicion(condicion);
                 condicion.Revisar(
-                    LeerEstado<EstadoVerificacionCondicion>(peticion.Estado),
-                    peticion.EvidenciaReferencia,
+                    decision,
+                    peticion.EvidenciaReferencia ?? condicion.EvidenciaReferencia,
                     peticion.Observacion,
                     autor);
                 await _antecedentes.GuardarRevisionAsync(
@@ -239,6 +269,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
             async (
                 solicitud,
                 autor,
+                estado,
                 token) =>
             {
                 ComprobarRevision(
@@ -271,7 +302,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
         Guid institucionId,
         Guid solicitudId,
         OperacionInscripciones operacion,
-        Func<SolicitudInscripcion, Guid, CancellationToken, Task<T>> cambio,
+        Func<SolicitudInscripcion, Guid, string, CancellationToken, Task<T>> cambio,
         CancellationToken tokenCancelacion)
     {
         var autor = await _acceso.AutorizarOperacionAsync(
@@ -300,6 +331,7 @@ public sealed class ServicioAntecedentesSolicitud : IModuloAntecedentesSolicitud
                 return await cambio(
                     solicitud,
                     autor,
+                    estado,
                     token);
             },
             tokenCancelacion);

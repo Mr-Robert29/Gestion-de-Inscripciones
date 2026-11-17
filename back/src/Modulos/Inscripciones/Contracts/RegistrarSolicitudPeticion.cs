@@ -6,4 +6,6 @@ public sealed record RegistrarSolicitudPeticion(
     DatosDomicilioSolicitud Domicilio,
     Guid TurnoPreferidoId,
     IReadOnlyList<Guid>? TurnosAlternativosAceptados = null,
-    string? ReferenciaConsentimiento = null);
+    string? ReferenciaConsentimiento = null,
+    string? ArticulacionPedagogica = "No",
+    string? InstitucionProcedencia = null);

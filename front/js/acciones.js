@@ -380,6 +380,32 @@ export async function atenderAccion(elemento, ctx) {
     return;
   }
   if (
+    accion === "corregir-articulacion"
+  ) {
+    const condicion = ficha.antecedentes.condiciones.find(
+      (x) => x.id === elemento.dataset.id,
+    );
+    if (!condicion || estado.periodo?.estado !== "RecepcionAbierta")
+      throw new Error("La respuesta solo se puede cambiar mientras la recepción esté abierta.");
+    mostrar(ctx, {
+      titulo: "Actualizar respuesta sobre articulación",
+      descripcion: "La respuesta nueva quedará pendiente de revisión y se conservará el cambio en el historial.",
+      formulario: "corregir-articulacion",
+      id: condicion.id,
+      contenido: seleccion({
+        nombre: "respuestaArticulacion",
+        etiqueta: "Respuesta de la familia",
+        valor: condicion.tipo === "ArticulacionPedagogica" ? "Si" : condicion.tipo === "DeclaracionArticulacionNegativa" ? "No" : "NoEstoySeguro",
+        opciones: opciones([
+          ["Si", "Sí"],
+          ["No", "No"],
+          ["NoEstoySeguro", "No estoy seguro/a"],
+        ]),
+      }) + campo({ nombre: "institucionProcedencia", etiqueta: "Institución de procedencia (opcional)", valor: condicion.evidenciaReferencia?.startsWith("Institución de procedencia informada por la familia: ") ? condicion.evidenciaReferencia.slice("Institución de procedencia informada por la familia: ".length) : "" }) + motivo(motivos.condicion, { etiqueta: "Motivo del cambio" }),
+    });
+    return;
+  }
+  if (
     [
       "nuevo-documento",
       "revisar-documento",
@@ -424,6 +450,10 @@ export async function atenderAccion(elemento, ctx) {
                     ["PendienteRevision", "Pendiente de revisión"],
                     ["Verificada", "Verificada"],
                     ["Observada", "Observada"],
+                    ...(estado.periodo?.estado === "RecepcionCerrada" &&
+                    (dato.tipo === "ArticulacionPedagogica" || dato.tipo === "ConsultaArticulacionPedagogica")
+                      ? [["NoAcreditada", "No acreditada al cierre"]]
+                      : []),
                   ]),
               valor: dato.estado ?? dato.estadoVerificacion,
             })
@@ -580,6 +610,8 @@ export async function atenderFormulario(formulario, ctx) {
           turnoPreferidoId: datos.turnoPreferidoId,
           turnosAlternativosAceptados: alternativas,
           referenciaConsentimiento: datos.referenciaConsentimiento || null,
+          articulacionPedagogica: datos.articulacionPedagogica,
+          institucionProcedencia: datos.institucionProcedencia || null,
         },
       );
       actualizarBorrador(clave, aspiranteId, false);
@@ -871,6 +903,25 @@ export async function atenderFormulario(formulario, ctx) {
           motivo: datos.motivo,
         },
       );
+    } else if (nombre === "corregir-articulacion") {
+      if (estado.periodo?.estado !== "RecepcionAbierta")
+        throw new Error("La respuesta solo se puede cambiar mientras la recepción esté abierta.");
+      const condicion = f.antecedentes.condiciones.find((x) => x.id === operacion.id);
+      if (!condicion) throw new Error("No se encontró la declaración de articulación.");
+      const tipos = {
+        Si: ["ArticulacionPedagogica", "La familia declara que la institución de procedencia articula formalmente con este jardín."],
+        No: ["DeclaracionArticulacionNegativa", "La familia responde que no hay una articulación formal conocida con este jardín."],
+        NoEstoySeguro: ["ConsultaArticulacionPedagogica", "La familia no sabe si la institución de procedencia articula formalmente con este jardín."],
+      };
+      const [tipo, valorDeclarado] = tipos[datos.respuestaArticulacion] ?? [];
+      if (!tipo) throw new Error("Seleccioná una respuesta válida.");
+      await actualizar(`${f.rutaSolicitud}/condiciones/${encodeURIComponent(condicion.id)}/declaracion`, {
+        tipo,
+        valorDeclarado,
+        evidenciaReferencia: datos.institucionProcedencia ? `Institución de procedencia informada por la familia: ${datos.institucionProcedencia}` : "Institución de procedencia no informada por la familia.",
+        revisionSolicitud: f.antecedentes.revisionSolicitud,
+        motivo: datos.motivo,
+      });
     } else if (
       [
         "nuevo-documento",

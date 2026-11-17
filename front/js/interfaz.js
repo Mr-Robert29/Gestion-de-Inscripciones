@@ -38,6 +38,8 @@ export const textos = {
   Presentada: "Presentada",
   Observada: "Observada",
   Verificada: "Verificada",
+  NoAcreditada: "No acreditada",
+  NoDeclarada: "Sin prioridad declarada",
   Observado: "Observado",
   DuplicacionConfirmada: "Duplicación confirmada",
   PersonasDiferentes: "Personas diferentes",
@@ -54,7 +56,7 @@ export function etiqueta(estado, variante = "") {
     "ManualProvisional",
     "Preparado",
   ].includes(estado);
-  const error = ["Observado", "Observada", "DuplicacionConfirmada"].includes(
+  const error = ["Observado", "Observada", "NoAcreditada", "DuplicacionConfirmada"].includes(
     estado,
   );
   return `<span class="etiqueta ${variante ? `etiqueta--${variante}` : aviso ? "etiqueta--aviso" : error ? "etiqueta--error" : ""}"><span class="etiqueta__punto"></span>${escapar(textoEstado(estado))}</span>`;
@@ -163,8 +165,9 @@ export function seleccion({
   opciones,
   valor = "",
   obligatorio = false,
+  completo = false,
 }) {
-  return `<label class="campo"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? " *" : ""}</span><select name="${escapar(nombre)}" class="campo__control" ${obligatorio ? "required" : ""}>${opciones.map((o) => `<option value="${escapar(o.id)}" ${String(o.id) === String(valor) ? "selected" : ""}>${escapar(o.nombre)}</option>`).join("")}</select></label>`;
+  return `<label class="campo ${completo ? "campo--completo" : ""}"><span class="campo__etiqueta">${escapar(rotulo)}${obligatorio ? " *" : ""}</span><select name="${escapar(nombre)}" class="campo__control" ${obligatorio ? "required" : ""}>${opciones.map((o) => `<option value="${escapar(o.id)}" ${String(o.id) === String(valor) ? "selected" : ""}>${escapar(o.nombre)}</option>`).join("")}</select></label>`;
 }
 export const aviso = (mensaje, variante = "") =>
   `<div class="aviso ${variante ? `aviso--${variante}` : ""}" role="status">${icono("ayuda")}<div class="aviso__contenido">${mensaje}</div></div>`;

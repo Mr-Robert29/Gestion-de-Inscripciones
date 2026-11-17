@@ -46,6 +46,104 @@ export async function atenderAdmision(elemento, ctx) {
         return { destino: "vacantes/ingresos" };
       },
     );
+  } else if (accion === "org-revisar-articulacion") {
+    const articulacion = datos.articulaciones?.find(
+      (x) => x.condicion.id === id,
+    );
+    if (!articulacion)
+      throw new Error("La declaración cambió. Actualizá la pantalla e intentá de nuevo.");
+    const opcionesEstado = [
+      { id: "", nombre: "Seleccioná una decisión" },
+      { id: "Verificada", nombre: "Verificada: corresponde aplicar la prioridad" },
+      { id: "Observada", nombre: "Observada: requiere una aclaración" },
+    ];
+    if (ctx.estado.periodo.estado === "RecepcionCerrada")
+      opcionesEstado.push({ id: "NoAcreditada", nombre: "No acreditada al cierre: no se aplica esta prioridad" });
+    formulario(
+      ctx,
+      "Revisar articulación pedagógica",
+      `<p><strong>${e(nombreSolicitud(ctx, articulacion.solicitudId))}</strong></p><p>${e(articulacion.condicion.valorDeclarado)}</p><p class="formulario__nota">Elegí “Verificada” solo si comprobaste que existe un acuerdo formal entre las instituciones y que incluye a este aspirante. “Observada” deja el caso pendiente de aclaración. “No acreditada al cierre” registra que no se pudo comprobar antes del cierre.</p>` +
+        selector("estado", "Decisión", opcionesEstado) +
+        campo({ nombre: "observacion", etiqueta: "Aclaración (opcional)", ayuda: "Anotá un dato útil para el seguimiento, como qué falta revisar o por qué no corresponde." }) +
+        motivo([
+          "Se confirmó la articulación con documentación institucional",
+          "La articulación no comprende a este aspirante",
+          "Falta documentación para confirmar la articulación",
+          "La institución de procedencia no pudo ser identificada",
+          "No se acreditó la articulación antes del cierre",
+        ], { etiqueta: "Motivo de la decisión" }),
+      (d) => {
+        return enviar(
+          ctx,
+          `/instituciones/${encodeURIComponent(ctx.estado.institucion.id)}/solicitudes/${articulacion.solicitudId}/condiciones/${articulacion.condicion.id}`,
+          {
+            estado: d.estado,
+            revisionSolicitud: articulacion.revisionSolicitud,
+            motivo: d.motivo,
+            evidenciaReferencia: null,
+            observacion: d.observacion || null,
+          },
+          "PUT",
+        );
+      },
+    );
+  } else if (accion === "org-ver-etapa") {
+    const nombres = {
+      ArticulacionPedagogica: "1. Articulación pedagógica",
+      HermanosYGruposConvivientes: "2. Hermanos o grupos convivientes",
+      Cercania: "3. Cercanía al jardín",
+      HijosDelPersonal: "4. Hijos del personal",
+      SorteoUltimaInstancia: "5. Sorteo, última instancia",
+      FueraDeTermino: "6. Inscripciones fuera de término",
+    };
+    const clave = id;
+    if (!nombres[clave]) throw new Error("No se encontró la etapa de prioridad.");
+    const filas = datos.prioridades ?? [];
+    const participa = (x) => clave === "FueraDeTermino"
+      ? x.explicacion?.includes("Solicitud fuera de término.")
+      : clave === "SorteoUltimaInstancia"
+        ? x.requiereRevision
+        : x.explicacion?.some((texto) =>
+            texto === `Criterio verificado: ${clave}.` ||
+            (clave === "Cercania" && texto.startsWith("Cercanía:")),
+          );
+    const listado = (items) => tabla(
+      ["Aspirante", "Sala", "Posición", "Estado de evaluación"],
+      items.map((x) => [
+        `<a href="#solicitud/${encodeURIComponent(x.solicitudId)}">${e(nombreSolicitud(ctx, x.solicitudId))}</a>`,
+        e(x.sala ?? "Pendiente"),
+        e(x.posicion ?? "Pendiente"),
+        e(x.motivoRevision ?? (x.requiereRevision ? "Requiere revisión" : "Evaluado")),
+      ]),
+    );
+    const incluidos = filas.filter(participa);
+    const siguientes = filas.filter((x) => !participa(x));
+    const criteriosEtapa = ["ArticulacionPedagogica", "HermanosYGruposConvivientes", "Cercania", "HijosDelPersonal"];
+    const etapasOrdenadas = [...criteriosEtapa, "SorteoUltimaInstancia", "FueraDeTermino"];
+    const etapaPrioridad = (prioridad) => criteriosEtapa.find((key) => prioridad.explicacion?.some((text) => text === `Criterio verificado: ${key}.` || (key === "Cercania" && text.startsWith("Cercanía:")))) ?? (prioridad.explicacion?.includes("Solicitud fuera de término.") ? "FueraDeTermino" : null);
+    const indiceEtapa = etapasOrdenadas.indexOf(clave);
+    const capacidadInicial = (ctx.estado.ofertasPublicadas ?? []).reduce(
+      (total, oferta) => total + Number(oferta.capacidadNetaInicial ?? oferta.capacidad ?? 0), 0,
+    );
+    const resultadosPropuesta = datos.propuestaVigente?.resultados ?? [];
+    const propuestasAcumuladas = resultadosPropuesta.filter((resultado) => {
+      if (resultado.estado !== "IngresoPropuesto") return false;
+      const prioridad = filas.find((x) => x.solicitudId === resultado.solicitudId);
+      const etapa = prioridad ? etapaPrioridad(prioridad) : null;
+      return etapa && etapasOrdenadas.indexOf(etapa) <= indiceEtapa;
+    }).length;
+    const propuestasDeEtapa = resultadosPropuesta.filter((resultado) => resultado.estado === "IngresoPropuesto" && filas.find((x) => x.solicitudId === resultado.solicitudId && etapaPrioridad(x) === clave)).length;
+    const quedan = Math.max(0, capacidadInicial - propuestasAcumuladas);
+    const resumenCupos = `<div class="prioridades__metricas"><div><span>Cupos publicados</span><strong>${capacidadInicial}</strong></div><div><span>Propuestas en esta etapa</span><strong>${propuestasDeEtapa}</strong></div><div><span>Cupos por distribuir</span><strong>${datos.propuestaVigente ? quedan : "—"}</strong></div></div>`;
+    ver(
+      ctx,
+      nombres[clave],
+      resumenCupos +
+        `<p class="formulario__nota">${datos.propuestaVigente ? `Cálculo basado en la propuesta vigente del ${e(datos.propuestaVigente.fecha)}` : "Todavía no hay una propuesta vigente para calcular el impacto de los cupos."} · Las propuestas no son ingresos confirmados; los cupos se ocupan definitivamente al confirmar los ingresos.</p>` +
+        (clave === "SorteoUltimaInstancia"
+          ? `<p>${(datos.sorteos ?? []).length} sorteos registrados para este período.</p>`
+          : `<section class="prioridades__grupo"><h3>Con prioridad verificada · ${incluidos.length}</h3>${listado(incluidos)}</section><section class="prioridades__grupo"><h3>Sin prioridad acreditada en este criterio · ${siguientes.length}</h3>${listado(siguientes)}</section>`),
+    );
   } else if (accion === "org-modificar-propuesta") {
     const propuesta = datos.propuesta;
     const x = propuesta.resultados.find((x) => x.solicitudId === id);

@@ -13,8 +13,10 @@ for (const nombre of [
   "org-modificar-propuesta",
   "org-orden",
   "org-reabrir",
+  "org-revisar-articulacion",
   "org-resolver",
   "org-sorteo",
+  "org-ver-etapa",
 ])
   operaciones.set(nombre, atenderAdmision);
 for (const nombre of [

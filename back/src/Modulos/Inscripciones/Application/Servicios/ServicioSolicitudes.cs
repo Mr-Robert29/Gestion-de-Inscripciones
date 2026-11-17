@@ -82,7 +82,9 @@ public sealed class ServicioSolicitudes : IModuloSolicitudes
                     periodo.Revision,
                     periodo.Estado == "RecepcionCerrada",
                     autor,
-                    peticion.ReferenciaConsentimiento);
+                    peticion.ReferenciaConsentimiento,
+                    peticion.ArticulacionPedagogica,
+                    peticion.InstitucionProcedencia);
                 var cambio = new CambioInscripciones(
                     institucionId,
                     autor,

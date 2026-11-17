@@ -34,7 +34,9 @@ public sealed class ServicioSolicitudesEvaluables : IModuloSolicitudesEvaluables
             s.FueraDeTermino,
             s.Condiciones
                 .Where(c => c.EstadoVerificacion == EstadoVerificacionCondicion.Verificada)
-                .Select(c => c.Tipo)
+                .Select(c => c.Tipo is "ArticulacionPedagogica" or "ConsultaArticulacionPedagogica"
+                    ? "ArticulacionPedagogica"
+                    : c.Tipo)
                 .Distinct(StringComparer.Ordinal)
                 .ToArray(),
             s.DistanciaMetros,

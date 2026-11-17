@@ -18,6 +18,27 @@ public sealed class RepositorioAntecedentesSolicitud : IRepositorioAntecedentesS
         => _contexto.Solicitudes.AsSingleQuery().Include(s => s.Documentos).Include(s => s.Condiciones)
             .SingleOrDefaultAsync(s => s.Id == solicitudId && s.InstitucionId == institucionId, tokenCancelacion);
 
+    public async Task<IReadOnlyList<CondicionArticulacionInterna>> ListarArticulacionesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default)
+    {
+        var registros = await (
+            from condicion in _contexto.CondicionesPrioridad.AsNoTracking()
+            join solicitud in _contexto.Solicitudes.AsNoTracking()
+                on condicion.SolicitudId equals solicitud.Id
+            where solicitud.InstitucionId == institucionId &&
+                  solicitud.PeriodoId == periodoId &&
+                  (condicion.Tipo == "ArticulacionPedagogica" ||
+                   condicion.Tipo == "ConsultaArticulacionPedagogica")
+            orderby condicion.FechaRegistro
+            select new { Condicion = condicion, solicitud.RevisionDatos })
+            .ToArrayAsync(tokenCancelacion);
+        return registros.Select(x => new CondicionArticulacionInterna(
+            x.Condicion,
+            x.RevisionDatos)).ToArray();
+    }
+
     // Implementa IRepositorioAntecedentesSolicitud.AgregarDocumentoAsync.
     public Task AgregarDocumentoAsync(
         SolicitudInscripcion solicitud,

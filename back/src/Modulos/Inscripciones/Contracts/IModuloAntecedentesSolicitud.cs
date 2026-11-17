@@ -6,6 +6,10 @@ public interface IModuloAntecedentesSolicitud
         Guid institucionId,
         Guid solicitudId,
         CancellationToken tokenCancelacion = default);
+    Task<IReadOnlyList<DatosArticulacionSolicitud>> ListarArticulacionesAsync(
+        Guid institucionId,
+        Guid periodoId,
+        CancellationToken tokenCancelacion = default);
     Task<RegistrarDocumentoRespuesta> RegistrarDocumentoAsync(
         Guid institucionId,
         Guid solicitudId,

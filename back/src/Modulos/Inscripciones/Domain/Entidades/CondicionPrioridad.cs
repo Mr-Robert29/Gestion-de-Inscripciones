@@ -1,6 +1,6 @@
 namespace Jardin.Inscripciones.Domain.Entidades;
 
-public enum EstadoVerificacionCondicion { PendienteRevision, Verificada, Observada }
+public enum EstadoVerificacionCondicion { PendienteRevision, Verificada, Observada, NoAcreditada }
 
 // Una declaración y su verificación no asignan puntajes ni deciden un ingreso.
 public sealed class CondicionPrioridad

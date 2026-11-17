@@ -18,11 +18,32 @@ import {
 
 const etapas = [
   ["vacantes", "Propuestas"],
-  ["vacantes/prioridades", "Prioridades y sorteo"],
+  ["vacantes/prioridades", "Prioridades"],
   ["vacantes/espera", "Lista de espera"],
   ["vacantes/ofrecimientos", "Ofrecimientos"],
   ["vacantes/ingresos", "Ingresos y bajas"],
 ];
+const institucionDeclarada = (condicion) => {
+  const prefijo = "Institución de procedencia informada por la familia: ";
+  const referencia = condicion.evidenciaReferencia ?? "";
+  return referencia.startsWith(prefijo)
+    ? referencia.slice(prefijo.length)
+    : "No informada";
+};
+const criterios = [
+  ["ArticulacionPedagogica", "1. Articulación pedagógica"],
+  ["HermanosYGruposConvivientes", "2. Hermanos o grupos convivientes"],
+  ["Cercania", "3. Cercanía al jardín"],
+  ["HijosDelPersonal", "4. Hijos del personal"],
+];
+const cumpleCriterio = (resultado, clave) =>
+  resultado.explicacion?.some((texto) =>
+    texto === `Criterio verificado: ${clave}.` ||
+    (clave === "Cercania" && texto.startsWith("Cercanía:")),
+  ) ?? false;
+const etapaDe = (resultado) =>
+  criterios.find(([clave]) => cumpleCriterio(resultado, clave))?.[0] ??
+  (resultado.explicacion?.includes("Solicitud fuera de término.") ? "FueraDeTermino" : null);
 export async function vacantes(ruta, ctx) {
   const paso = ruta.split("/")[1] ?? "";
   const activa = ["propuesta"].includes(paso)
@@ -37,40 +58,59 @@ export async function vacantes(ruta, ctx) {
   await cargarNombres(ctx);
   const p = rutaPeriodo(ctx);
   if (paso === "prioridades") {
-    const [prioridades, sorteos, casos] = await Promise.all([
+    const [prioridades, sorteos, casos, articulaciones, propuestas] = await Promise.all([
       ctx.api(`${p}/prioridades`),
       ctx.api(`${p}/sorteos`),
       ctx.api(`${p}/casos-revision`).catch((error) => {
         if (error.estado !== 404) throw error;
         return { aviso: error.message };
       }),
+      ctx.api(`${rutaInstitucional(ctx)}/articulaciones`),
+      ctx.api(`${p}/propuestas-ingresos`).catch(() => []),
     ]);
+    const propuestaVigente = propuestas
+      .filter((x) => x.entradasVigentes && x.estado !== "Desactualizada")
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0] ?? null;
     ctx.organizacion = {
       prioridades,
       sorteos,
       casos: Array.isArray(casos) ? casos : [],
+      articulaciones,
+      propuestaVigente,
     };
     return (
       cabecera +
       resumen(
-        "Orden y criterios aplicados",
-        tabla(
-          ["Aspirante", "Sala", "Posición", "Criterios / revisión"],
-          prioridades.map((x) => [
-            enlaceSolicitud(ctx, x.solicitudId),
-            e(x.sala ?? "Pendiente"),
-            e(x.posicion ?? "—"),
-            e(
-              [
-                ...(x.criteriosAplicados ?? []),
-                x.motivoRevision,
-                ...(x.explicacion ?? []),
-              ]
-                .filter(Boolean)
-                .join(" · "),
-            ),
-          ]),
-        ),
+        "Articulaciones por revisar",
+        `<p>Las respuestas de la familia no asignan prioridad por sí solas. Confirmá la articulación formal para aplicarla. Si al cierre no se acredita, registrá esa decisión; se conservará la respuesta original.</p>` +
+          tabla(
+            ["Aspirante", "Institución informada", "Respuesta declarada", "Estado", "Acción"],
+            articulaciones
+              .filter((x) => ["PendienteRevision", "Observada"].includes(x.condicion.estadoVerificacion))
+              .map((x) => [
+                enlaceSolicitud(ctx, x.solicitudId),
+                e(institucionDeclarada(x.condicion)),
+                e(x.condicion.valorDeclarado),
+                etiqueta(x.condicion.estadoVerificacion),
+                ctx.puedeResolver()
+                  ? boton("org-revisar-articulacion", "Revisar", x.condicion.id)
+                  : "Requiere Directivo",
+              ]),
+          ) +
+          (ctx.estado.periodo.estado !== "RecepcionCerrada"
+            ? '<p class="formulario__nota">Podés confirmar las declaraciones durante la recepción. La decisión “No acreditada al cierre” solo estará disponible después de cerrar el período.</p>'
+            : ""),
+      ) +
+      resumen(
+        "Etapas de prioridad",
+        `<p>Revisá los criterios en este orden. Cada etapa muestra las solicitudes con prioridad verificada y las que no la tienen acreditada para ese criterio. Esto es una evaluación de prioridad; la propuesta de vacantes determina después quién obtiene una vacante.</p>` +
+          `<div class="prioridades__etapas">${criterios.map(([clave, titulo], indice) => {
+            const conPrioridad = prioridades.filter((x) => cumpleCriterio(x, clave));
+            const propuestasEtapa = propuestaVigente?.resultados.filter((x) => x.estado === "IngresoPropuesto" && etapaDe(prioridades.find((r) => r.solicitudId === x.solicitudId) ?? {}) === clave).length ?? 0;
+            return `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="${e(clave)}"><span class="prioridades__numero">${indice + 1}</span><span class="prioridades__texto"><strong>${e(titulo)}</strong><small>${conPrioridad.length} con prioridad verificada · ${propuestaVigente ? `${propuestasEtapa} propuestas` : "sin propuesta vigente"}</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`;
+          }).join("")}</div>` +
+          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="SorteoUltimaInstancia"><span class="prioridades__numero">5</span><span class="prioridades__texto"><strong>Sorteo, última instancia</strong><small>${sorteos.length} sorteos registrados</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>` +
+          `<button class="prioridades__etapa" data-accion="org-ver-etapa" data-id="FueraDeTermino"><span class="prioridades__numero">6</span><span class="prioridades__texto"><strong>Inscripciones fuera de término</strong><small>${prioridades.filter((x) => x.explicacion?.includes("Solicitud fuera de término.")).length} solicitudes</small></span><span class="prioridades__flecha" aria-hidden="true">›</span></button>`,
       ) +
       resumen(
         "Sorteos registrados",
